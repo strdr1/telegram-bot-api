@@ -1,0 +1,505 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "F:\\1\\telegram-bot-restaurant\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\handlers\\handlers_main.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:handlers\\handlers_main.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\keyboards.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:keyboards.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\bot.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:bot.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\handlers\\__init__.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:handlers\\__init__.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\cache_manager.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:cache_manager.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\handlers\\handlers_personal_cabinet.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:handlers\\handlers_personal_cabinet.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\handlers\\handlers_registration.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:handlers\\handlers_registration.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\database.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:database.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\handlers\\handlers_delivery.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:handlers\\handlers_delivery.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\handlers\\handlers_booking.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:handlers\\handlers_booking.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\config.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:config.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\presto_api_booking.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:presto_api_booking.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\handlers\\handlers_admin.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:handlers\\handlers_admin.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\handlers\\utils.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:handlers\\utils.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\presto_api.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:presto_api.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\menu_cache.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:menu_cache.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\.env||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:.env||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\cart_manager.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:cart_manager.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\services.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:services.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\debug_categories.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:debug_categories.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\Test_presto.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:Test_presto.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|F:\\1\\telegram-bot-restaurant\\order_response_debug.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:order_response_debug.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|F:\\1\\telegram-bot-restaurant\\districts_with_coords_debug.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:districts_with_coords_debug.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|F:\\1\\telegram-bot-restaurant\\order_request_debug.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:order_request_debug.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\test_presto_booking.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:test_presto_booking.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|F:\\1\\telegram-bot-restaurant\\districts_debug.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:districts_debug.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|F:\\1\\telegram-bot-restaurant\\delivery_cost_debug.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:delivery_cost_debug.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|F:\\1\\telegram-bot-restaurant\\address_suggestions_debug.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:address_suggestions_debug.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|F:\\1\\telegram-bot-restaurant\\test_districts.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:test_districts.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|F:\\1\\telegram-bot-restaurant\\add_default_faq.py||{8B382828-6202-11D1-8870-0000F87579D2}",
+      "RelativeMoniker": "D:0:0:{D9D39497-B331-44BA-A1B3-2E6980DD8AE6}|telegram-bot-restaurant.pyproj|solutionrelative:add_default_faq.py||{8B382828-6202-11D1-8870-0000F87579D2}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 21,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "handlers_personal_cabinet.py",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\handlers\\handlers_personal_cabinet.py",
+              "RelativeDocumentMoniker": "handlers\\handlers_personal_cabinet.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\handlers\\handlers_personal_cabinet.py",
+              "RelativeToolTip": "handlers\\handlers_personal_cabinet.py",
+              "ViewState": "AgIAAC8EAAAAAAAAAAAAwEQEAAAIAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2026-01-08T03:37:58.733Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "handlers_registration.py",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\handlers\\handlers_registration.py",
+              "RelativeDocumentMoniker": "handlers\\handlers_registration.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\handlers\\handlers_registration.py",
+              "RelativeToolTip": "handlers\\handlers_registration.py",
+              "ViewState": "AgIAAJEBAAAAAAAAAAAAwKoBAAA5AAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2026-01-08T02:51:24.272Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 23,
+              "Title": "order_request_debug.json",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\order_request_debug.json",
+              "RelativeDocumentMoniker": "order_request_debug.json",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\order_request_debug.json",
+              "RelativeToolTip": "order_request_debug.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAB8AAAA4AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-01-06T21:43:17.686Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 21,
+              "Title": "order_response_debug.json",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\order_response_debug.json",
+              "RelativeDocumentMoniker": "order_response_debug.json",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\order_response_debug.json",
+              "RelativeToolTip": "order_response_debug.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAMAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-01-06T21:43:07.143Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 22,
+              "Title": "districts_with_coords_debug.json",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\districts_with_coords_debug.json",
+              "RelativeDocumentMoniker": "districts_with_coords_debug.json",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\districts_with_coords_debug.json",
+              "RelativeToolTip": "districts_with_coords_debug.json",
+              "ViewState": "AgIAAEwAAAAAAAAAAAAAAGYAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-01-06T21:39:50.811Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 26,
+              "Title": "delivery_cost_debug.json",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\delivery_cost_debug.json",
+              "RelativeDocumentMoniker": "delivery_cost_debug.json",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\delivery_cost_debug.json",
+              "RelativeToolTip": "delivery_cost_debug.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-01-06T21:21:13.961Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 27,
+              "Title": "address_suggestions_debug.json",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\address_suggestions_debug.json",
+              "RelativeDocumentMoniker": "address_suggestions_debug.json",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\address_suggestions_debug.json",
+              "RelativeToolTip": "address_suggestions_debug.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-01-06T21:20:42.254Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 25,
+              "Title": "districts_debug.json",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\districts_debug.json",
+              "RelativeDocumentMoniker": "districts_debug.json",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\districts_debug.json",
+              "RelativeToolTip": "districts_debug.json",
+              "ViewState": "AgIAAAwAAAAAAAAAAAAAAGEAAAADAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-01-06T21:20:12.04Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 28,
+              "Title": "test_districts.json",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\test_districts.json",
+              "RelativeDocumentMoniker": "test_districts.json",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\test_districts.json",
+              "RelativeToolTip": "test_districts.json",
+              "ViewState": "AgIAAGIAAAAAAAAAAAAAAHoAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-01-06T16:50:22.448Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 18,
+              "Title": "services.py",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\services.py",
+              "RelativeDocumentMoniker": "services.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\services.py",
+              "RelativeToolTip": "services.py",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACYAAAA/AAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2026-01-06T15:39:57.842Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 19,
+              "Title": "debug_categories.py",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\debug_categories.py",
+              "RelativeDocumentMoniker": "debug_categories.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\debug_categories.py",
+              "RelativeToolTip": "debug_categories.py",
+              "ViewState": "AgIAAEAAAAAAAAAAAAAmwGEAAABWAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2026-01-06T15:29:22.502Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 24,
+              "Title": "test_presto_booking.py",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\test_presto_booking.py",
+              "RelativeDocumentMoniker": "test_presto_booking.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\test_presto_booking.py",
+              "RelativeToolTip": "test_presto_booking.py",
+              "ViewState": "AgIAABIAAAAAAAAAAAAAACUAAAAhAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2026-01-05T19:22:46.803Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "presto_api_booking.py",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\presto_api_booking.py",
+              "RelativeDocumentMoniker": "presto_api_booking.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\presto_api_booking.py",
+              "RelativeToolTip": "presto_api_booking.py",
+              "ViewState": "AgIAAHIBAAAAAAAAAAAAwJ4BAAAVAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2026-01-04T23:06:01.329Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 20,
+              "Title": "Test_presto.py",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\Test_presto.py",
+              "RelativeDocumentMoniker": "Test_presto.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\Test_presto.py",
+              "RelativeToolTip": "Test_presto.py",
+              "ViewState": "AgIAALEAAAAAAAAAAAAAAMkAAAAdAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2026-01-04T03:47:03.446Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "menu_cache.py",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\menu_cache.py",
+              "RelativeDocumentMoniker": "menu_cache.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\menu_cache.py",
+              "RelativeToolTip": "menu_cache.py",
+              "ViewState": "AgIAAB8BAAAAAAAAAAAAwEgBAAAYAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2026-01-04T03:35:01.244Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "presto_api.py",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\presto_api.py",
+              "RelativeDocumentMoniker": "presto_api.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\presto_api.py",
+              "RelativeToolTip": "presto_api.py",
+              "ViewState": "AgIAAJAAAAAAAAAAAAAUwKIAAAANAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2026-01-04T03:26:50.039Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 17,
+              "Title": "cart_manager.py",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\cart_manager.py",
+              "RelativeDocumentMoniker": "cart_manager.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\cart_manager.py",
+              "RelativeToolTip": "cart_manager.py",
+              "ViewState": "AgIAABsCAAAAAAAAAAAAwEQCAAAyAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2026-01-04T03:25:49.336Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "handlers_delivery.py",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\handlers\\handlers_delivery.py",
+              "RelativeDocumentMoniker": "handlers\\handlers_delivery.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\handlers\\handlers_delivery.py",
+              "RelativeToolTip": "handlers\\handlers_delivery.py",
+              "ViewState": "AgIAABwRAAAAAAAAAAAAwCkRAAAgAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2026-01-03T22:30:06.976Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "handlers_booking.py",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\handlers\\handlers_booking.py",
+              "RelativeDocumentMoniker": "handlers\\handlers_booking.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\handlers\\handlers_booking.py",
+              "RelativeToolTip": "handlers\\handlers_booking.py",
+              "ViewState": "AgIAAF0GAAAAAAAAAAAAwIkGAAABAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2026-01-03T22:29:55.968Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "handlers_admin.py",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\handlers\\handlers_admin.py",
+              "RelativeDocumentMoniker": "handlers\\handlers_admin.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\handlers\\handlers_admin.py",
+              "RelativeToolTip": "handlers\\handlers_admin.py",
+              "ViewState": "AgIAAJcGAAAAAAAAAAAnwK0GAAAQAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2026-01-03T22:29:48.897Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "handlers_main.py",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\handlers\\handlers_main.py",
+              "RelativeDocumentMoniker": "handlers\\handlers_main.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\handlers\\handlers_main.py",
+              "RelativeToolTip": "handlers\\handlers_main.py",
+              "ViewState": "AgIAAAUAAAAAAAAAAAAtwBcAAAAAAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2026-01-03T22:29:42.232Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "utils.py",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\handlers\\utils.py",
+              "RelativeDocumentMoniker": "handlers\\utils.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\handlers\\utils.py",
+              "RelativeToolTip": "handlers\\utils.py",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAAQAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2026-01-03T22:29:32.935Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "__init__.py (handlers)",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\handlers\\__init__.py",
+              "RelativeDocumentMoniker": "handlers\\__init__.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\handlers\\__init__.py",
+              "RelativeToolTip": "handlers\\__init__.py",
+              "ViewState": "AgIAAMQAAAAAAAAAAAAAwPAAAABMAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2026-01-03T22:29:25.808Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "cache_manager.py",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\cache_manager.py",
+              "RelativeDocumentMoniker": "cache_manager.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\cache_manager.py",
+              "RelativeToolTip": "cache_manager.py",
+              "ViewState": "AgIAAA8AAAAAAAAAAAAAAAsAAAAEAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2026-01-03T01:02:33.949Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 29,
+              "Title": "add_default_faq.py",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\add_default_faq.py",
+              "RelativeDocumentMoniker": "add_default_faq.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\add_default_faq.py",
+              "RelativeToolTip": "add_default_faq.py",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAAA1AAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2026-01-02T19:01:46.684Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "keyboards.py",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\keyboards.py",
+              "RelativeDocumentMoniker": "keyboards.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\keyboards.py",
+              "RelativeToolTip": "keyboards.py",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAACAAAAAKAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2026-01-02T02:13:38.395Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 16,
+              "Title": ".env",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\.env",
+              "RelativeDocumentMoniker": ".env",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\.env",
+              "RelativeToolTip": ".env",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001001|",
+              "WhenOpened": "2026-01-02T01:27:50.407Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "database.py",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\database.py",
+              "RelativeDocumentMoniker": "database.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\database.py",
+              "RelativeToolTip": "database.py",
+              "ViewState": "AgIAAJoAAAAAAAAAAADwv7YAAAA5AAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2025-12-30T22:34:20.334Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "config.py",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\config.py",
+              "RelativeDocumentMoniker": "config.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\config.py",
+              "RelativeToolTip": "config.py",
+              "ViewState": "AgIAADYAAAAAAAAAAAAAwGIAAABDAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2025-12-30T21:59:37.419Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "bot.py",
+              "DocumentMoniker": "F:\\1\\telegram-bot-restaurant\\bot.py",
+              "RelativeDocumentMoniker": "bot.py",
+              "ToolTip": "F:\\1\\telegram-bot-restaurant\\bot.py",
+              "RelativeToolTip": "bot.py",
+              "ViewState": "AgIAAHkAAAAAAAAAAAAAwLoAAAAdAAAAAAAAAA==",
+              "Icon": "00000000-0000-0000-0000-000000000000.000000|iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAEXSURBVDhPrZMhboVAEIZ/GiQCiUBAgkByAZKHRnMKDKqGIAiqQXAEJEdAcAAkOEgQGASShANs9223r2xo8xJev\u002BRPdndmfmYmQTKHD4KLzPY7wA0u6V77Rg8PDMNgkmWZv3yhqioUReE3EcFgGAaUZYl5nhGGISuq6xpd12GaJhRFwTN/EAzWdYXneQiCAFEUIY5j9maaJpOmaXAch2dzjjvY953QDgjthGRZRpqmIb7vC3MfddrBtm1I0xSu6yJJEvR9j9vtxmL3veR5Dsuy2P3BsQM6u/AFugNC5ydt27KuqqoS4qz2aKDrupDwLdu2f42dRliWhZ9ExnH8MyYYXOF/DQghJz1DMJAk6aRnvDzCS78zAHwC4SWr3mOE00YAAAAASUVORK5CYII=",
+              "WhenOpened": "2025-12-30T21:58:21.581Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,119 @@
+"""
+category_handler.py - Обработчик показа категорий блюд
+"""
+
+import logging
+from menu_cache import menu_cache
+from handlers.utils import safe_send_message
+from aiogram.types import BufferedInputFile
+
+logger = logging.getLogger(__name__)
+
+async def handle_show_category(category_name: str, user_id: int, bot):
+    """
+    Показывает всю категорию блюд с фото и описаниями
+    """
+    try:
+        # Очищаем от эмодзи и лишних символов
+        category_name = category_name.replace('🍕', '').replace('🥗', '').replace('🍳', '').replace('🧀', '').replace('🍖', '').replace('🥩', '').replace('🍗', '').replace('🥙', '').replace('🌮', '').replace('🌯', '').replace('🥪', '').replace('🍔', '').replace('🍟', '').replace('🍝', '').replace('🍜', '').replace('🍛', '').replace('🍱', '').replace('🍣', '').replace('🍤', '').replace('🍙', '').replace('🍚', '').replace('🍘', '').replace('🍥', '').replace('🥟', '').replace('🥠', '').replace('🥡', '').replace('🦀', '').replace('🦞', '').replace('🦐', '').replace('🦑', '').replace('🍦', '').replace('🍧', '').replace('🍨', '').replace('🍩', '').replace('🍪', '').replace('🎂', '').replace('🍰', '').replace('🧁', '').replace('🥧', '').replace('🍫', '').replace('🍬', '').replace('🍭', '').replace('🍮', '').replace('🍯', '').replace('🍼', '').replace('🥛', '').replace('☕', '').replace('🍵', '').replace('🍶', '').replace('🍾', '').replace('🍷', '').replace('🍸', '').replace('🍹', '').replace('🍺', '').replace('🍻', '').replace('🥂', '').replace('🥃', '').strip()
+        category_name = category_name.replace('_', ' ').strip()
+        logger.info(f"Ищу категорию: '{category_name}'")
+
+        # Ищем категорию в меню (улучшенный поиск)
+        found = False
+        for menu_id, menu in menu_cache.all_menus_cache.items():
+            for cat_id, category in menu.get('categories', {}).items():
+                cat_name = category.get('name', '').lower().strip()
+                cat_display_name = category.get('display_name', cat_name).lower().strip()
+                search_name = category_name.lower().strip()
+
+                # Проверяем точное совпадение или вхождение
+                if (search_name in cat_name or cat_name in search_name or
+                    search_name in cat_display_name or cat_display_name in search_name):
+                    # Получаем все блюда категории
+                    items = category.get('items', [])
+                    if not items:
+                        await safe_send_message(bot, user_id, f"В категории '{category.get('name', category_name)}' пока нет блюд.", parse_mode="HTML")
+                        return
+
+                    # Отправляем заголовок категории
+                    category_title = category.get('display_name') or category.get('name', category_name)
+                    await safe_send_message(bot, user_id, f"🍽️ <b>{category_title}</b>\n\nВот что у нас есть:", parse_mode="HTML")
+
+                    # Отправляем каждое блюдо с фото
+                    for item in items:
+                        try:
+                            photo_url = item.get('image_url')
+                            if photo_url:
+                                caption = f"🍽️ <b>{item['name']}</b>\n\n"
+                                caption += f"💰 Цена: {item['price']}₽\n"
+                                if item.get('calories'):
+                                    caption += f"🔥 Калории: {item['calories']} ккал\n"
+                                if item.get('proteins') or item.get('fats') or item.get('carbs'):
+                                    caption += f"\n🧃 БЖУ:\n"
+                                    if item.get('proteins'):
+                                        caption += f"• Белки: {item['proteins']}г\n"
+                                    if item.get('fats'):
+                                        caption += f"• Жиры: {item['fats']}г\n"
+                                    if item.get('carbs'):
+                                        caption += f"• Углеводы: {item['carbs']}г\n"
+                                if item.get('description'):
+                                    caption += f"\n{item['description']}"
+
+                                await bot.send_photo(
+                                    chat_id=user_id,
+                                    photo=photo_url,
+                                    caption=caption,
+                                    parse_mode="HTML"
+                                )
+                            else:
+                                # Если нет фото - отправляем текстом
+                                text = f"🍽️ <b>{item['name']}</b>\n💰 Цена: {item['price']}₽"
+                                if item.get('description'):
+                                    text += f"\n{item['description']}"
+                                await safe_send_message(bot, user_id, text, parse_mode="HTML")
+
+                        except Exception as e:
+                            logger.error(f"Ошибка отправки блюда {item.get('name', 'unknown')}: {e}")
+                            continue
+
+                    found = True
+                    logger.info(f"Показал категорию: {category_title} с {len(items)} блюдами")
+                    break
+
+            if found:
+                break
+
+        if not found:
+            # Если категория не найдена, ищем похожие
+            all_categories = []
+            for menu_id, menu in menu_cache.all_menus_cache.items():
+                for cat_id, category in menu.get('categories', {}).items():
+                    cat_name = category.get('name', '')
+                    if cat_name:
+                        all_categories.append(cat_name)
+
+            # Ищем наиболее похожие категории
+            from difflib import SequenceMatcher
+            similar = []
+            for cat in all_categories:
+                ratio = SequenceMatcher(None, category_name.lower(), cat.lower()).ratio()
+                if ratio > 0.4:  # Порог похожести
+                    similar.append((cat, ratio))
+
+            similar.sort(key=lambda x: x[1], reverse=True)
+            similar = similar[:3]  # Максимум 3 похожих
+
+            if similar:
+                text = f"Категория '{category_name}' не найдена. Возможно, вы имели в виду:\n\n"
+                for cat_name, ratio in similar:
+                    text += f"• {cat_name}\n"
+                text += "\nПопробуйте уточнить запрос."
+            else:
+                text = f"Категория '{category_name}' не найдена. Попробуйте другой запрос."
+
+            await safe_send_message(bot, user_id, text, parse_mode="HTML")
+
+    except Exception as e:
+        logger.error(f"Ошибка обработки категории '{category_name}': {e}")
+        await safe_send_message(bot, user_id, "Произошла ошибка при показе категории. Попробуйте позже.", parse_mode="HTML")

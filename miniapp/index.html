@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Админ Миниапп - Ресторан Бот</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .app {
+            display: flex;
+            height: 100vh;
+        }
+        .sidebar {
+            width: 30%;
+            background: white;
+            border-right: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+        }
+        .stats {
+            padding: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .chat-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+        .chat-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-item:hover {
+            background-color: #f8f9fa;
+        }
+        .chat-item.active {
+            background-color: #e3f2fd;
+        }
+        .chat-item .user {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .chat-item .last-message {
+            font-size: 0.9em;
+            color: #666;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .chat-item .time {
+            font-size: 0.8em;
+            color: #999;
+            align-self: flex-end;
+        }
+        .main-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+        .chat-header {
+            padding: 20px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .message {
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        .message.user {
+            align-items: flex-start;
+        }
+        .message.admin {
+            align-items: flex-end;
+        }
+        .message-bubble {
+            max-width: 70%;
+            padding: 10px 15px;
+            border-radius: 18px;
+            margin-bottom: 5px;
+        }
+        .message.user .message-bubble {
+            background: #e3f2fd;
+            color: #000;
+        }
+        .message.admin .message-bubble {
+            background: #007bff;
+            color: white;
+        }
+        .message-time {
+            font-size: 0.8em;
+            color: #999;
+        }
+        .chat-input {
+            padding: 20px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            gap: 10px;
+        }
+        .chat-input input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn-danger {
+            background: #dc3545;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* Мобильная адаптация */
+        @media (max-width: 768px) {
+            .app {
+                flex-direction: column;
+                height: auto;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                max-height: 40vh;
+                border-right: none;
+                border-bottom: 1px solid #ddd;
+            }
+
+            .stats {
+                padding: 15px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+            }
+
+            .stat-card {
+                padding: 8px;
+            }
+
+            .stat-number {
+                font-size: 1em;
+            }
+
+            .chat-item {
+                padding: 12px;
+                flex-direction: row;
+                align-items: center;
+            }
+
+            .chat-item .user {
+                margin-bottom: 0;
+                margin-right: 10px;
+                flex: 1;
+            }
+
+            .chat-item .last-message {
+                flex: 2;
+                margin-right: 10px;
+            }
+
+            .chat-item .time {
+                align-self: center;
+                margin-top: 0;
+            }
+
+            .main-chat {
+                height: 60vh;
+            }
+
+            .chat-header {
+                padding: 15px;
+            }
+
+            .chat-header h2 {
+                font-size: 1.1em;
+                margin: 0;
+            }
+
+            .control-buttons {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .control-buttons button {
+                padding: 6px 12px;
+                font-size: 0.9em;
+            }
+
+            .chat-messages {
+                padding: 15px;
+            }
+
+            .message-bubble {
+                max-width: 85%;
+                padding: 8px 12px;
+                font-size: 0.95em;
+            }
+
+            .chat-input {
+                padding: 15px;
+            }
+
+            .chat-input input {
+                padding: 12px;
+                font-size: 16px; /* Предотвращает зум на iOS */
+            }
+
+            .btn {
+                padding: 10px 16px;
+                font-size: 0.95em;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 6px;
+            }
+
+            .stat-card {
+                padding: 6px;
+            }
+
+            .stat-number {
+                font-size: 0.9em;
+            }
+
+            .chat-item {
+                padding: 10px;
+            }
+
+            .chat-item .user {
+                font-size: 0.95em;
+            }
+
+            .chat-item .last-message {
+                font-size: 0.85em;
+            }
+
+            .chat-item .time {
+                font-size: 0.75em;
+            }
+
+            .chat-header {
+                padding: 12px;
+            }
+
+            .chat-messages {
+                padding: 12px;
+            }
+
+            .chat-input {
+                padding: 12px;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .chat-input input {
+                padding: 14px;
+            }
+
+            .btn {
+                width: 100%;
+                padding: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="sidebar">
+            <div class="stats">
+                <h3>Статистика</h3>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="total-chats">0</div>
+                        <div>Всего</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="active-chats">0</div>
+                        <div>Активных</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="completed-chats">0</div>
+                        <div>Завершенных</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="avg-chat-time">0</div>
+                        <div>Среднее время</div>
+                    </div>
+                </div>
+            </div>
+            <div class="chat-list" id="chat-list">
+                <!-- Chat items will be loaded here -->
+            </div>
+        </div>
+        <div class="main-chat">
+            <div class="chat-header">
+                <h2 id="chat-title">Выберите чат</h2>
+                <div class="control-buttons">
+                    <button class="btn btn-danger" onclick="pauseChat()">Пауза</button>
+                    <button class="btn" onclick="resumeChat()">Продолжить</button>
+                    <button class="btn" onclick="analyzeChat()">Анализ ИИ</button>
+                </div>
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                <!-- Messages will appear here -->
+            </div>
+            <div class="chat-input">
+                <input type="text" id="admin-message" placeholder="Введите сообщение как админ">
+                <button class="btn" onclick="sendAdminMessage()">Отправить</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Telegram Web App initialization
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        let chats = [];
+        let currentChatId = null;
+
+        console.log('🚀 MiniApp started');
+        console.log('🌐 Current location:', window.location.href);
+        console.log('🤖 Telegram WebApp:', tg);
+
+        // API Base URL - для продакшена замените на ваш сервер
+        const API_BASE = 'http://188.243.182.103:8080'; // ← ВНЕШНИЙ IP АДРЕС
+
+        // Функция для выполнения API запросов
+        async function apiRequest(endpoint, options = {}) {
+            try {
+                const url = `${API_BASE}${endpoint}`;
+                console.log(`📡 API Request: ${options.method || 'GET'} ${url}`);
+
+                const response = await fetch(url, {
+                    method: options.method || 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    body: options.body ? JSON.stringify(options.body) : undefined
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log(`✅ API Response:`, data);
+                return data;
+
+            } catch (error) {
+                console.error(`❌ API Error:`, error);
+                throw error;
+            }
+        }
+
+        // Load statistics
+        async function loadStats() {
+            try {
+                console.log('📊 Loading stats from API...');
+
+                const stats = await apiRequest('/api/stats');
+
+                document.getElementById('total-chats').textContent = stats.total_chats || 0;
+                document.getElementById('active-chats').textContent = stats.active_chats || 0;
+                document.getElementById('completed-chats').textContent = stats.completed_chats || 0;
+                document.getElementById('avg-chat-time').textContent = stats.avg_messages_per_chat || 0;
+
+                console.log('✅ Stats loaded:', stats);
+
+            } catch (error) {
+                console.error('❌ Error loading stats:', error);
+                // Fallback to zeros
+                document.getElementById('total-chats').textContent = '0';
+                document.getElementById('active-chats').textContent = '0';
+                document.getElementById('completed-chats').textContent = '0';
+                document.getElementById('avg-chat-time').textContent = '0';
+            }
+        }
+
+        // Load chat list
+        async function loadChatList() {
+            try {
+                console.log('📋 Loading chat list from API...');
+
+                chats = await apiRequest('/api/chats');
+
+                const chatListDiv = document.getElementById('chat-list');
+                chatListDiv.innerHTML = '';
+
+                if (!chats || chats.length === 0) {
+                    chatListDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">Нет активных чатов</div>';
+                    return;
+                }
+
+                console.log('📋 Rendering chats:', chats.length);
+
+                chats.forEach(chat => {
+                    const chatItem = document.createElement('div');
+                    chatItem.className = 'chat-item';
+                    if (chat.id === currentChatId) {
+                        chatItem.classList.add('active');
+                    }
+                    chatItem.onclick = () => selectChat(chat.id);
+                    chatItem.innerHTML = `
+                        <div class="user">${chat.user_name || 'Неизвестный пользователь'}</div>
+                        <div class="last-message">${chat.last_message || 'Нет сообщений'}</div>
+                        <div class="time">${formatTime(chat.last_message_time)}</div>
+                    `;
+                    chatListDiv.appendChild(chatItem);
+                });
+
+                console.log('✅ Chat list loaded:', chats.length, 'chats');
+            } catch (error) {
+                console.error('❌ Error loading chat list:', error);
+                // Fallback message
+                const chatListDiv = document.getElementById('chat-list');
+                chatListDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">Ошибка загрузки чатов</div>';
+            }
+        }
+
+        // Select chat
+        async function selectChat(chatId) {
+            console.log('👆 Selecting chat:', chatId);
+            currentChatId = chatId;
+            const chat = chats.find(c => c.id === chatId);
+            if (chat) {
+                document.getElementById('chat-title').textContent = `Чат с ${chat.user_name}`;
+                console.log('📝 Chat title updated to:', chat.user_name);
+                await loadChatMessages(chatId);
+                loadChatList(); // Refresh to show active state
+            } else {
+                console.error('❌ Chat not found:', chatId);
+            }
+        }
+
+        // Load chat messages
+        async function loadChatMessages(chatId) {
+            try {
+                console.log('💬 Loading messages for chat:', chatId, 'from API');
+
+                const messages = await apiRequest(`/api/chats/${chatId}`);
+
+                console.log('💬 Messages loaded:', messages);
+
+                const messagesDiv = document.getElementById('chat-messages');
+                messagesDiv.innerHTML = '';
+
+                if (!messages || messages.length === 0) {
+                    messagesDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">Нет сообщений в этом чате</div>';
+                    return;
+                }
+
+                console.log('💬 Rendering messages:', messages.length);
+
+                messages.forEach(msg => {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = `message ${msg.sender}`;
+                    messageDiv.innerHTML = `
+                        <div class="message-bubble">${msg.text}</div>
+                        <div class="message-time">${formatTime(msg.time)}</div>
+                    `;
+                    messagesDiv.appendChild(messageDiv);
+                });
+
+                // Scroll to bottom
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                console.log('✅ Messages loaded for chat:', chatId);
+            } catch (error) {
+                console.error('❌ Error loading messages:', error);
+                const messagesDiv = document.getElementById('chat-messages');
+                messagesDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">Ошибка загрузки сообщений</div>';
+            }
+        }
+
+        // Format time for display
+        function formatTime(timeString) {
+            if (!timeString) return '';
+            try {
+                const date = new Date(timeString);
+                return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            } catch (e) {
+                return timeString;
+            }
+        }
+
+        // Pause chat
+        async function pauseChat() {
+            if (!currentChatId) return;
+
+            try {
+                console.log('⏸️ Pausing chat:', currentChatId);
+
+                const result = await apiRequest(`/api/chats/${currentChatId}/status`, {
+                    method: 'PUT',
+                    body: { status: 'paused' }
+                });
+
+                if (result.success) {
+                    console.log('✅ Chat paused');
+                    alert('Чат поставлен на паузу');
+                    loadChatList();
+                } else {
+                    throw new Error('Failed to pause chat');
+                }
+            } catch (error) {
+                console.error('❌ Error pausing chat:', error);
+                alert('Ошибка при постановке чата на паузу');
+            }
+        }
+
+        // Resume chat
+        async function resumeChat() {
+            if (!currentChatId) return;
+
+            try {
+                console.log('▶️ Resuming chat:', currentChatId);
+
+                const result = await apiRequest(`/api/chats/${currentChatId}/status`, {
+                    method: 'PUT',
+                    body: { status: 'active' }
+                });
+
+                if (result.success) {
+                    console.log('✅ Chat resumed');
+                    alert('Чат продолжен');
+                    loadChatList();
+                } else {
+                    throw new Error('Failed to resume chat');
+                }
+            } catch (error) {
+                console.error('❌ Error resuming chat:', error);
+                alert('Ошибка при продолжении чата');
+            }
+        }
+
+        // Send admin message
+        async function sendAdminMessage() {
+            const message = document.getElementById('admin-message').value.trim();
+            if (!message || !currentChatId) return;
+
+            try {
+                console.log('📤 Sending admin message to chat:', currentChatId);
+
+                const result = await apiRequest(`/api/chats/${currentChatId}/messages`, {
+                    method: 'POST',
+                    body: { message: message }
+                });
+
+                if (result.success) {
+                    // Очищаем поле ввода
+                    document.getElementById('admin-message').value = '';
+
+                    // Показываем сообщение об отправке
+                    alert('Сообщение отправлено!');
+
+                    // Обновляем сообщения
+                    await loadChatMessages(currentChatId);
+                } else {
+                    throw new Error('Failed to send message');
+                }
+
+            } catch (error) {
+                console.error('❌ Error sending message:', error);
+                alert('Ошибка при отправке сообщения');
+            }
+        }
+
+        // Analyze chat with AI
+        function analyzeChat() {
+            if (currentChatId) {
+                const chat = chats.find(c => c.id === currentChatId);
+                alert(`Анализ чата с ${chat.user_name}:\nПричина завершения: Пользователь получил необходимую информацию.\nРекомендации: Улучшить скорость ответа.`);
+                // Here you would call AI analysis API
+            }
+        }
+
+        // Handle Enter key in message input
+        document.getElementById('admin-message').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendAdminMessage();
+            }
+        });
+
+        // Initialize
+        loadStats();
+        loadChatList();
+
+        // Auto refresh every 5 seconds
+        setInterval(() => {
+            loadStats();
+            loadChatList();
+            if (currentChatId) {
+                loadChatMessages(currentChatId);
+            }
+        }, 5000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+{
+  "515216260": {
+    "items": [
+      {
+        "dish_id": 2030,
+        "name": "Паста Индейка в сливочном соусе",
+        "price": 730.0,
+        "quantity": 3,
+        "total_price": 2190.0,
+        "image_url": "https://disk.sbis.ru/disk/api/v1/e07ee196-d39b-4f25-b7ae-7cab5199dad0",
+        "added_at": "2026-01-08T05:19:33.988464"
+      }
+    ],
+    "applied_discount": 0,
+    "original_total": 2190.0,
+    "updated_at": "2026-01-08T05:19:33.988464"
+  },
+  "1896442362": {
+    "items": [
+      {
+        "dish_id": 353,
+        "name": "Том Ям",
+        "price": 690.0,
+        "quantity": 1,
+        "total_price": 690.0,
+        "image_url": "https://disk.sbis.ru/disk/api/v1/f3d4179b-a1d2-4154-94c3-a97f49bcf509",
+        "added_at": "2026-01-08T09:50:38.449290"
+      },
+      {
+        "dish_id": 351,
+        "name": "Куриный супчик",
+        "price": 350.0,
+        "quantity": 1,
+        "total_price": 350.0,
+        "image_url": "https://disk.sbis.ru/disk/api/v1/9d3a8ebe-8294-4321-8c04-ef408894790b",
+        "added_at": "2026-01-08T09:50:40.022780"
+      }
+    ],
+    "applied_discount": 0,
+    "original_total": 1040.0,
+    "updated_at": "2026-01-08T09:50:40.022780"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "comment": "Бронь через Telegram бот. Пользователь: @daniil1234_sr",
+  "datetime": "2026-01-09 19:00:00",
+  "externalId": "019b9c60-9722-7e7e-9cc2-9b4bcc3fd430",
+  "customer": {
+    "blacklisted": false,
+    "email": null,
+    "externalId": "f007055b-dcc9-4443-998b-fa7c35a51d78",
+    "lastname": "",
+    "name": "Даниил",
+    "patronymic": null,
+    "phone": "+7 995 592 20 11"
+  },
+  "booking": {
+    "hall": 9195,
+    "table": 9206,
+    "visitors": "2",
+    "woTable": false
+  },
+  "nomenclatures": {}
+}
