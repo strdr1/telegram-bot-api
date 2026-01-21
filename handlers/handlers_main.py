@@ -2068,12 +2068,11 @@ async def photos_callback(callback: types.CallbackQuery):
                         parse_mode="HTML",
                         bot=callback.bot)
 
-@router.callback_query(F.data == "our_app")
 async def show_our_app_menu(user_id: int, bot):
-    """Показать меню приложений"""
-    text = f"""🎉 <b>У нас часто проводятся различные мероприятия!</b>
+    """Показать меню приложений (helper function for AI assistant)"""
+    text = f"""📱 <b>Наше приложение</b>
 
-Обычно мы публикуем анонсы в нашем приложении. Скачайте его и посмотрите ближайшие мероприятия в нем!
+Скачайте наше приложение для удобного заказа доставки и бронирования!
 
 <b>Преимущества нашего приложения:</b>
 • 🎉 Анонсы мероприятий и событий
@@ -2103,6 +2102,50 @@ async def show_our_app_menu(user_id: int, bot):
         logger.info(f"Отправлено меню приложений пользователю {user_id}")
     except Exception as e:
         logger.error(f"Ошибка отправки меню приложений пользователю {user_id}: {e}")
+
+@router.callback_query(F.data == "our_app")
+async def our_app_callback_handler(callback: types.CallbackQuery):
+    """Показать меню приложений"""
+    await callback.answer()
+    
+    text = f"""📱 <b>Наше приложение</b>
+
+Скачайте наше приложение для удобного заказа доставки и бронирования!
+
+<b>Преимущества нашего приложения:</b>
+• 🎉 Анонсы мероприятий и событий
+• 🍽️ Полное меню с фотографиями
+• 🛒 Удобная корзина для заказов
+• 💳 Онлайн оплата
+• 📍 Точное определение адреса
+• ⏱️ Отслеживание заказа
+
+Выберите вашу платформу:"""
+    
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="🍎 App Store", url=config.APP_IOS)],
+        [types.InlineKeyboardButton(text="🤖 Google Play", url=config.APP_ANDROID)],
+        [types.InlineKeyboardButton(text="🟦 RuStore", url=config.APP_RUSTORE)],
+        [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+    ])
+    
+    try:
+        await callback.message.edit_text(
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+        logger.info(f"Отправлено меню приложений пользователю {callback.from_user.id}")
+    except Exception as e:
+        logger.error(f"Ошибка редактирования сообщения в our_app_callback: {e}")
+        # Если редактирование не удалось, отправляем новое сообщение
+        await safe_send_message(
+            callback.bot,
+            callback.from_user.id,
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
 
 async def show_hall_photos(user_id: int, bot):
     """Показать фотографии зала"""
@@ -2448,46 +2491,7 @@ async def show_restaurant_menu(user_id: int, bot):
     except Exception as e:
         logger.error(f"Ошибка показа меню ресторана пользователю {user_id}: {e}")
 
-async def our_app_callback(callback: types.CallbackQuery):
-    """Наше приложение"""
-    await callback.answer()
-    
-    text = f"""📱 <b>Наше приложение</b>
 
-Скачайте наше приложение для удобного заказа доставки и бронирования!
-
-<b>Преимущества:</b>
-• 🍽️ Полное меню с фотографиями
-• 🛒 Удобная корзина
-• 💳 Онлайн оплата
-• 📍 Точное определение адреса
-• ⏱️ Отслеживание заказа
-
-Выберите вашу платформу:"""
-    
-    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-        [types.InlineKeyboardButton(text="🍎 App Store", url=config.APP_IOS)],
-        [types.InlineKeyboardButton(text="🤖 Google Play", url=config.APP_ANDROID)],
-        [types.InlineKeyboardButton(text="🟦 RuStore", url=config.APP_RUSTORE)],
-        [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
-    ])
-    
-    try:
-        await callback.message.edit_text(
-            text,
-            reply_markup=keyboard,
-            parse_mode="HTML"
-        )
-    except Exception as e:
-        logger.error(f"Ошибка редактирования сообщения в our_app_callback: {e}")
-        # Если редактирование не удалось, отправляем новое сообщение
-        await safe_send_message(
-            callback.bot,
-            callback.from_user.id,
-            text,
-            reply_markup=keyboard,
-            parse_mode="HTML"
-        )
 
 # ===== ТЕКСТОВЫЙ ОБРАБОТЧИК =====
 
@@ -2989,9 +2993,14 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
 
     except Exception as e:
         logger.error(f"Ошибка AI: {e}")
-        text_response = """🤖 <b>Я не понял ваш запрос</b>
+        logger.error(f"Тип ошибки: {type(e)}")
+        logger.error(f"Сообщение пользователя: {message.text}")
+        import traceback
+        logger.error(f"Полный traceback: {traceback.format_exc()}")
+        
+        text_response = """🤖 <b>Извините, произошла техническая ошибка</b>
 
-Используйте кнопки меню ниже или задайте вопрос оператору."""
+Попробуйте переформулировать вопрос или используйте кнопки меню ниже."""
         keyboard = keyboards.main_menu_with_profile(user.id)
         await safe_send_message(message.bot, user.id, text_response,
                                reply_markup=keyboard, parse_mode="HTML")
