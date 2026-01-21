@@ -2503,50 +2503,69 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
         return
 
     # Проверяем короткие ответы для показа категорий
-    short_answers = ['хочу', 'да', 'покажи', 'давай', 'конечно', 'показать', 'покажите']
+    short_answers = ['хочу', 'да', 'покажи', 'давай', 'конечно', 'показать', 'покажите', 'хочется', 'можно']
     if text in short_answers:
         # Получаем последние сообщения пользователя для определения контекста
         try:
             chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
-            recent_messages = database.get_recent_chat_messages(chat_id, limit=5)
+            recent_messages = database.get_recent_chat_messages(chat_id, limit=10)  # Увеличиваем лимит
             
             # Ищем упоминания категорий в последних сообщениях
             category_keywords = {
-                'пицца': ['пицц', 'pizza'],
-                'суп': ['суп', 'soup'],
-                'десерт': ['десерт', 'сладк', 'торт', 'пирожн'],
-                'напитки': ['напитк', 'пить', 'drink'],
-                'пиво': ['пиво', 'beer'],
-                'вино': ['вино', 'wine'],
-                'салат': ['салат', 'salad'],
-                'горячее': ['горяч', 'мясо', 'рыба', 'стейк']
+                'пицца': ['пицц', 'pizza', 'пиццы', 'пиццей', 'пиццу'],
+                'суп': ['суп', 'soup', 'супы', 'супов', 'супчик', 'борщ', 'солянка'],
+                'десерт': ['десерт', 'сладк', 'торт', 'пирожн', 'десерты', 'десертов', 'мороженое', 'тирамису'],
+                'напитки': ['напитк', 'пить', 'drink', 'сок', 'вода', 'лимонад'],
+                'пиво': ['пиво', 'beer', 'пива', 'пивом', 'пивко'],
+                'вино': ['вино', 'wine', 'вина', 'винишко', 'белое', 'красное', 'розовое', 'игристое'],
+                'салат': ['салат', 'salad', 'салаты', 'салатов', 'салатик'],
+                'горячее': ['горяч', 'мясо', 'рыба', 'стейк', 'котлет', 'жарен'],
+                'коктейль': ['коктейль', 'коктейли', 'коктейлей', 'мохито', 'дайкири']
             }
             
             detected_category = None
+            # Проверяем последние сообщения бота (более широкий поиск)
             for message_data in recent_messages:
                 if message_data.get('sender') == 'bot':
                     bot_text = message_data.get('message', '').lower()
                     for category, keywords in category_keywords.items():
                         if any(keyword in bot_text for keyword in keywords):
                             detected_category = category
+                            logger.info(f"🎯 Найден контекст категории '{category}' в сообщении бота: '{bot_text[:100]}...'")
                             break
                     if detected_category:
                         break
             
+            # Если не нашли в сообщениях бота, проверяем сообщения пользователя
+            if not detected_category:
+                for message_data in recent_messages:
+                    if message_data.get('sender') == 'user':
+                        user_text = message_data.get('message', '').lower()
+                        for category, keywords in category_keywords.items():
+                            if any(keyword in user_text for keyword in keywords):
+                                detected_category = category
+                                logger.info(f"🎯 Найден контекст категории '{category}' в сообщении пользователя: '{user_text[:100]}...'")
+                                break
+                        if detected_category:
+                            break
+            
             if detected_category:
                 logger.info(f"🎯 Обнаружен короткий ответ '{text}' с контекстом категории '{detected_category}' для пользователя {user.id}")
                 
-                # Показываем категорию
-                from category_handler import handle_show_category
-                await handle_show_category(detected_category, user.id, message.bot)
+                # Показываем краткий список категории для коротких ответов
+                from category_handler import handle_show_category_brief
+                await handle_show_category_brief(detected_category, user.id, message.bot)
                 
                 # Сохраняем в чат
                 database.save_chat_message(chat_id, 'user', message.text)
                 database.save_chat_message(chat_id, 'bot', f'Показал категорию: {detected_category}')
                 return
+            else:
+                logger.info(f"🤔 Короткий ответ '{text}' без контекста - передаем AI для обработки")
                 
         except Exception as e:
             logger.error(f"Ошибка обработки короткого ответа: {e}")
+            # Продолжаем обработку через AI
 
     # Проверяем и сбрасываем лимит AI генераций при изменении баланса бонусов
     from ai_assistant import check_and_reset_ai_limit
@@ -2793,7 +2812,23 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
             from ai_assistant import get_ai_response
             result = await get_ai_response(message.text, user.id)
 
-        # Проверяем на показ категории
+        # Проверяем на показ категории (краткий список)
+        if result.get('show_category_brief'):
+            category_name = result.get('show_category_brief')
+            logger.info(f"Показываем краткий список категории: {category_name} для пользователя {user_id}")
+            from category_handler import handle_show_category_brief
+            await handle_show_category_brief(category_name, user_id, message.bot)
+
+            # Сохраняем в чат
+            try:
+                chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
+                database.save_chat_message(chat_id, 'bot', f'Показал краткий список категории: {category_name}')
+            except Exception as e:
+                logger.error(f"Ошибка сохранения в миниапп: {e}")
+
+            return
+
+        # Проверяем на показ категории (полный список)
         if result.get('show_category'):
             category_name = result.get('show_category')
             logger.info(f"Показываем категорию: {category_name} для пользователя {user_id}")

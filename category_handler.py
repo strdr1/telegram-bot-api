@@ -9,6 +9,111 @@ from aiogram.types import BufferedInputFile
 
 logger = logging.getLogger(__name__)
 
+async def handle_show_category_brief(category_name: str, user_id: int, bot):
+    """
+    Показывает краткий список категории блюд (только названия и цены)
+    """
+    try:
+        # Очищаем от эмодзи и лишних символов
+        category_name = category_name.replace('🍕', '').replace('🥗', '').replace('🍳', '').replace('🧀', '').replace('🍖', '').replace('🥩', '').replace('🍗', '').replace('🥙', '').replace('🌮', '').replace('🌯', '').replace('🥪', '').replace('🍔', '').replace('🍟', '').replace('🍝', '').replace('🍜', '').replace('🍛', '').replace('🍱', '').replace('🍣', '').replace('🍤', '').replace('🍙', '').replace('🍚', '').replace('🍘', '').replace('🍥', '').replace('🥟', '').replace('🥠', '').replace('🥡', '').replace('🦀', '').replace('🦞', '').replace('🦐', '').replace('🦑', '').replace('🍦', '').replace('🍧', '').replace('🍨', '').replace('🍩', '').replace('🍪', '').replace('🎂', '').replace('🍰', '').replace('🧁', '').replace('🥧', '').replace('🍫', '').replace('🍬', '').replace('🍭', '').replace('🍮', '').replace('🍯', '').replace('🍼', '').replace('🥛', '').replace('☕', '').replace('🍵', '').replace('🍶', '').replace('🍾', '').replace('🍷', '').replace('🍸', '').replace('🍹', '').replace('🍺', '').replace('🍻', '').replace('🥂', '').replace('🥃', '').strip()
+        category_name = category_name.replace('_', ' ').strip()
+        logger.info(f"Показываю краткий список категории: '{category_name}'")
+
+        # Ищем категорию в меню
+        found = False
+        for menu_id, menu in menu_cache.all_menus_cache.items():
+            for cat_id, category in menu.get('categories', {}).items():
+                cat_name = category.get('name', '').lower().strip()
+                cat_display_name = category.get('display_name', cat_name).lower().strip()
+                search_name = category_name.lower().strip()
+
+                # Проверяем точное совпадение или вхождение
+                if (search_name in cat_name or cat_name in search_name or
+                    search_name in cat_display_name or cat_display_name in search_name):
+                    # Получаем все блюда категории
+                    items = category.get('items', [])
+                    if not items:
+                        await safe_send_message(bot, user_id, f"В категории '{category.get('name', category_name)}' пока нет блюд.", parse_mode="HTML")
+                        return
+
+                    # Формируем краткий список
+                    category_title = category.get('display_name') or category.get('name', category_name)
+                    
+                    # Определяем эмодзи для категории
+                    emoji_map = {
+                        'пицца': '🍕', 'пицц': '🍕',
+                        'суп': '🍲', 'супы': '🍲', 'супов': '🍲',
+                        'десерт': '🍰', 'десерты': '🍰', 'десертов': '🍰',
+                        'коктейль': '🍸', 'коктейли': '🍸', 'коктейлей': '🍸',
+                        'пиво': '🍺', 'пива': '🍺',
+                        'вино': '🍷', 'вин': '🍷', 'вина': '🍷',
+                        'салат': '🥗', 'салаты': '🥗', 'салатов': '🥗'
+                    }
+                    
+                    emoji = '🍽️'
+                    for key, em in emoji_map.items():
+                        if key in category_name.lower():
+                            emoji = em
+                            break
+                    
+                    text = f"{emoji} <b>{category_title}</b>\n\n"
+                    
+                    # Убираем дубликаты по ID блюда
+                    unique_items = {}
+                    for item in items:
+                        item_id = item.get('id')
+                        if item_id not in unique_items:
+                            unique_items[item_id] = item
+                    
+                    # Добавляем блюда в список
+                    for item in unique_items.values():
+                        text += f"• {item['name']} — {item['price']}₽\n"
+                    
+                    text += f"\n💡 <i>Спросите про конкретное блюдо, чтобы увидеть фото и подробное описание!</i>"
+                    
+                    await safe_send_message(bot, user_id, text, parse_mode="HTML")
+                    
+                    found = True
+                    logger.info(f"Показал краткий список категории: {category_title} с {len(unique_items)} блюдами")
+                    break
+
+            if found:
+                break
+
+        if not found:
+            # Если категория не найдена, ищем похожие
+            all_categories = []
+            for menu_id, menu in menu_cache.all_menus_cache.items():
+                for cat_id, category in menu.get('categories', {}).items():
+                    cat_name = category.get('name', '')
+                    if cat_name:
+                        all_categories.append(cat_name)
+
+            # Ищем наиболее похожие категории
+            from difflib import SequenceMatcher
+            similar = []
+            for cat in all_categories:
+                ratio = SequenceMatcher(None, category_name.lower(), cat.lower()).ratio()
+                if ratio > 0.4:  # Порог похожести
+                    similar.append((cat, ratio))
+
+            similar.sort(key=lambda x: x[1], reverse=True)
+            similar = similar[:3]  # Максимум 3 похожих
+
+            if similar:
+                text = f"Категория '{category_name}' не найдена. Возможно, вы имели в виду:\n\n"
+                for cat_name, ratio in similar:
+                    text += f"• {cat_name}\n"
+                text += "\nПопробуйте уточнить запрос."
+            else:
+                text = f"Категория '{category_name}' не найдена. Попробуйте другой запрос."
+
+            await safe_send_message(bot, user_id, text, parse_mode="HTML")
+
+    except Exception as e:
+        logger.error(f"Ошибка обработки краткого списка категории '{category_name}': {e}")
+        await safe_send_message(bot, user_id, "Произошла ошибка при показе категории. Попробуйте позже.", parse_mode="HTML")
+
 async def handle_show_category(category_name: str, user_id: int, bot):
     """
     Показывает всю категорию блюд с фото и описаниями
