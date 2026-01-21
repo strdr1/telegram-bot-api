@@ -203,7 +203,7 @@ def admin_menu():
     """Меню админки - широкие кнопки"""
     return InlineKeyboardMarkup(inline_keyboard=[
         [
-            InlineKeyboardButton(text="💬 УПРАВЛЕНИЕ ЧАТАМИ", web_app=types.WebAppInfo(url="https://strdr1.github.io/Admin-app/")),
+            InlineKeyboardButton(text="💬 УПРАВЛЕНИЕ ЧАТАМИ", url="https://t.me/MashkovRestBot/Admin"),
         ],
         [
             InlineKeyboardButton(text="📊 СТАТИСТИКА БОТА", callback_data="admin_stats"),
