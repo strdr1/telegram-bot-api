@@ -160,7 +160,7 @@ GOOGLE_API_KEY=$(grep "GOOGLE_API_KEY=" .env | cut -d'=' -f2)
 GOOGLE_SEARCH_ENGINE_ID=$(grep "GOOGLE_SEARCH_ENGINE_ID=" .env | cut -d'=' -f2)
 
 # AI API
-POLZA_AI_TOKEN=your_polza_ai_token_here
+POLZA_AI_TOKEN=ak_MUlqpkRNU2jE5Xo3tf2yOfZImxVP90gcvvcN2Neif2g
 
 # Restaurant Settings
 RESTAURANT_NAME=Машков
@@ -250,8 +250,7 @@ EOF
     echo "📋 Что делать дальше:"
     echo "   1. Настройте миниапп в @BotFather:"
     echo "      URL: https://$SERVER_DOMAIN/miniapp/"
-    echo "   2. Добавьте POLZA_AI_TOKEN в .env файл на сервере"
-    echo "   3. Протестируйте бота в Telegram"
+    echo "   2. Протестируйте бота в Telegram"
     echo ""
     echo "🔧 Управление:"
     echo "   • Статус: ssh root@$SERVER_IP '/opt/telegram-bot/monitor.sh status'"

@@ -162,7 +162,7 @@ GOOGLE_API_KEY=$googleApiKey
 GOOGLE_SEARCH_ENGINE_ID=$googleSearchEngineId
 
 # AI API
-POLZA_AI_TOKEN=your_polza_ai_token_here
+POLZA_AI_TOKEN=ak_MUlqpkRNU2jE5Xo3tf2yOfZImxVP90gcvvcN2Neif2g
 
 # Restaurant Settings
 RESTAURANT_NAME=Машков
@@ -257,8 +257,7 @@ LOG_FILE=/var/log/telegram-bot/bot.log
     Write-Host "`n📋 Что делать дальше:" -ForegroundColor Yellow
     Write-Host "   1. Настройте миниапп в @BotFather:"
     Write-Host "      URL: https://$ServerDomain/miniapp/"
-    Write-Host "   2. Добавьте POLZA_AI_TOKEN в .env файл на сервере"
-    Write-Host "   3. Протестируйте бота в Telegram"
+    Write-Host "   2. Протестируйте бота в Telegram"
     Write-Host "`n🔧 Управление:" -ForegroundColor Yellow
     Write-Host "   • Статус: plink -ssh -batch -pw $ServerPassword $ServerUser@$ServerIP '/opt/telegram-bot/monitor.sh status'"
     Write-Host "   • Логи: plink -ssh -batch -pw $ServerPassword $ServerUser@$ServerIP '/opt/telegram-bot/monitor.sh logs bot'"
