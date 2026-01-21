@@ -16,7 +16,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('update.log'),
+        logging.FileHandler('update.log', encoding='utf-8'),
         logging.StreamHandler()
     ]
 )
@@ -44,7 +44,7 @@ def run_command(command, cwd=None):
 
 def check_for_updates():
     """Проверить наличие обновлений"""
-    logger.info("🔍 Проверяем наличие обновлений...")
+    logger.info("Проверяем наличие обновлений...")
     
     # Получаем информацию о текущем коммите
     success, current_commit, error = run_command("git rev-parse HEAD")
@@ -62,7 +62,7 @@ def check_for_updates():
         return False
     
     # Проверяем, есть ли новые коммиты
-    success, remote_commit, error = run_command("git rev-parse origin/main")
+    success, remote_commit, error = run_command("git rev-parse origin/master")
     if not success:
         logger.error(f"Не удалось получить удаленный коммит: {error}")
         return False
@@ -71,15 +71,15 @@ def check_for_updates():
     logger.info(f"Удаленный коммит: {remote_commit[:8]}")
     
     if current_commit != remote_commit:
-        logger.info("✅ Найдены обновления!")
+        logger.info("Найдены обновления!")
         return True
     else:
-        logger.info("ℹ️ Обновлений нет")
+        logger.info("Обновлений нет")
         return False
 
 def backup_important_files():
     """Создать резервную копию важных файлов"""
-    logger.info("💾 Создаем резервную копию важных файлов...")
+    logger.info("Создаем резервную копию важных файлов...")
     
     important_files = [
         '.env',
@@ -104,31 +104,31 @@ def backup_important_files():
                 # Копируем файл
                 success, output, error = run_command(f'copy "{file_path}" "{backup_file_path}"')
                 if success:
-                    logger.info(f"✅ Скопирован: {file_path}")
+                    logger.info(f"Скопирован: {file_path}")
                 else:
-                    logger.warning(f"⚠️ Не удалось скопировать {file_path}: {error}")
+                    logger.warning(f"Не удалось скопировать {file_path}: {error}")
         
-        logger.info(f"💾 Резервная копия создана в: {backup_dir}")
+        logger.info(f"Резервная копия создана в: {backup_dir}")
         return backup_dir
         
     except Exception as e:
-        logger.error(f"❌ Ошибка создания резервной копии: {e}")
+        logger.error(f"Ошибка создания резервной копии: {e}")
         return None
 
 def apply_updates():
     """Применить обновления"""
-    logger.info("🔄 Применяем обновления...")
+    logger.info("Применяем обновления...")
     
     # Сохраняем изменения в stash (если есть)
     run_command("git stash")
     
     # Получаем обновления
-    success, output, error = run_command("git pull origin main")
+    success, output, error = run_command("git pull origin master")
     if not success:
-        logger.error(f"❌ Не удалось применить обновления: {error}")
+        logger.error(f"Не удалось применить обновления: {error}")
         return False
     
-    logger.info("✅ Обновления применены успешно!")
+    logger.info("Обновления применены успешно!")
     
     # Восстанавливаем изменения из stash (если были)
     run_command("git stash pop")
@@ -137,7 +137,7 @@ def apply_updates():
 
 def restart_bot():
     """Перезапустить бота"""
-    logger.info("🔄 Перезапускаем бота...")
+    logger.info("Перезапускаем бота...")
     
     # Останавливаем текущий процесс бота (если запущен)
     run_command("taskkill /f /im python.exe")
@@ -149,43 +149,43 @@ def restart_bot():
     if os.path.exists("start.bat"):
         success, output, error = run_command("start.bat")
         if success:
-            logger.info("✅ Бот перезапущен!")
+            logger.info("Бот перезапущен!")
             return True
         else:
-            logger.error(f"❌ Не удалось перезапустить бота: {error}")
+            logger.error(f"Не удалось перезапустить бота: {error}")
             return False
     else:
-        logger.warning("⚠️ Файл start.bat не найден, запустите бота вручную")
+        logger.warning("Файл start.bat не найден, запустите бота вручную")
         return False
 
 def main():
     """Основная функция автообновления"""
-    logger.info("🚀 Запуск автообновления...")
+    logger.info("Запуск автообновления...")
     
     try:
         # Проверяем наличие обновлений
         if not check_for_updates():
-            logger.info("✅ Автообновление завершено - обновлений нет")
+            logger.info("Автообновление завершено - обновлений нет")
             return
         
         # Создаем резервную копию
         backup_dir = backup_important_files()
         if not backup_dir:
-            logger.error("❌ Не удалось создать резервную копию, обновление отменено")
+            logger.error("Не удалось создать резервную копию, обновление отменено")
             return
         
         # Применяем обновления
         if not apply_updates():
-            logger.error("❌ Не удалось применить обновления")
+            logger.error("Не удалось применить обновления")
             return
         
         # Перезапускаем бота
         restart_bot()
         
-        logger.info("🎉 Автообновление завершено успешно!")
+        logger.info("Автообновление завершено успешно!")
         
     except Exception as e:
-        logger.error(f"❌ Критическая ошибка автообновления: {e}")
+        logger.error(f"Критическая ошибка автообновления: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
