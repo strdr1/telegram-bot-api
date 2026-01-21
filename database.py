@@ -2290,6 +2290,60 @@ def get_chat_messages(chat_id: int, limit: int = 50) -> List[Dict[str, Any]]:
         logger.error(f"Ошибка получения сообщений чата {chat_id}: {e}")
         return []
 
+def get_recent_chat_messages(chat_id: int, limit: int = 5) -> List[Dict[str, Any]]:
+    """Получение последних сообщений чата в обратном порядке (новые сначала)"""
+    try:
+        with get_cursor() as cursor:
+            # Проверяем, есть ли поле sent в таблице
+            cursor.execute("PRAGMA table_info(chat_messages)")
+            columns = cursor.fetchall()
+            has_sent_column = any(col[1] == 'sent' for col in columns)
+
+            if has_sent_column:
+                cursor.execute('''
+                SELECT id, sender, message_text, message_time, sent
+                FROM chat_messages
+                WHERE chat_id = ?
+                ORDER BY message_time DESC
+                LIMIT ?
+                ''', (chat_id, limit))
+
+                results = cursor.fetchall() or []
+                return [
+                    {
+                        'id': row[0],
+                        'sender': row[1],
+                        'message': row[2],
+                        'time': row[3],
+                        'sent': bool(row[4]) if len(row) > 4 else False
+                    }
+                    for row in results
+                ]
+            else:
+                # Если поля sent нет, получаем без него
+                cursor.execute('''
+                SELECT id, sender, message_text, message_time
+                FROM chat_messages
+                WHERE chat_id = ?
+                ORDER BY message_time DESC
+                LIMIT ?
+                ''', (chat_id, limit))
+
+                results = cursor.fetchall() or []
+                return [
+                    {
+                        'id': row[0],
+                        'sender': row[1],
+                        'message': row[2],
+                        'time': row[3],
+                        'sent': False  # По умолчанию считаем не отправленным
+                    }
+                    for row in results
+                ]
+    except Exception as e:
+        logger.error(f"Ошибка получения последних сообщений чата {chat_id}: {e}")
+        return []
+
 def update_chat_status(chat_id: int, status: str) -> bool:
     """Обновление статуса чата"""
     try:

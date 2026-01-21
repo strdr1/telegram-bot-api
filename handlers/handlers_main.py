@@ -2502,6 +2502,52 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
     if text.startswith('/'):
         return
 
+    # Проверяем короткие ответы для показа категорий
+    short_answers = ['хочу', 'да', 'покажи', 'давай', 'конечно', 'показать', 'покажите']
+    if text in short_answers:
+        # Получаем последние сообщения пользователя для определения контекста
+        try:
+            chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
+            recent_messages = database.get_recent_chat_messages(chat_id, limit=5)
+            
+            # Ищем упоминания категорий в последних сообщениях
+            category_keywords = {
+                'пицца': ['пицц', 'pizza'],
+                'суп': ['суп', 'soup'],
+                'десерт': ['десерт', 'сладк', 'торт', 'пирожн'],
+                'напитки': ['напитк', 'пить', 'drink'],
+                'пиво': ['пиво', 'beer'],
+                'вино': ['вино', 'wine'],
+                'салат': ['салат', 'salad'],
+                'горячее': ['горяч', 'мясо', 'рыба', 'стейк']
+            }
+            
+            detected_category = None
+            for message_data in recent_messages:
+                if message_data.get('sender') == 'bot':
+                    bot_text = message_data.get('message', '').lower()
+                    for category, keywords in category_keywords.items():
+                        if any(keyword in bot_text for keyword in keywords):
+                            detected_category = category
+                            break
+                    if detected_category:
+                        break
+            
+            if detected_category:
+                logger.info(f"🎯 Обнаружен короткий ответ '{text}' с контекстом категории '{detected_category}' для пользователя {user.id}")
+                
+                # Показываем категорию
+                from category_handler import handle_show_category
+                await handle_show_category(detected_category, user.id, message.bot)
+                
+                # Сохраняем в чат
+                database.save_chat_message(chat_id, 'user', message.text)
+                database.save_chat_message(chat_id, 'bot', f'Показал категорию: {detected_category}')
+                return
+                
+        except Exception as e:
+            logger.error(f"Ошибка обработки короткого ответа: {e}")
+
     # Проверяем и сбрасываем лимит AI генераций при изменении баланса бонусов
     from ai_assistant import check_and_reset_ai_limit
     await check_and_reset_ai_limit(user.id)
