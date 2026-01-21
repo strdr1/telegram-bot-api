@@ -2935,6 +2935,18 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                     [types.InlineKeyboardButton(text="🟦 RuStore", url=config.APP_RUSTORE)]
                 ])
                 await safe_send_message(message.bot, user.id, result['text'], reply_markup=keyboard, parse_mode="HTML")
+            elif result.get('show_category'):
+                # Показываем категорию блюд
+                category_name = result.get('show_category')
+                logger.info(f"Показываем категорию: {category_name}")
+                
+                # Сначала отправляем текст с вопросом
+                await safe_send_message(message.bot, user.id, result['text'], parse_mode="HTML")
+                
+                # Затем показываем категорию
+                from category_handler import handle_show_category
+                await handle_show_category(category_name, user.id, message.bot)
+                return
             elif result.get('show_delivery_button', False):
                 keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
                     [types.InlineKeyboardButton(text="🚚 Заказать доставку", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))]

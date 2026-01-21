@@ -63,9 +63,9 @@ async def test_calories_questions():
         try:
             result = await get_ai_response(case['query'], user_id=515216260)
             
-            if result and result.get('type') == 'category':
+            if result and result.get('type') == 'text' and result.get('show_category'):
                 # Проверяем что показывается правильная категория
-                category_name = result.get('category_name', '')
+                category_name = result.get('show_category', '')
                 
                 if case['expected_category'] in category_name.lower():
                     print(f"   ✅ Правильная категория: {category_name}")
