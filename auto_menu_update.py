@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+"""
+Автоматическое обновление меню из Presto API
+Запускается ежедневно в 4:00 утра через cron
+"""
+import asyncio
+import sys
+import os
+from datetime import datetime
+
+# Добавляем текущую директорию в путь
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+async def auto_update_menu():
+    """Автоматическое обновление меню"""
+    print(f"🔄 Начинаю автоматическое обновление меню в {datetime.now().strftime('%H:%M:%S')}")
+
+    try:
+        # Импортируем необходимые модули
+        from menu_cache import menu_cache
+        import database
+
+        # Обновляем меню с принудительной перезагрузкой
+        menus = await menu_cache.load_all_menus(force_update=True)
+
+        if menus:
+            total_items = 0
+            for menu_id, menu_data in menus.items():
+                for cat_id, cat_data in menu_data.get('categories', {}).items():
+                    total_items += len(cat_data.get('items', []))
+
+            success_message = (
+                f"✅ Меню успешно обновлено автоматически!\n\n"
+                f"📊 Загружено {len(menus)} меню\n"
+                f"🍽️ Всего позиций: {total_items}\n\n"
+                f"🕐 Обновлено: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            )
+
+            print(success_message)
+
+            # Логируем в базу данных
+            database.log_action(0, "auto_menu_update", f"success: {len(menus)} menus, {total_items} items")
+
+            # Отправляем уведомление администраторам
+            try:
+                admins = database.get_all_admins()
+                for admin_id in admins:
+                    try:
+                        from aiogram import Bot
+                        from config import BOT_TOKEN
+                        import config
+
+                        if BOT_TOKEN:
+                            bot = Bot(token=BOT_TOKEN)
+                            await bot.send_message(
+                                chat_id=admin_id,
+                                text=f"🔄 <b>Автоматическое обновление меню</b>\n\n{success_message}",
+                                parse_mode="HTML"
+                            )
+                    except Exception as e:
+                        print(f"Не удалось отправить уведомление админу {admin_id}: {e}")
+            except Exception as e:
+                print(f"Ошибка отправки уведомлений: {e}")
+
+        else:
+            error_message = "❌ Ошибка автоматического обновления меню - не удалось загрузить меню из Presto API"
+            print(error_message)
+
+            # Логируем ошибку
+            database.log_action(0, "auto_menu_update", "error: failed to load menus")
+
+            # Отправляем уведомление об ошибке администраторам
+            try:
+                admins = database.get_all_admins()
+                for admin_id in admins:
+                    try:
+                        from aiogram import Bot
+                        from config import BOT_TOKEN
+
+                        if BOT_TOKEN:
+                            bot = Bot(token=BOT_TOKEN)
+                            await bot.send_message(
+                                chat_id=admin_id,
+                                text=f"⚠️ <b>Ошибка автоматического обновления меню</b>\n\n{error_message}",
+                                parse_mode="HTML"
+                            )
+                    except Exception as e:
+                        print(f"Не удалось отправить уведомление админу {admin_id}: {e}")
+            except Exception as e:
+                print(f"Ошибка отправки уведомлений об ошибке: {e}")
+
+    except Exception as e:
+        error_message = f"❌ Критическая ошибка автоматического обновления меню: {str(e)}"
+        print(error_message)
+
+        # Логируем критическую ошибку
+        try:
+            import database
+            database.log_action(0, "auto_menu_update", f"critical_error: {str(e)}")
+        except:
+            pass
+
+if __name__ == "__main__":
+    asyncio.run(auto_update_menu())

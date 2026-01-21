@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mashkov Доставка</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        /* УБИРАЕМ ВСЕ ОТСТУПЫ */
+        * {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        
+        html, body {
+            width: 100% !important;
+            height: 100% !important;
+            overflow: hidden !important;
+        }
+        
+        /* ВИДЖЕТ НА ВЕСЬ ЭКРАН */
+        .consultant-widget-Widget,
+        .consultant-widget-Window,
+        .consultant-widget-Window-onlineorder,
+        [data-widget] {
+            width: 100vw !important;
+            height: 100vh !important;
+            min-width: 100vw !important;
+            min-height: 100vh !important;
+            max-width: 100vw !important;
+            max-height: 100vh !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            position: fixed !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
+            transform: none !important;
+        }
+        
+        /* Убираем все внутренние ограничения */
+        .consultant-widget-Window__inner,
+        .consultant-widget-Window__contentContainer,
+        .consultant-widget-Window__content,
+        iframe {
+            width: 100% !important;
+            height: 100% !important;
+            min-width: 100% !important;
+            min-height: 100% !important;
+            border: none !important;
+            border-radius: 0 !important;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+        }
+        
+        /* Убираем все resize элементы */
+        .consultant-widget-Window__resizableHandle {
+            display: none !important;
+        }
+        
+        /* Убираем тени и границы */
+        .consultant-widget-Widget__shadow {
+            box-shadow: none !important;
+        }
+        
+        .consultant-widget-Window_borderTop_rounded-s,
+        .consultant-widget-Window_borderBottom_rounded-s {
+            border-radius: 0 !important;
+            border: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- SABY WIDGET -->
+    <script type="text/javascript" data-saby-widget="c75e63d4-0625-473c-85e6-085fad873248">
+    (
+       function(win, doc, url) {
+          var sws = doc.createElement('script');
+          sws.type = 'text/javascript';
+          sws.async = true;
+          sws.src = url;
+
+          var pfs = doc.getElementsByTagName('script')[0];
+          pfs.parentNode.insertBefore(sws, pfs);
+       }
+    )(window, document, "https://site.saby.ru/booking/script/c75e63d4-0625-473c-85e6-085fad873248");
+    </script>
+    
+    <script>
+        // Telegram
+        if (typeof Telegram !== 'undefined') {
+            const tg = Telegram.WebApp;
+            tg.expand();
+            tg.ready();
+            tg.BackButton.show();
+            tg.BackButton.onClick(() => tg.close());
+        }
+        
+        // РАСТЯГИВАЕМ ВИДЖЕТ НА ВЕСЬ ЭКРАН
+        function stretchWidgetToFullScreen() {
+            console.log('🔄 Растягиваем виджет...');
+            
+            // Ждем пока виджет загрузится
+            setTimeout(() => {
+                // 1. Находим все элементы виджета
+                const widgets = document.querySelectorAll(
+                    '.consultant-widget-Widget, ' +
+                    '.consultant-widget-Window, ' +
+                    '[data-widget], ' +
+                    '.consultant-widget-Window-onlineorder'
+                );
+                
+                widgets.forEach(widget => {
+                    // Растягиваем на весь экран
+                    widget.style.width = '100vw';
+                    widget.style.height = '100vh';
+                    widget.style.minWidth = '100vw';
+                    widget.style.minHeight = '100vh';
+                    widget.style.position = 'fixed';
+                    widget.style.top = '0';
+                    widget.style.left = '0';
+                    widget.style.margin = '0';
+                    widget.style.padding = '0';
+                    widget.style.borderRadius = '0';
+                    widget.style.zIndex = '999999';
+                });
+                
+                // 2. Находим iframe и растягиваем его
+                const iframes = document.querySelectorAll('iframe');
+                iframes.forEach(iframe => {
+                    iframe.style.width = '100%';
+                    iframe.style.height = '100%';
+                    iframe.style.minHeight = '100vh';
+                    iframe.style.border = 'none';
+                    iframe.style.display = 'block';
+                });
+                
+                // 3. Скрываем все resize handles
+                document.querySelectorAll('.consultant-widget-Window__resizableHandle')
+                    .forEach(el => el.style.display = 'none');
+                
+                // 4. Убираем все лишние отступы у body
+                document.body.style.overflow = 'hidden';
+                document.body.style.margin = '0';
+                document.body.style.padding = '0';
+                
+                console.log('✅ Виджет растянут на весь экран');
+            }, 2000);
+        }
+        
+        // Запускаем несколько раз
+        stretchWidgetToFullScreen();
+        setTimeout(stretchWidgetToFullScreen, 3000);
+        setTimeout(stretchWidgetToFullScreen, 5000);
+        
+        // Также при ресайзе
+        window.addEventListener('resize', stretchWidgetToFullScreen);
+    </script>
+</body>
+</html>
