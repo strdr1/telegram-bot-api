@@ -1,22 +1,38 @@
-# 🚀 Автоматический скрипт развертывания Telegram Bot на сервере (PowerShell)
-# Сервер: a950841.fvds.ru (155.212.164.61)
-# Пароль: Mashkov.Rest
+# PowerShell Deployment Script for Telegram Bot
+# Server: a950841.fvds.ru (155.212.164.61)
+# Password: Mashkov.Rest
 
 param(
     [switch]$Force
 )
 
-# Конфигурация сервера
+# Server Configuration
 $ServerIP = "155.212.164.61"
 $ServerUser = "root"
 $ServerPassword = "Mashkov.Rest"
 $ServerDomain = "a950841.fvds.ru"
 
-# Функции для цветного вывода
-function Write-Success { param($Message) Write-Host "✅ $Message" -ForegroundColor Green }
-function Write-Info { param($Message) Write-Host "ℹ️  $Message" -ForegroundColor Blue }
-function Write-Warning { param($Message) Write-Host "⚠️  $Message" -ForegroundColor Yellow }
-function Write-Error { param($Message) Write-Host "❌ $Message" -ForegroundColor Red }
+# Output Functions
+function Write-Success { 
+    param($Message) 
+    Write-Host "[SUCCESS] $Message" -ForegroundColor Green 
+}
+
+function Write-Info { 
+    param($Message) 
+    Write-Host "[INFO] $Message" -ForegroundColor Blue 
+}
+
+function Write-Warning { 
+    param($Message) 
+    Write-Host "[WARNING] $Message" -ForegroundColor Yellow 
+}
+
+function Write-Error { 
+    param($Message) 
+    Write-Host "[ERROR] $Message" -ForegroundColor Red 
+}
+
 function Write-Header { 
     param($Message) 
     Write-Host "`n==================================" -ForegroundColor Blue
@@ -24,112 +40,112 @@ function Write-Header {
     Write-Host "==================================" -ForegroundColor Blue
 }
 
-# Проверка наличия plink (PuTTY)
+# Check for PuTTY
 function Test-PuTTY {
     if (-not (Get-Command plink -ErrorAction SilentlyContinue)) {
-        Write-Warning "PuTTY не найден. Скачиваем..."
+        Write-Warning "PuTTY not found. Downloading..."
         
         $puttyUrl = "https://the.earth.li/~sgtatham/putty/latest/w64/putty.zip"
-        $puttyZip = "$env:TEMP\putty.zip"
-        $puttyDir = "$env:TEMP\putty"
+        $puttyZip = Join-Path $env:TEMP "putty.zip"
+        $puttyDir = Join-Path $env:TEMP "putty"
         
         try {
             Invoke-WebRequest -Uri $puttyUrl -OutFile $puttyZip
             Expand-Archive -Path $puttyZip -DestinationPath $puttyDir -Force
-            
-            # Добавляем в PATH для текущей сессии
             $env:PATH += ";$puttyDir"
-            
-            Write-Success "PuTTY скачан и настроен"
+            Write-Success "PuTTY downloaded and configured"
         }
         catch {
-            Write-Error "Не удалось скачать PuTTY: $_"
-            Write-Info "Скачайте PuTTY вручную с https://putty.org/"
+            Write-Error "Failed to download PuTTY: $_"
+            Write-Info "Please download PuTTY manually from https://putty.org/"
             exit 1
         }
     }
 }
 
-# Функция для выполнения команд на сервере
+# Execute remote command
 function Invoke-RemoteCommand {
     param($Command)
-    Write-Info "Выполняем: $Command"
+    Write-Info "Executing: $Command"
     
     $result = & plink -ssh -batch -pw $ServerPassword "$ServerUser@$ServerIP" $Command 2>&1
     if ($LASTEXITCODE -ne 0) {
-        Write-Warning "Команда завершилась с кодом $LASTEXITCODE"
+        Write-Warning "Command finished with code $LASTEXITCODE"
     }
     return $result
 }
 
-# Функция для копирования файла на сервер
+# Copy file to server
 function Copy-ToServer {
     param($LocalFile, $RemotePath)
-    Write-Info "Копируем $LocalFile -> $RemotePath"
+    Write-Info "Copying $LocalFile -> $RemotePath"
     & pscp -batch -pw $ServerPassword $LocalFile "$ServerUser@$ServerIP`:$RemotePath"
 }
 
-# Основная функция
+# Main deployment function
 function Start-Deployment {
-    Write-Header "🚀 АВТОМАТИЧЕСКОЕ РАЗВЕРТЫВАНИЕ TELEGRAM BOT"
+    Write-Header "[DEPLOYMENT] TELEGRAM BOT AUTO DEPLOYMENT"
     
-    Write-Info "Сервер: $ServerDomain ($ServerIP)"
-    Write-Info "Пользователь: $ServerUser"
-    Write-Info "Начинаем развертывание..."
+    Write-Info "Server: $ServerDomain ($ServerIP)"
+    Write-Info "User: $ServerUser"
+    Write-Info "Starting deployment..."
     
-    # Проверяем PuTTY
+    # Check PuTTY
     Test-PuTTY
     
-    # Тестируем подключение
-    Write-Info "Тестируем подключение к серверу..."
+    # Test connection
+    Write-Info "Testing server connection..."
     try {
-        $testResult = Invoke-RemoteCommand "echo 'Подключение успешно'"
-        if ($testResult -match "Подключение успешно") {
-            Write-Success "Подключение к серверу установлено"
+        $testResult = Invoke-RemoteCommand "echo 'Connection successful'"
+        if ($testResult -match "Connection successful") {
+            Write-Success "Server connection established"
         } else {
-            throw "Неожиданный ответ сервера"
+            throw "Unexpected server response"
         }
     }
     catch {
-        Write-Error "Не удалось подключиться к серверу!"
-        Write-Error "Проверьте IP адрес, пароль и доступность сервера"
+        Write-Error "Failed to connect to server!"
+        Write-Error "Check IP address, password and server availability"
         exit 1
     }
     
-    # Шаг 1: Обновляем систему
-    Write-Header "📦 УСТАНОВКА СИСТЕМНЫХ ПАКЕТОВ"
-    Invoke-RemoteCommand "apt update && apt upgrade -y"
+    # Step 1: Update system
+    Write-Header "[STEP 1] INSTALLING SYSTEM PACKAGES"
+    Invoke-RemoteCommand "apt update"
+    Invoke-RemoteCommand "apt upgrade -y"
     Invoke-RemoteCommand "apt install -y python3 python3-pip python3-venv git nginx supervisor sqlite3 curl wget certbot python3-certbot-nginx"
-    Write-Success "Системные пакеты установлены"
+    Write-Success "System packages installed"
     
-    # Шаг 2: Создаем пользователя
-    Write-Header "👤 СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ"
-    Invoke-RemoteCommand "if ! id 'botuser' &>/dev/null; then useradd -m -s /bin/bash botuser && usermod -aG www-data botuser; fi"
-    Write-Success "Пользователь botuser создан"
+    # Step 2: Create user
+    Write-Header "[STEP 2] CREATING USER"
+    Invoke-RemoteCommand "if ! id 'botuser' &>/dev/null; then useradd -m -s /bin/bash botuser; usermod -aG www-data botuser; fi"
+    Write-Success "User botuser created"
     
-    # Шаг 3: Создаем директории
-    Write-Header "📁 СОЗДАНИЕ ДИРЕКТОРИЙ"
+    # Step 3: Create directories
+    Write-Header "[STEP 3] CREATING DIRECTORIES"
     Invoke-RemoteCommand "mkdir -p /opt/telegram-bot /var/log/telegram-bot /var/run/telegram-bot"
     Invoke-RemoteCommand "chown -R botuser:botuser /opt/telegram-bot /var/log/telegram-bot /var/run/telegram-bot"
-    Write-Success "Директории созданы"
+    Write-Success "Directories created"
     
-    # Шаг 4: Клонируем репозиторий
-    Write-Header "📥 КЛОНИРОВАНИЕ РЕПОЗИТОРИЯ"
-    Invoke-RemoteCommand "cd /opt && if [ -d 'telegram-bot' ]; then cd telegram-bot && git pull origin master; else git clone https://github.com/strdr1/telegram-bot-api.git telegram-bot && cd telegram-bot; fi"
+    # Step 4: Clone repository
+    Write-Header "[STEP 4] CLONING REPOSITORY"
+    Invoke-RemoteCommand "cd /opt"
+    Invoke-RemoteCommand "if [ -d 'telegram-bot' ]; then rm -rf telegram-bot; fi"
+    Invoke-RemoteCommand "git clone https://github.com/strdr1/telegram-bot-api.git telegram-bot"
     Invoke-RemoteCommand "chown -R botuser:botuser /opt/telegram-bot"
-    Write-Success "Репозиторий клонирован"
+    Write-Success "Repository cloned"
     
-    # Шаг 5: Python зависимости
-    Write-Header "🐍 УСТАНОВКА PYTHON ЗАВИСИМОСТЕЙ"
+    # Step 5: Python dependencies
+    Write-Header "[STEP 5] INSTALLING PYTHON DEPENDENCIES"
     Invoke-RemoteCommand "cd /opt/telegram-bot && sudo -u botuser python3 -m venv venv"
     Invoke-RemoteCommand "cd /opt/telegram-bot && sudo -u botuser bash -c 'source venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt'"
-    Write-Success "Python зависимости установлены"
+    Write-Success "Python dependencies installed"
     
-    # Шаг 6: Создаем .env файл
-    Write-Header "⚙️ СОЗДАНИЕ КОНФИГУРАЦИИ"
+    # Step 6: Create .env file
+    Write-Header "[STEP 6] CREATING CONFIGURATION"
     
     if (Test-Path ".env") {
-        Write-Info "Читаем локальный .env файл..."
+        Write-Info "Reading local .env file..."
         
         $envContent = Get-Content ".env"
         $botToken = ($envContent | Where-Object { $_ -match "BOT_TOKEN=" }) -replace "BOT_TOKEN=", ""
@@ -141,7 +157,7 @@ function Start-Deployment {
         $googleApiKey = ($envContent | Where-Object { $_ -match "GOOGLE_API_KEY=" }) -replace "GOOGLE_API_KEY=", ""
         $googleSearchEngineId = ($envContent | Where-Object { $_ -match "GOOGLE_SEARCH_ENGINE_ID=" }) -replace "GOOGLE_SEARCH_ENGINE_ID=", ""
         
-        # Создаем серверный .env файл
+        # Create server .env file
         $serverEnv = @"
 # Telegram Bot Configuration
 BOT_TOKEN=$botToken
@@ -165,10 +181,10 @@ GOOGLE_SEARCH_ENGINE_ID=$googleSearchEngineId
 POLZA_AI_TOKEN=ak_MUlqpkRNU2jE5Xo3tf2yOfZImxVP90gcvvcN2Neif2g
 
 # Restaurant Settings
-RESTAURANT_NAME=Машков
+RESTAURANT_NAME=Mashkov
 RESTAURANT_PHONE=+7 (495) 123-45-67
-RESTAURANT_ADDRESS=Москва, ул. Примерная, 1
-RESTAURANT_HOURS=Ежедневно с 10:00 до 23:00
+RESTAURANT_ADDRESS=Moscow, Example St, 1
+RESTAURANT_HOURS=Daily 10:00-23:00
 
 # Server Settings
 HOST=0.0.0.0
@@ -190,79 +206,81 @@ LOG_LEVEL=INFO
 LOG_FILE=/var/log/telegram-bot/bot.log
 "@
         
-        # Сохраняем во временный файл и копируем на сервер
-        $tempEnvFile = "$env:TEMP\server.env"
+        # Save to temp file and copy to server
+        $tempEnvFile = Join-Path $env:TEMP "server.env"
         $serverEnv | Out-File -FilePath $tempEnvFile -Encoding UTF8
         Copy-ToServer $tempEnvFile "/opt/telegram-bot/.env"
         Invoke-RemoteCommand "chown botuser:botuser /opt/telegram-bot/.env"
         Remove-Item $tempEnvFile
         
-        Write-Success "Конфигурация создана"
+        Write-Success "Configuration created"
     } else {
-        Write-Error "Локальный .env файл не найден!"
+        Write-Error "Local .env file not found!"
         exit 1
     }
     
-    # Шаг 7: SSL сертификат
-    Write-Header "🔒 НАСТРОЙКА SSL СЕРТИФИКАТА"
-    Invoke-RemoteCommand "certbot certonly --nginx -d $ServerDomain --email admin@$ServerDomain --agree-tos --non-interactive --quiet || echo 'SSL уже настроен или ошибка'"
-    Write-Success "SSL сертификат настроен"
+    # Step 7: SSL certificate
+    Write-Header "[STEP 7] CONFIGURING SSL CERTIFICATE"
+    Invoke-RemoteCommand "certbot certonly --nginx -d $ServerDomain --email admin@$ServerDomain --agree-tos --non-interactive --quiet || echo 'SSL already configured or error'"
+    Write-Success "SSL certificate configured"
     
-    # Шаг 8: Nginx
-    Write-Header "🌐 НАСТРОЙКА NGINX"
+    # Step 8: Nginx
+    Write-Header "[STEP 8] CONFIGURING NGINX"
     Invoke-RemoteCommand "cp /opt/telegram-bot/nginx.conf /etc/nginx/sites-available/telegram-bot"
     Invoke-RemoteCommand "ln -sf /etc/nginx/sites-available/telegram-bot /etc/nginx/sites-enabled/"
     Invoke-RemoteCommand "rm -f /etc/nginx/sites-enabled/default"
-    Invoke-RemoteCommand "nginx -t && systemctl restart nginx"
-    Write-Success "Nginx настроен"
+    Invoke-RemoteCommand "nginx -t"
+    Invoke-RemoteCommand "systemctl restart nginx"
+    Write-Success "Nginx configured"
     
-    # Шаг 9: Supervisor
-    Write-Header "🔧 НАСТРОЙКА SUPERVISOR"
+    # Step 9: Supervisor
+    Write-Header "[STEP 9] CONFIGURING SUPERVISOR"
     Invoke-RemoteCommand "cp /opt/telegram-bot/supervisor.conf /etc/supervisor/conf.d/telegram-bot.conf"
-    Invoke-RemoteCommand "supervisorctl reread && supervisorctl update"
-    Write-Success "Supervisor настроен"
+    Invoke-RemoteCommand "supervisorctl reread"
+    Invoke-RemoteCommand "supervisorctl update"
+    Write-Success "Supervisor configured"
     
-    # Шаг 10: Запуск сервисов
-    Write-Header "🚀 ЗАПУСК СЕРВИСОВ"
+    # Step 10: Start services
+    Write-Header "[STEP 10] STARTING SERVICES"
     Invoke-RemoteCommand "supervisorctl start telegram-bot-group"
     Start-Sleep -Seconds 5
-    Write-Success "Сервисы запущены"
+    Write-Success "Services started"
     
-    # Шаг 11: Проверка статуса
-    Write-Header "🔍 ПРОВЕРКА СТАТУСА"
+    # Step 11: Check status
+    Write-Header "[STEP 11] CHECKING STATUS"
     Invoke-RemoteCommand "supervisorctl status"
     
-    # Проверяем webhook
-    Write-Info "Проверяем webhook..."
+    # Check webhook
+    Write-Info "Checking webhook..."
     try {
         $webhookTest = Invoke-WebRequest -Uri "https://$ServerDomain/health" -UseBasicParsing
         if ($webhookTest.Content -match "ok") {
-            Write-Success "Webhook работает!"
+            Write-Success "Webhook is working!"
         } else {
-            Write-Warning "Webhook может быть еще не готов, проверьте через минуту"
+            Write-Warning "Webhook may not be ready yet, check in a minute"
         }
     }
     catch {
-        Write-Warning "Webhook может быть еще не готов, проверьте через минуту"
+        Write-Warning "Webhook may not be ready yet, check in a minute"
     }
     
-    # Финальная информация
-    Write-Header "🎉 РАЗВЕРТЫВАНИЕ ЗАВЕРШЕНО!"
+    # Final information
+    Write-Header "[COMPLETED] DEPLOYMENT FINISHED!"
     
-    Write-Host "`n✅ Бот успешно развернут на сервере!" -ForegroundColor Green
-    Write-Host "`n🔗 Ссылки:" -ForegroundColor Yellow
+    Write-Host "`n[SUCCESS] Bot successfully deployed to server!" -ForegroundColor Green
+    Write-Host "`n[LINKS] Links:" -ForegroundColor Yellow
     Write-Host "   • Webhook: https://$ServerDomain/webhook"
     Write-Host "   • Health check: https://$ServerDomain/health"
-    Write-Host "   • Миниапп: https://$ServerDomain/miniapp/"
-    Write-Host "`n📋 Что делать дальше:" -ForegroundColor Yellow
-    Write-Host "   1. Настройте миниапп в @BotFather:"
+    Write-Host "   • Miniapp: https://$ServerDomain/miniapp/"
+    Write-Host "`n[NEXT STEPS] What to do next:" -ForegroundColor Yellow
+    Write-Host "   1. Configure miniapp in @BotFather:"
     Write-Host "      URL: https://$ServerDomain/miniapp/"
-    Write-Host "   2. Протестируйте бота в Telegram"
-    Write-Host "`n🔧 Управление:" -ForegroundColor Yellow
-    Write-Host "   • Статус: plink -ssh -batch -pw $ServerPassword $ServerUser@$ServerIP '/opt/telegram-bot/monitor.sh status'"
-    Write-Host "   • Логи: plink -ssh -batch -pw $ServerPassword $ServerUser@$ServerIP '/opt/telegram-bot/monitor.sh logs bot'"
-    Write-Host "   • Перезапуск: plink -ssh -batch -pw $ServerPassword $ServerUser@$ServerIP '/opt/telegram-bot/monitor.sh restart'"
+    Write-Host "   2. Test the bot in Telegram"
+    Write-Host "`n[MANAGEMENT] Management:" -ForegroundColor Yellow
+    Write-Host "   • Status: plink -ssh -batch -pw $ServerPassword $ServerUser@$ServerIP '/opt/telegram-bot/monitor.sh status'"
+    Write-Host "   • Logs: plink -ssh -batch -pw $ServerPassword $ServerUser@$ServerIP '/opt/telegram-bot/monitor.sh logs bot'"
+    Write-Host "   • Restart: plink -ssh -batch -pw $ServerPassword $ServerUser@$ServerIP '/opt/telegram-bot/monitor.sh restart'"
 }
 
-# Запускаем развертывание
+# Start deployment
 Start-Deployment
