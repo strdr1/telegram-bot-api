@@ -1620,7 +1620,8 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                     return {
                         'type': 'photo_with_text',
                         'photo_url': best_match['image_url'],
-                        'text': caption
+                        'text': caption,
+                        'show_delivery_button': True  # Добавляем кнопку доставки для полных карточек блюд
                     }
                 
                 if not found:
