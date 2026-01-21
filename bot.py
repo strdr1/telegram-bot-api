@@ -1,12 +1,14 @@
 ﻿# -*- coding: utf-8 -*-
 """
-bot.py - ИСПРАВЛЕННЫЙ (с личным кабинетом)
+bot.py - ИСПРАВЛЕННЫЙ (с личным кабинетом) + Webhook support
 """
 
 import asyncio
 import logging
 import sys
 import os
+from aiohttp import web
+from aiohttp.web_request import Request
 
 # Настройка кодировки для Windows
 if sys.platform == 'win32':
@@ -28,6 +30,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from config import BOT_TOKEN, REQUEST_TIMEOUT
 
 # Импортируем все роутеры
@@ -53,6 +56,9 @@ logging.basicConfig(
     datefmt='%H:%M:%S'
 )
 logger = logging.getLogger(__name__)
+
+# Глобальный диспетчер для webhook
+dp = None
 
 async def process_message_queue(bot):
     """Обработка очереди сообщений от миниаппа"""
@@ -149,6 +155,45 @@ async def shutdown(bot=None):
     except Exception as e:
         print(f"⚠️ Ошибка закрытия БД: {e}")
 
+async def webhook_handler(request: Request, bot: Bot) -> web.Response:
+    """Обработчик webhook от Telegram"""
+    try:
+        # Получаем данные от Telegram
+        data = await request.json()
+        
+        # Создаем Update объект
+        from aiogram.types import Update
+        update = Update(**data)
+        
+        # Передаем в диспетчер
+        await dp.feed_update(bot, update)
+        
+        return web.Response(status=200)
+    except Exception as e:
+        logger.error(f"Ошибка в webhook handler: {e}")
+        return web.Response(status=500)
+
+async def health_handler(request: Request) -> web.Response:
+    """Health check endpoint"""
+    return web.json_response({"status": "ok", "bot": "running"})
+
+async def setup_webhook(bot: Bot):
+    """Настройка webhook"""
+    webhook_url = os.getenv('WEBHOOK_URL')
+    if webhook_url:
+        try:
+            await bot.set_webhook(
+                url=webhook_url,
+                drop_pending_updates=True,
+                allowed_updates=["message", "callback_query", "inline_query"]
+            )
+            logger.info(f"Webhook установлен: {webhook_url}")
+            return True
+        except Exception as e:
+            logger.error(f"Ошибка установки webhook: {e}")
+            return False
+    return False
+
 async def main():
     """Основная функция запуска бота"""
     print("🤖 Бот запускается...")
@@ -167,6 +212,7 @@ async def main():
     bot = Bot(token=BOT_TOKEN, default=default, session=session)
     
     # Настройка диспетчера
+    global dp
     dp = Dispatcher(storage=MemoryStorage())
     # Регистрируем middleware таймаута глобально (если поддерживается)
     try:
@@ -217,15 +263,64 @@ async def main():
     print("🚀 Бот готов к работе!")
     print("=" * 50)
     
+    # Проверяем режим работы (webhook или polling)
+    webhook_mode = os.getenv('WEBHOOK_MODE', 'false').lower() == 'true'
+    
+    if webhook_mode:
+        print("🌐 Запуск в режиме webhook...")
+        
+        # Настраиваем webhook
+        webhook_success = await setup_webhook(bot)
+        if not webhook_success:
+            print("❌ Не удалось настроить webhook, переключаемся на polling")
+            webhook_mode = False
+    
     try:
-        # Запускаем бота
-        await dp.start_polling(
-            bot,
-            allowed_updates=dp.resolve_used_update_types(),
-            polling_timeout=25,
-            drop_pending_updates=True,
-            close_bot_session=True,
-        )
+        if webhook_mode:
+            # Запуск webhook сервера
+            app = web.Application()
+            
+            # Настраиваем обработчики
+            webhook_requests_handler = SimpleRequestHandler(
+                dispatcher=dp,
+                bot=bot,
+            )
+            webhook_requests_handler.register(app, path="/webhook")
+            
+            # Health check endpoint
+            app.router.add_get("/health", health_handler)
+            
+            # Настраиваем приложение
+            setup_application(app, dp, bot=bot)
+            
+            # Запускаем сервер
+            port = int(os.getenv('WEBHOOK_PORT', 8000))
+            print(f"🌐 Webhook сервер запускается на порту {port}")
+            
+            runner = web.AppRunner(app)
+            await runner.setup()
+            site = web.TCPSite(runner, '127.0.0.1', port)
+            await site.start()
+            
+            print(f"✅ Webhook сервер запущен на http://127.0.0.1:{port}")
+            
+            # Ждем завершения
+            try:
+                await asyncio.Future()  # run forever
+            except KeyboardInterrupt:
+                print("\n⏹️ Бот остановлен пользователем")
+            finally:
+                await runner.cleanup()
+        else:
+            # Запуск polling
+            print("🔄 Запуск в режиме polling...")
+            await dp.start_polling(
+                bot,
+                allowed_updates=dp.resolve_used_update_types(),
+                polling_timeout=25,
+                drop_pending_updates=True,
+                close_bot_session=True,
+            )
     except KeyboardInterrupt:
         print("\n⏹️ Бот остановлен пользователем")
     except Exception as e:
