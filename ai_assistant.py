@@ -927,8 +927,9 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             return get_fallback_response(message, user_id)
 
         logger.info("Отправляем запрос в Polza AI API")
-
-        # Отправляем запрос в Gemini API с правильным форматом
+        logger.info(f"Модель: {data['model']}")
+        logger.info(f"Количество сообщений: {len(data['messages'])}")
+        logger.info(f"Температура: {data['temperature']}")
 
         # 8. Формируем запрос к Polza AI API
         url = "https://api.polza.ai/api/v1/chat/completions"
@@ -969,18 +970,70 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         logger.info(f"Polza AI Request Headers: {headers}")
         logger.info(f"Polza AI Request Data: {json.dumps(data, indent=2, ensure_ascii=False)}")
 
-        # Выполняем запрос асинхронно
-        loop = asyncio.get_event_loop()
-        response = await loop.run_in_executor(
-            None,
-            lambda: requests.post(url, headers=headers, json=data, timeout=30)
-        )
+        # Выполняем запрос асинхронно с retry логикой
+        max_retries = 3
+        last_error = None
+        
+        for attempt in range(max_retries):
+            try:
+                loop = asyncio.get_event_loop()
+                response = await loop.run_in_executor(
+                    None,
+                    lambda: requests.post(url, headers=headers, json=data, timeout=30)
+                )
 
-        logger.info(f"Polza AI response status: {response.status_code}")
+                logger.info(f"Polza AI response status: {response.status_code} (попытка {attempt + 1})")
 
+                if response.status_code in [200, 201]:
+                    # Успешный ответ
+                    break
+                elif response.status_code == 429:
+                    # Rate limiting - ждем и повторяем
+                    wait_time = (2 ** attempt) * 1000  # Экспоненциальная задержка
+                    logger.warning(f"Rate limiting, ждем {wait_time}ms перед повтором...")
+                    await asyncio.sleep(wait_time / 1000)
+                    continue
+                elif response.status_code == 400:
+                    # Проверяем тип ошибки 400
+                    try:
+                        error_data = response.json()
+                        error_message = error_data.get('error', {}).get('message', response.text)
+                        
+                        if 'temporarily unavailable' in error_message.lower() or 'proxies failed' in error_message.lower():
+                            # Временная недоступность - можно повторить
+                            logger.warning(f"Временная недоступность API (попытка {attempt + 1}): {error_message}")
+                            if attempt < max_retries - 1:
+                                await asyncio.sleep(2 ** attempt)  # Ждем 1, 2, 4 секунды
+                                continue
+                        else:
+                            # Ошибка в запросе - не повторяем
+                            logger.error(f"Ошибка в запросе: {error_message}")
+                            return get_fallback_response(message, user_id)
+                    except:
+                        logger.error(f"Polza AI API error 400: {response.text}")
+                        return get_fallback_response(message, user_id)
+                else:
+                    # Другие ошибки
+                    logger.error(f"Polza AI API error: {response.status_code} - {response.text}")
+                    last_error = f"HTTP {response.status_code}: {response.text}"
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(1)
+                        continue
+                    
+            except asyncio.TimeoutError:
+                logger.error(f"Timeout при запросе к Polza AI (попытка {attempt + 1})")
+                last_error = "Timeout"
+                if attempt < max_retries - 1:
+                    continue
+            except Exception as e:
+                logger.error(f"Исключение при запросе к Polza AI (попытка {attempt + 1}): {e}")
+                last_error = str(e)
+                if attempt < max_retries - 1:
+                    continue
+        
+        # Если все попытки неудачны
         if response.status_code not in [200, 201]:
-            logger.error(f"Polza AI API error: {response.status_code} - {response.text}")
-            # При ошибке используем fallback
+            logger.error(f"Все попытки запроса к Polza AI неудачны. Последняя ошибка: {last_error}")
             return get_fallback_response(message, user_id)
 
         response_data = response.json()
@@ -1688,6 +1741,51 @@ def get_fallback_response(message: str, user_id: int) -> Dict:
     Fallback ответы когда AI недоступен - в русском стиле
     """
     message_lower = message.lower().strip()
+
+    # Проверяем короткие ответы
+    short_answers = ['хочу', 'да', 'покажи', 'давай', 'конечно', 'показать', 'покажите']
+    if message_lower in short_answers:
+        return {
+            'type': 'text',
+            'text': '😊 Понял! Но что именно показать? Пиццы, супы, десерты, напитки или что-то другое? Уточните, пожалуйста! 🍽️'
+        }
+
+    # Проверяем на конкретные блюда
+    if 'пицца' in message_lower:
+        if '4 сыра' in message_lower or 'четыре сыра' in message_lower:
+            return {'type': 'dish_photo', 'dish_name': 'Пицца 4 сыра'}
+        elif 'пепперони' in message_lower:
+            return {'type': 'dish_photo', 'dish_name': 'Пицца Пепперони'}
+        elif 'маргарита' in message_lower:
+            return {'type': 'dish_photo', 'dish_name': 'Пицца Маргарита'}
+        elif 'инфаркт' in message_lower:
+            return {'type': 'dish_photo', 'dish_name': 'Пицца Инфаркт'}
+        elif 'мясная' in message_lower:
+            return {'type': 'dish_photo', 'dish_name': 'Пицца Мясная'}
+        elif message_lower == 'пицца' or ('есть' in message_lower and 'пицц' in message_lower):
+            return {'type': 'category', 'show_category': 'пицца'}
+    
+    if 'борщ' in message_lower:
+        return {'type': 'dish_photo', 'dish_name': 'Борщ'}
+    
+    if 'солянка' in message_lower:
+        return {'type': 'dish_photo', 'dish_name': 'Солянка'}
+    
+    if 'стейк' in message_lower:
+        return {'type': 'dish_photo', 'dish_name': 'Стейк'}
+
+    # Проверяем на категории
+    if 'суп' in message_lower and ('есть' in message_lower or 'какие' in message_lower):
+        return {'type': 'category', 'show_category': 'суп'}
+    
+    if 'десерт' in message_lower and ('есть' in message_lower or 'какие' in message_lower):
+        return {'type': 'category', 'show_category': 'десерт'}
+    
+    if 'пиво' in message_lower and ('есть' in message_lower or 'какое' in message_lower):
+        return {'type': 'category', 'show_category': 'пиво'}
+    
+    if 'вино' in message_lower and ('есть' in message_lower or 'какое' in message_lower):
+        return {'type': 'category', 'show_category': 'вино'}
 
     # Простые ответы на распространенные вопросы
     if 'привет' in message_lower or 'здравствуй' in message_lower or 'добрый' in message_lower:

@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-01-21T19:17:38.812906",
+  "timestamp": "2026-01-21T19:46:14.814444",
   "point_id": 3596,
   "all_menus": {
     "92": {
@@ -34,8 +34,7 @@
               "hierarchical_id": 4865,
               "hierarchical_parent": 4853,
               "category_id": 4853,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1785,
@@ -59,8 +58,7 @@
               "hierarchical_id": 4870,
               "hierarchical_parent": 4853,
               "category_id": 4853,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1786,
@@ -84,8 +82,7 @@
               "hierarchical_id": 4871,
               "hierarchical_parent": 4853,
               "category_id": 4853,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 2017,
@@ -109,8 +106,7 @@
               "hierarchical_id": 4882,
               "hierarchical_parent": 4853,
               "category_id": 4853,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1509,
@@ -134,8 +130,7 @@
               "hierarchical_id": 4858,
               "hierarchical_parent": 4853,
               "category_id": 4853,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1511,
@@ -159,8 +154,7 @@
               "hierarchical_id": 4859,
               "hierarchical_parent": 4853,
               "category_id": 4853,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1594,
@@ -736,8 +730,7 @@
               "hierarchical_id": 4866,
               "hierarchical_parent": 4853,
               "category_id": 4853,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1503,
@@ -761,8 +754,7 @@
               "hierarchical_id": 4855,
               "hierarchical_parent": 4853,
               "category_id": 4853,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1499,
@@ -786,8 +778,7 @@
               "hierarchical_id": 4852,
               "hierarchical_parent": 4853,
               "category_id": 4853,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1502,
@@ -811,8 +802,7 @@
               "hierarchical_id": 4854,
               "hierarchical_parent": 4853,
               "category_id": 4853,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1504,
@@ -836,8 +826,7 @@
               "hierarchical_id": 4856,
               "hierarchical_parent": 4853,
               "category_id": 4853,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1505,
@@ -861,8 +850,7 @@
               "hierarchical_id": 4857,
               "hierarchical_parent": 4853,
               "category_id": 4853,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             }
           ],
           "image_url": "/disk/api/v1/c886fbd3-b93a-4d97-b671-f40def17e7a6"
@@ -895,8 +883,7 @@
               "hierarchical_id": 4837,
               "hierarchical_parent": 4817,
               "category_id": 4817,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1283,
@@ -920,8 +907,7 @@
               "hierarchical_id": 4834,
               "hierarchical_parent": 4817,
               "category_id": 4817,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 363,
@@ -945,8 +931,7 @@
               "hierarchical_id": 4797,
               "hierarchical_parent": 4817,
               "category_id": 4817,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1008,
@@ -970,8 +955,7 @@
               "hierarchical_id": 4826,
               "hierarchical_parent": 4817,
               "category_id": 4817,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 360,
@@ -995,8 +979,7 @@
               "hierarchical_id": 4796,
               "hierarchical_parent": 4817,
               "category_id": 4817,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 357,
@@ -1020,8 +1003,7 @@
               "hierarchical_id": 4794,
               "hierarchical_parent": 4817,
               "category_id": 4817,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 358,
@@ -1045,8 +1027,7 @@
               "hierarchical_id": 4795,
               "hierarchical_parent": 4817,
               "category_id": 4817,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1268,
@@ -1070,8 +1051,7 @@
               "hierarchical_id": 4832,
               "hierarchical_parent": 4817,
               "category_id": 4817,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1335,
@@ -1095,8 +1075,7 @@
               "hierarchical_id": 4840,
               "hierarchical_parent": 4817,
               "category_id": 4817,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 370,
@@ -1120,8 +1099,7 @@
               "hierarchical_id": 4798,
               "hierarchical_parent": 4817,
               "category_id": 4817,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 2364,
@@ -1145,8 +1123,7 @@
               "hierarchical_id": 5484,
               "hierarchical_parent": 4817,
               "category_id": 4817,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             }
           ],
           "image_url": "/disk/api/v1/10360c6f-a382-4de8-b914-0faf8ef25dcb"
@@ -1179,8 +1156,7 @@
               "hierarchical_id": 4849,
               "hierarchical_parent": 4818,
               "category_id": 4818,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1988,
@@ -1204,8 +1180,7 @@
               "hierarchical_id": 4873,
               "hierarchical_parent": 4818,
               "category_id": 4818,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1983,
@@ -1229,8 +1204,7 @@
               "hierarchical_id": 4874,
               "hierarchical_parent": 4818,
               "category_id": 4818,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1285,
@@ -1254,8 +1228,7 @@
               "hierarchical_id": 4835,
               "hierarchical_parent": 4818,
               "category_id": 4818,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 374,
@@ -1279,8 +1252,7 @@
               "hierarchical_id": 4799,
               "hierarchical_parent": 4818,
               "category_id": 4818,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 375,
@@ -1304,8 +1276,7 @@
               "hierarchical_id": 4861,
               "hierarchical_parent": 4818,
               "category_id": 4818,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1002,
@@ -1329,8 +1300,7 @@
               "hierarchical_id": 4846,
               "hierarchical_parent": 4818,
               "category_id": 4818,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             }
           ],
           "image_url": "/disk/api/v1/8bcf784a-8c89-477e-b64e-25204ce6c44f"
@@ -1404,8 +1374,7 @@
               "hierarchical_id": 4791,
               "hierarchical_parent": 4819,
               "category_id": 4819,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 2348,
@@ -1429,8 +1398,7 @@
               "hierarchical_id": 5480,
               "hierarchical_parent": 4819,
               "category_id": 4819,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 351,
@@ -1454,8 +1422,7 @@
               "hierarchical_id": 4792,
               "hierarchical_parent": 4819,
               "category_id": 4819,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 353,
@@ -1537,8 +1504,7 @@
               "hierarchical_id": 4793,
               "hierarchical_parent": 4819,
               "category_id": 4819,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1735,
@@ -1601,8 +1567,7 @@
               "hierarchical_id": 4867,
               "hierarchical_parent": 4819,
               "category_id": 4819,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             }
           ],
           "image_url": "/disk/api/v1/ec73d719-2785-48e7-bcfc-7a4c2a4b1bd0"
@@ -1635,8 +1600,7 @@
               "hierarchical_id": 4800,
               "hierarchical_parent": 4820,
               "category_id": 4820,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 387,
@@ -1660,8 +1624,7 @@
               "hierarchical_id": 4801,
               "hierarchical_parent": 4820,
               "category_id": 4820,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 388,
@@ -1685,8 +1648,7 @@
               "hierarchical_id": 4802,
               "hierarchical_parent": 4820,
               "category_id": 4820,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 2005,
@@ -1710,8 +1672,7 @@
               "hierarchical_id": 4876,
               "hierarchical_parent": 4820,
               "category_id": 4820,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1251,
@@ -1735,8 +1696,7 @@
               "hierarchical_id": 4828,
               "hierarchical_parent": 4820,
               "category_id": 4820,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             }
           ],
           "image_url": "/disk/api/v1/83ed39d5-dabf-4d10-85f2-bd8093ffeff1"
@@ -1769,8 +1729,7 @@
               "hierarchical_id": 4844,
               "hierarchical_parent": 4821,
               "category_id": 4821,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1347,
@@ -1794,8 +1753,7 @@
               "hierarchical_id": 4843,
               "hierarchical_parent": 4821,
               "category_id": 4821,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1346,
@@ -1819,8 +1777,7 @@
               "hierarchical_id": 4842,
               "hierarchical_parent": 4821,
               "category_id": 4821,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 390,
@@ -1844,8 +1801,7 @@
               "hierarchical_id": 4803,
               "hierarchical_parent": 4821,
               "category_id": 4821,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1486,
@@ -1869,8 +1825,7 @@
               "hierarchical_id": 4851,
               "hierarchical_parent": 4821,
               "category_id": 4821,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 391,
@@ -1894,8 +1849,7 @@
               "hierarchical_id": 4804,
               "hierarchical_parent": 4821,
               "category_id": 4821,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             }
           ],
           "image_url": "/disk/api/v1/1633cd5e-00e1-4855-9204-89b7d863f467"
@@ -1928,8 +1882,7 @@
               "hierarchical_id": 4805,
               "hierarchical_parent": 4825,
               "category_id": 4825,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 401,
@@ -1953,8 +1906,7 @@
               "hierarchical_id": 4806,
               "hierarchical_parent": 4825,
               "category_id": 4825,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1286,
@@ -1978,8 +1930,7 @@
               "hierarchical_id": 4836,
               "hierarchical_parent": 4825,
               "category_id": 4825,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 2263,
@@ -2003,8 +1954,7 @@
               "hierarchical_id": 5440,
               "hierarchical_parent": 4825,
               "category_id": 4825,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 404,
@@ -2028,8 +1978,7 @@
               "hierarchical_id": 4808,
               "hierarchical_parent": 4825,
               "category_id": 4825,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 402,
@@ -2053,8 +2002,7 @@
               "hierarchical_id": 4807,
               "hierarchical_parent": 4825,
               "category_id": 4825,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 2030,
@@ -2117,8 +2065,7 @@
               "hierarchical_id": 4841,
               "hierarchical_parent": 4825,
               "category_id": 4825,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             }
           ],
           "image_url": "https://disk.saby.ru/disk/api/v1/d62dff65-39c9-4032-9d2f-72d417018fe1_f677bbc3-f684-48e1-b0a1-1de3c86a80ef"
@@ -2151,8 +2098,7 @@
               "hierarchical_id": 4829,
               "hierarchical_parent": 4822,
               "category_id": 4822,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1269,
@@ -2537,8 +2483,7 @@
               "hierarchical_id": 4833,
               "hierarchical_parent": 4822,
               "category_id": 4822,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1265,
@@ -2562,8 +2507,7 @@
               "hierarchical_id": 4831,
               "hierarchical_parent": 4822,
               "category_id": 4822,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1293,
@@ -2587,8 +2531,7 @@
               "hierarchical_id": 4839,
               "hierarchical_parent": 4822,
               "category_id": 4822,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1991,
@@ -2954,8 +2897,7 @@
               "hierarchical_id": 4877,
               "hierarchical_parent": 4822,
               "category_id": 4822,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 2002,
@@ -3123,8 +3065,7 @@
               "hierarchical_id": 4881,
               "hierarchical_parent": 4822,
               "category_id": 4822,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1993,
@@ -3225,8 +3166,7 @@
               "hierarchical_id": 4879,
               "hierarchical_parent": 4822,
               "category_id": 4822,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1998,
@@ -3327,8 +3267,7 @@
               "hierarchical_id": 4880,
               "hierarchical_parent": 4822,
               "category_id": 4822,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 2340,
@@ -3352,8 +3291,7 @@
               "hierarchical_id": 5481,
               "hierarchical_parent": 4822,
               "category_id": 4822,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 2344,
@@ -3377,8 +3315,7 @@
               "hierarchical_id": 5482,
               "hierarchical_parent": 4822,
               "category_id": 4822,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 2347,
@@ -3402,8 +3339,7 @@
               "hierarchical_id": 5483,
               "hierarchical_parent": 4822,
               "category_id": 4822,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 410,
@@ -3427,8 +3363,7 @@
               "hierarchical_id": 4860,
               "hierarchical_parent": 4822,
               "category_id": 4822,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             }
           ],
           "image_url": "/disk/api/v1/6309f147-9761-4ed0-8062-f998916046b0"
@@ -3461,8 +3396,7 @@
               "hierarchical_id": 4812,
               "hierarchical_parent": 4823,
               "category_id": 4823,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1557,
@@ -3486,8 +3420,7 @@
               "hierarchical_id": 4862,
               "hierarchical_parent": 4823,
               "category_id": 4823,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1221,
@@ -3511,8 +3444,7 @@
               "hierarchical_id": 4864,
               "hierarchical_parent": 4823,
               "category_id": 4823,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 2018,
@@ -3536,8 +3468,7 @@
               "hierarchical_id": 4884,
               "hierarchical_parent": 4823,
               "category_id": 4823,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 2451,
@@ -3561,8 +3492,7 @@
               "hierarchical_id": 5558,
               "hierarchical_parent": 4823,
               "category_id": 4823,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             }
           ],
           "image_url": "/disk/api/v1/cb2ab9c3-5d8a-43d3-b0a8-b2a37b8c7265"
@@ -3595,8 +3525,7 @@
               "hierarchical_id": 4814,
               "hierarchical_parent": 4824,
               "category_id": 4824,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 421,
@@ -3620,8 +3549,7 @@
               "hierarchical_id": 4815,
               "hierarchical_parent": 4824,
               "category_id": 4824,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 422,
@@ -3645,8 +3573,7 @@
               "hierarchical_id": 4816,
               "hierarchical_parent": 4824,
               "category_id": 4824,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1404,
@@ -3670,8 +3597,7 @@
               "hierarchical_id": 4847,
               "hierarchical_parent": 4824,
               "category_id": 4824,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             }
           ],
           "image_url": "/disk/api/v1/e28e850d-5045-45dc-8ad4-bc171e1122f4"
@@ -3704,8 +3630,7 @@
               "hierarchical_id": 5585,
               "hierarchical_parent": 5583,
               "category_id": 5583,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1371,
@@ -3729,8 +3654,7 @@
               "hierarchical_id": 5586,
               "hierarchical_parent": 5583,
               "category_id": 5583,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1847,
@@ -3754,8 +3678,7 @@
               "hierarchical_id": 5587,
               "hierarchical_parent": 5583,
               "category_id": 5583,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 116,
@@ -3932,8 +3855,7 @@
               "hierarchical_id": 5594,
               "hierarchical_parent": 5584,
               "category_id": 5584,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 104,
@@ -3957,8 +3879,7 @@
               "hierarchical_id": 5595,
               "hierarchical_parent": 5584,
               "category_id": 5584,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 105,
@@ -3982,8 +3903,7 @@
               "hierarchical_id": 5596,
               "hierarchical_parent": 5584,
               "category_id": 5584,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 111,
@@ -4007,8 +3927,7 @@
               "hierarchical_id": 5597,
               "hierarchical_parent": 5584,
               "category_id": 5584,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 112,
@@ -4080,8 +3999,7 @@
               "hierarchical_id": 5599,
               "hierarchical_parent": 5584,
               "category_id": 5584,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 1775,
@@ -4105,8 +4023,7 @@
               "hierarchical_id": 5600,
               "hierarchical_parent": 5584,
               "category_id": 5584,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 2294,
@@ -4130,8 +4047,7 @@
               "hierarchical_id": 5602,
               "hierarchical_parent": 5584,
               "category_id": 5584,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             },
             {
               "id": 2391,
@@ -4155,8 +4071,7 @@
               "hierarchical_id": 5603,
               "hierarchical_parent": 5584,
               "category_id": 5584,
-              "menu_id": 92,
-              "image_downloaded": true
+              "menu_id": 92
             }
           ],
           "image_url": null
@@ -4457,8 +4372,7 @@
               "hierarchical_id": 5510,
               "hierarchical_parent": null,
               "category_id": null,
-              "menu_id": 141,
-              "image_downloaded": true
+              "menu_id": 141
             },
             {
               "id": 2386,
@@ -4482,8 +4396,7 @@
               "hierarchical_id": 5512,
               "hierarchical_parent": null,
               "category_id": null,
-              "menu_id": 141,
-              "image_downloaded": true
+              "menu_id": 141
             },
             {
               "id": 2388,
@@ -4507,8 +4420,7 @@
               "hierarchical_id": 5581,
               "hierarchical_parent": null,
               "category_id": null,
-              "menu_id": 141,
-              "image_downloaded": true
+              "menu_id": 141
             },
             {
               "id": 2389,
@@ -4532,8 +4444,7 @@
               "hierarchical_id": 5582,
               "hierarchical_parent": null,
               "category_id": null,
-              "menu_id": 141,
-              "image_downloaded": true
+              "menu_id": 141
             }
           ],
           "image_url": null
