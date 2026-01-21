@@ -151,7 +151,7 @@ RESTAURANT_ADDRESS = "бул. Академика Ландау, 1, Москва"
    ```bash
    git add .
    git commit -m "Описание изменений"
-   git push origin main
+   git push origin master
    ```
 3. Автообновление подхватит изменения автоматически
 
