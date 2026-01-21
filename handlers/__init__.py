@@ -44,8 +44,10 @@ from .handlers_main import (
 # Импортируем часто используемые функции из handlers_registration
 from .handlers_registration import (
     ask_for_registration_phone,
+    ask_for_event_registration_phone,
     handle_post_registration_redirect,
-    RegistrationStates
+    RegistrationStates,
+    EventRegistrationStates
 )
 
 # Импортируем часто используемые функции из handlers_booking
@@ -135,6 +137,7 @@ __all__ = [
     'BookingStates',
     'AdminStates',
     'RegistrationStates',
+    'EventRegistrationStates',
     'MenuDeliveryStates',
     'DeliveryOrderStates',
     'PersonalCabinetStates',  # <-- ДОБАВИТЬ ЭТО
@@ -146,6 +149,7 @@ __all__ = [
     
     # Часто используемые функции из handlers_registration
     'ask_for_registration_phone',
+    'ask_for_event_registration_phone',
     'handle_post_registration_redirect',
     
     # Часто используемые функции из handlers_booking

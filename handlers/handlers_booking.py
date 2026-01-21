@@ -28,6 +28,12 @@ try:
     print("✅ Presto API загружен успешно")
 except ImportError as e:
     print(f"⚠️ Ошибка импорта Presto API: {e}")
+
+try:
+    from .handlers_main import clean_phone_for_link
+except ImportError:
+    def clean_phone_for_link(phone):
+        return ''.join(c for c in phone if c.isdigit() or c == '+')
     def get_booking_calendar(*args, **kwargs):
         print("⚠️ Presto API не доступен: get_booking_calendar")
         return None
@@ -65,14 +71,54 @@ except ImportError as e:
 from .utils import update_message, check_user_registration_fast, clear_user_cache, send_admin_notification, safe_delete_message, safe_send_message, typing_indicator, clear_operator_chat
 from .handlers_main import clean_phone_for_link
 
+async def show_booking_options(callback_or_user_id, bot=None):
+    """Показать опции бронирования"""
+    # Определяем тип входных данных
+    if hasattr(callback_or_user_id, 'from_user'):
+        # Это callback - просто отправляем новое сообщение
+        callback = callback_or_user_id
+        user_id = callback.from_user.id
+        bot = callback.bot
+    else:
+        # Это user_id и bot
+        user_id = callback_or_user_id
+        if bot is None:
+            return
+
+    # Всегда отправляем новое сообщение
+    kb = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📍 Конструктор бронирования", callback_data="new_booking")],
+        [InlineKeyboardButton(text="💬 Забронировать в чате", callback_data="chat_operator")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_main")]
+    ])
+
+    await safe_send_message(bot, user_id,
+                           "📅 <b>Бронирование столика</b>\n\n"
+                           "Вы можете забронировать столик двумя способами:\n\n"
+                           "1️⃣ Через наш конструктор бронирования (с выбором стола на схеме)\n"
+                           "2️⃣ Написать мне в чате, и я сам забронирую для вас!\n\n"
+                           "💡 <b>Пример сообщения:</b> \"3 человека, 19 января, в 19:30\"\n\n"
+                           "ℹ️ <b>Важно:</b> Автоматическое бронирование доступно до 4 человек.\n"
+                           "Для компаний от 5 человек свяжитесь с оператором.\n\n"
+                           "Выберите удобный для вас способ:",
+                           reply_markup=kb,
+                           parse_mode="HTML")
+
 try:
     from PIL import Image, ImageDraw, ImageFont, ImageFilter
     from io import BytesIO
-    import requests
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
     print("⚠️ Pillow не установлен.")
+
+try:
+    import requests
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    REQUESTS_AVAILABLE = False
+    requests = None
+    print("⚠️ requests не установлен.")
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -159,42 +205,32 @@ async def booking_start(callback: types.CallbackQuery, state: FSMContext):
     user_bookings = await get_user_bookings(user_id)
     active_bookings = [b for b in user_bookings if b.get('status_code', 0) not in [40, 45, 220]]
     
-    if active_bookings:
-        # Показать меню выбора: новая бронь или управление существующими
-        kb = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="➕ Новая бронь", callback_data="new_booking")],
-            [InlineKeyboardButton(text="📋 Мои брони", callback_data="my_bookings")],
-            [InlineKeyboardButton(text="💬 Забронировать в чате", callback_data="chat_operator")],
-            [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_main")]
-        ])
-        
-        await update_message(user_id,
-                           "📅 <b>Бронирование столика</b>\n\n"
-                           f"У вас есть активные брони: {len(active_bookings)}",
-                           reply_markup=kb,
-                           parse_mode="HTML",
-                           bot=callback.bot)
-    else:
-        # Показать только кнопку новой брони
-        await show_booking_options(user_id, callback.bot)
-
-async def show_booking_options(user_id: int, bot):
     kb = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="📍 Конструктор бронирования", callback_data="new_booking")],
+        [InlineKeyboardButton(text="➕ Новая бронь", callback_data="new_booking")],
+        [InlineKeyboardButton(text="📋 Мои брони", callback_data="my_bookings")],
         [InlineKeyboardButton(text="💬 Забронировать в чате", callback_data="chat_operator")],
         [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_main")]
     ])
-    
-    await update_message(user_id,
-                        "📅 <b>Бронирование столика</b>\n\n"
-                        "Вы можете забронировать столик двумя способами:\n\n"
-                        "1️⃣ Через наш конструктор бронирования (с выбором стола на схеме)\n"
-                        "2️⃣ Написать мне в чате, и я сам забронирую для вас!\n\n"
-                        "💡 <b>Пример сообщения:</b> \"3 человека, 19 января, в 19:30\"\n\n"
-                        "Выберите удобный для вас способ:",
-                        reply_markup=kb,
-                        parse_mode="HTML",
-                        bot=bot)
+
+    if active_bookings:
+        # Показать меню выбора: новая бронь или управление существующими
+        text = "📅 <b>Бронирование столика</b>\n\n" \
+               f"У вас есть активные брони: {len(active_bookings)}\n\n" \
+               "Вы можете создать новую бронь или управлять существующими."
+    else:
+        # Показать только кнопку новой брони
+        text = "📅 <b>Бронирование столика</b>\n\n" \
+               "Вы можете забронировать столик двумя способами:\n\n" \
+               "1️⃣ Через наш конструктор бронирования (с выбором стола на схеме)\n" \
+               "2️⃣ Написать мне в чате, и я сам забронирую для вас!\n\n" \
+               "💡 <b>Пример сообщения:</b> \"3 человека, 19 января, в 19:30\"\n\n" \
+               "ℹ️ <b>Важно:</b> Автоматическое бронирование доступно до 4 человек.\n" \
+               "Для компаний от 5 человек свяжитесь с оператором.\n\n" \
+               "Выберите удобный для вас способ:"
+
+    await callback.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
+
+
 
 @router.callback_query(F.data == "new_booking")
 async def new_booking_handler(callback: types.CallbackQuery, state: FSMContext):
@@ -223,10 +259,10 @@ async def new_booking_handler(callback: types.CallbackQuery, state: FSMContext):
 @router.callback_query(F.data == "my_bookings")
 async def my_bookings_handler(callback: types.CallbackQuery, state: FSMContext):
     global _schema_message_id
-    
+
     await callback.answer()
     user_id = callback.from_user.id
-    
+
     # Удаляем схему зала если есть
     if _schema_message_id:
         try:
@@ -234,34 +270,44 @@ async def my_bookings_handler(callback: types.CallbackQuery, state: FSMContext):
             _schema_message_id = None
         except:
             pass
-    
-    await show_user_bookings(user_id, callback.bot, state)
 
-async def show_user_bookings(user_id: int, bot, state: FSMContext = None):
+    await show_user_bookings(callback, state)
+
+async def show_user_bookings(callback: types.CallbackQuery, state: FSMContext = None):
     """Показать список броней пользователя"""
     # Очищаем завершенные брони перед показом
     logger.debug("Очистка завершенных бронирований пропущена")
-    
+
+    user_id = callback.from_user.id
     user_bookings = await get_user_bookings(user_id)
-    
+
     if not user_bookings:
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="➕ Новая бронь", callback_data="new_booking")],
             [InlineKeyboardButton(text="💬 Забронировать в чате", callback_data="chat_operator")],
             [InlineKeyboardButton(text="⬅️ Назад", callback_data="booking")]
         ])
-        
-        await update_message(user_id,
-                           "📋 <b>Мои брони</b>\n\n"
-                           "У вас пока нет активных бронирований.",
-                           reply_markup=kb,
-                           parse_mode="HTML",
-                           bot=bot)
+
+        try:
+            await callback.message.edit_text(
+                "📋 <b>Мои брони</b>\n\n"
+                "У вас пока нет активных бронирований.",
+                reply_markup=kb,
+                parse_mode="HTML"
+            )
+        except Exception:
+            await callback.bot.send_message(
+                user_id,
+                "📋 <b>Мои брони</b>\n\n"
+                "У вас пока нет активных бронирований.",
+                reply_markup=kb,
+                parse_mode="HTML"
+            )
         return
-    
+
     # Показываем только активные брони (после очистки)
     text = "📋 <b>Мои брони</b>\n\n"
-    
+
     if user_bookings:
         text += f"✅ <b>Активные брони ({len(user_bookings)}):</b>\n"
         for i, booking in enumerate(user_bookings, 1):
@@ -269,23 +315,31 @@ async def show_user_bookings(user_id: int, bot, state: FSMContext = None):
             text += f"{i}. {booking.get('date_display', 'Дата')} - {booking.get('time', 'Время')}\n"
             text += f"   Гостей: {booking.get('guests', 0)}, Стол: {booking.get('table_name', '—')}\n"
             text += f"   {status}\n\n"
-    
+
     kb_rows = []
-    
+
     # Кнопки для активных броней
     for i, booking in enumerate(user_bookings[:5], 1):  # Ограничим 5 бронями
         kb_rows.append([InlineKeyboardButton(
             text=f"📅 Бронь {i}: {booking.get('date_display', '')} {booking.get('time', '')}",
             callback_data=f"booking_details:{booking.get('external_id', '')}"
         )])
-    
+
     # Общие кнопки
     kb_rows.append([InlineKeyboardButton(text="➕ Новая бронь", callback_data="new_booking")])
     kb_rows.append([InlineKeyboardButton(text="💬 Забронировать в чате", callback_data="chat_operator")])
     kb_rows.append([InlineKeyboardButton(text="⬅️ Назад", callback_data="booking")])
-    
-    await update_message(user_id, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=kb_rows), parse_mode="HTML", bot=bot)
-    
+
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass  # Игнорируем ошибки удаления
+
+    try:
+        await callback.bot.send_message(user_id, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=kb_rows), parse_mode="HTML")
+    except Exception as e:
+        logger.error(f"Не удалось отправить сообщение списка броней: {e}")
+
     if state:
         await state.set_state(BookingStates.managing_booking)
 
@@ -435,7 +489,16 @@ async def booking_details_callback(callback: types.CallbackQuery, state: FSMCont
     kb_rows.append([InlineKeyboardButton(text="📞 Админ", callback_data="call_admin")])
     kb_rows.append([InlineKeyboardButton(text="⬅️ Назад", callback_data="booking")])
     
-    await update_message(callback.from_user.id, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=kb_rows), parse_mode="HTML", bot=callback.bot)
+    try:
+        await callback.message.delete()
+    except Exception:
+        pass
+
+    try:
+        await callback.bot.send_message(callback.from_user.id, text, reply_markup=InlineKeyboardMarkup(inline_keyboard=kb_rows), parse_mode="HTML")
+    except Exception as e:
+        logger.error(f"Не удалось отправить детали брони: {e}")
+
     await state.set_state(BookingStates.managing_booking)
 
 @router.callback_query(F.data.startswith("edit_booking:"))
@@ -720,15 +783,22 @@ async def select_guests(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
     guests = int(callback.data.split(":", 1)[1])
     if guests >= 5:
+        text = (
+            f"👥 <b>Бронирование на {guests} человек</b>\n\n"
+            f"❌ <b>Автоматическое бронирование недоступно</b>\n\n"
+            f"Бронь стола доступна в автоматическом режиме до 4 человек.\n"
+            f"Для компании от 5 человек свяжитесь с оператором."
+        )
+        
         await update_message(
             callback.from_user.id,
-            "👥 <b>Для компании от 5 человек</b>\n"
-            "Пожалуйста, свяжитесь с администратором для бронирования:\n"
-            f"📞 <a href=\"tel:{clean_phone_for_link(config.RESTAURANT_PHONE)}\">{config.RESTAURANT_PHONE}</a>",
-            reply_markup=keyboards.back_to_main(),
+            text,
             parse_mode="HTML",
             bot=callback.bot
         )
+        
+        # Показываем меню связи
+        await call_admin(callback)
         await state.clear()
         return
 
@@ -1332,34 +1402,23 @@ async def select_random_table(callback: types.CallbackQuery, state: FSMContext):
         [InlineKeyboardButton(text="❌ Отмена", callback_data="cancel_booking")]
     ])
     
-    # Пытаемся отредактировать сообщение, если не получается - удаляем и отправляем новое
+    # Всегда создаем новое сообщение, удаляем старое
+    _schema_message_id = None
+
     try:
-        if _schema_message_id and callback.message.message_id == _schema_message_id:
-            # Если это сообщение со схемой (фото), удаляем его и отправляем новое
-            await callback.message.delete()
-            await callback.bot.send_message(
-                callback.from_user.id, 
-                text, 
-                reply_markup=kb, 
-                parse_mode="HTML"
-            )
-            _schema_message_id = None
-        else:
-            # Обычное редактирование текстового сообщения
-            await callback.message.edit_text(text, reply_markup=kb, parse_mode="HTML")
-    except:
-        # Если редактирование не удалось, удаляем и отправляем новое
-        try:
-            await callback.message.delete()
-        except:
-            pass
+        await callback.message.delete()
+    except Exception:
+        pass  # Игнорируем ошибки удаления
+
+    try:
         await callback.bot.send_message(
-            callback.from_user.id, 
-            text, 
-            reply_markup=kb, 
+            callback.from_user.id,
+            text,
+            reply_markup=kb,
             parse_mode="HTML"
         )
-        _schema_message_id = None
+    except Exception as e:
+        logger.error(f"Не удалось отправить сообщение подтверждения: {e}")
     
     await state.set_state(BookingStates.waiting_for_confirmation)
 
@@ -1583,21 +1642,21 @@ async def confirm_booking(callback: types.CallbackQuery, state: FSMContext):
                 [InlineKeyboardButton(text="⬅️ В главное меню", callback_data="back_main")]
             ])
             
-            # РЕДАКТИРУЕМ сообщение на подтверждение брони
+            # Всегда создаем новое сообщение с результатом
             try:
-                await callback.message.edit_text(success_text, reply_markup=kb, parse_mode="HTML")
-            except:
-                # Если редактирование не удалось, удаляем и отправляем новое
-                try:
-                    await callback.message.delete()
-                except:
-                    pass
+                await callback.message.delete()
+            except Exception:
+                pass  # Игнорируем ошибки удаления
+
+            try:
                 await callback.bot.send_message(
-                    callback.from_user.id, 
-                    success_text, 
-                    reply_markup=kb, 
+                    callback.from_user.id,
+                    success_text,
+                    reply_markup=kb,
                     parse_mode="HTML"
                 )
+            except Exception as e:
+                logger.error(f"Не удалось отправить сообщение с результатом брони: {e}")
             
         else:
             try:
@@ -1655,6 +1714,10 @@ async def back_main(callback: types.CallbackQuery):
 
 def generate_hall_schema(hall_data: dict, guests: int, schema_id: str, selected_date: str, selected_time: str) -> tuple[str, list]:
     try:
+        if not PIL_AVAILABLE:
+            print("⚠️ Pillow не установлен, пропускаем генерацию схемы зала")
+            return None, []
+
         hall = hall_data["halls"][0]
         items = hall.get("items", [])
         base_schema_path = os.path.join("files", "tables.png")

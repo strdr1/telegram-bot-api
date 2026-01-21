@@ -43,8 +43,42 @@ from difflib import SequenceMatcher
 # Импортируем функции из других модулей с отложенным импортом для избежания циклических зависимостей
 
 # Локальные определения функций с отложенным импортом
-async def show_booking_options(user_id: int, bot):
+async def show_booking_options(callback_or_user_id, bot=None):
     """Показать опции бронирования"""
+    # Определяем тип входных данных
+    if hasattr(callback_or_user_id, 'from_user'):
+        # Это callback
+        callback = callback_or_user_id
+        user_id = callback.from_user.id
+        bot = callback.bot
+        # Пытаемся отредактировать сообщение
+        try:
+            await callback.message.edit_text(
+                "📅 <b>Бронирование столика</b>\n\n"
+                "Вы можете забронировать столик двумя способами:\n\n"
+                "1️⃣ Через наш конструктор бронирования (с выбором стола на схеме)\n"
+                "2️⃣ Написать мне в чате, и я сам забронирую для вас!\n\n"
+                "💡 <b>Пример сообщения:</b> \"3 человека, 19 января, в 19:30\"\n\n"
+                "ℹ️ <b>Важно:</b> Автоматическое бронирование доступно до 4 человек.\n"
+                "Для компаний от 5 человек свяжитесь с оператором.\n\n"
+                "Выберите удобный для вас способ:",
+                reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="📍 Конструктор бронирования", callback_data="new_booking")],
+                    [InlineKeyboardButton(text="💬 Забронировать в чате", callback_data="chat_operator")],
+                    [InlineKeyboardButton(text="⬅️ Назад", callback_data="back_main")]
+                ]),
+                parse_mode="HTML"
+            )
+            return
+        except Exception:
+            pass  # Если редактирование не удалось, продолжаем с отправкой нового сообщения
+    else:
+        # Это user_id и bot
+        user_id = callback_or_user_id
+        if bot is None:
+            return
+
+    # Импортируем реальную функцию из handlers_booking
     try:
         from .handlers_booking import show_booking_options as real_show_booking_options
         await real_show_booking_options(user_id, bot)
@@ -526,6 +560,35 @@ async def cmd_bot_menu(message: types.Message, state: FSMContext):
 async def cmd_menu(message: types.Message, state: FSMContext):
     """Открыть меню ресторана с проверкой возраста"""
     user_id = message.from_user.id
+
+    # Проверяем на вопрос о персонаже для отправки промежуточного сообщения
+    character_question_match = re.search(r'^А\s+([А-Яа-яЁёA-Za-z\s]+)\s+заходил', message.text.strip(), re.IGNORECASE) or \
+                              re.search(r'^А\s+([А-Яа-яЁёA-Za-z\s]+)\s+заходила', message.text.strip(), re.IGNORECASE) or \
+                              re.search(r'^А\s+([А-Яа-яЁёA-Za-z\s]+)\s+заходили', message.text.strip(), re.IGNORECASE) or \
+                              re.search(r'^А\s+([А-Яа-яЁёA-Za-z\s]+)\s+был', message.text.strip(), re.IGNORECASE) or \
+                              re.search(r'^А\s+([А-Яа-яЁёA-Za-z\s]+)\s+была', message.text.strip(), re.IGNORECASE) or \
+                              re.search(r'^А\s+([А-Яа-яЁёA-Za-z\s]+)\s+были', message.text.strip(), re.IGNORECASE) or \
+                              re.search(r'^А\s+([А-Яа-яЁёA-Za-z\s]+)\s+приходил', message.text.strip(), re.IGNORECASE) or \
+                              re.search(r'^А\s+([А-Яа-яЁёA-Za-z\s]+)\s+приходила', message.text.strip(), re.IGNORECASE) or \
+                              re.search(r'^А\s+([А-Яа-яЁёA-Za-z\s]+)\s+приходили', message.text.strip(), re.IGNORECASE) or \
+                              re.search(r'^([А-Яа-яЁёA-Za-z\s]+)\s+заходил', message.text.strip(), re.IGNORECASE) or \
+                              re.search(r'^([А-Яа-яЁёA-Za-z\s]+)\s+заходила', message.text.strip(), re.IGNORECASE) or \
+                              re.search(r'^([А-Яа-яЁёA-Za-z\s]+)\s+заходили', message.text.strip(), re.IGNORECASE) or \
+                              re.search(r'^([А-Яа-яЁёA-Za-z\s]+)\s+приходил', message.text.strip(), re.IGNORECASE) or \
+                              re.search(r'^([А-Яа-яЁёA-Za-z\s]+)\s+приходила', message.text.strip(), re.IGNORECASE) or \
+                              re.search(r'^([А-Яа-яЁёA-Za-z\s]+)\s+приходили', message.text.strip(), re.IGNORECASE)
+
+    if character_question_match:
+        character_name = character_question_match.group(1).strip()
+        logger.info(f"Обнаружен вопрос о персонаже: '{character_name}' - отправляем промежуточное сообщение")
+
+        # Отправляем промежуточное сообщение перед генерацией
+        await safe_send_message(message.bot, user_id, f"📸 Сейчас сфотографирую {character_name}, секунду! ⏳")
+        logger.info(f"Отправлено промежуточное сообщение для {character_name}")
+
+        # Добавляем небольшую задержку чтобы сообщение успело отобразиться
+        import asyncio
+        await asyncio.sleep(1)
     
     # Проверяем, подтверждал ли пользователь возраст
     if user_id not in age_verification_cache:
@@ -640,7 +703,7 @@ async def cmd_call(message: types.Message, state: FSMContext):
     restaurant_phone = database.get_setting('restaurant_phone', config.RESTAURANT_PHONE)
     restaurant_hours = database.get_setting('restaurant_hours', config.RESTAURANT_HOURS)
     clean_phone = clean_phone_for_link(restaurant_phone)
-    
+
     text = f"""📞 <b>Связаться с нами</b>
 
 <a href="tel:{clean_phone}">{restaurant_phone}</a>
@@ -648,15 +711,64 @@ async def cmd_call(message: types.Message, state: FSMContext):
 <b>Часы работы:</b>
 {restaurant_hours}
 
-💬 Или напишите нам прямо здесь!"""
-    
+<i>Или напишите нам прямо здесь!</i>"""
+
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
         [types.InlineKeyboardButton(text="💬 Написать оператору", callback_data="chat_operator")],
         [types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back_main")]
     ])
-    
-    await safe_send_message(message.bot, message.from_user.id, text, 
+
+    await safe_send_message(message.bot, message.from_user.id, text,
                            reply_markup=keyboard, parse_mode="HTML")
+
+@router.message(Command("restart_menu"))
+@handler_timeout()
+async def cmd_restart_menu(message: types.Message, state: FSMContext):
+    """Принудительное обновление меню из Presto API"""
+    user_id = message.from_user.id
+
+    # Проверяем, является ли пользователь админом
+    if not database.is_admin(user_id):
+        await safe_send_message(message.bot, user_id,
+                               "❌ Эта команда доступна только администраторам.",
+                               parse_mode="HTML")
+        return
+
+    await safe_send_message(message.bot, user_id,
+                           "🔄 <b>Начинаю обновление меню...</b>\n\nПожалуйста, подождите...",
+                           parse_mode="HTML")
+
+    try:
+        # Импортируем функцию загрузки меню
+        from menu_cache import menu_cache
+
+        # Обновляем меню с принудительной перезагрузкой
+        menus = await menu_cache.load_all_menus(force_update=True)
+
+        if menus:
+            total_items = 0
+            for menu_id, menu_data in menus.items():
+                for cat_id, cat_data in menu_data.get('categories', {}).items():
+                    total_items += len(cat_data.get('items', []))
+
+            await safe_send_message(message.bot, user_id,
+                                   f"✅ <b>Меню успешно обновлено!</b>\n\n"
+                                   f"📊 Загружено {len(menus)} меню\n"
+                                   f"🍽️ Всего позиций: {total_items}\n\n"
+                                   f"🕐 Обновлено: {datetime.now().strftime('%H:%M:%S')}",
+                                   parse_mode="HTML")
+        else:
+            await safe_send_message(message.bot, user_id,
+                                   "❌ <b>Ошибка обновления меню</b>\n\n"
+                                   "Не удалось загрузить меню из Presto API.",
+                                   parse_mode="HTML")
+
+    except Exception as e:
+        logger.error(f"Ошибка при обновлении меню: {e}")
+        await safe_send_message(message.bot, user_id,
+                               f"❌ <b>Ошибка обновления меню</b>\n\n"
+                               f"Подробности: {str(e)}",
+                               parse_mode="HTML")
 
 async def delete_start_message_after_delay(message: types.Message, delay_seconds: int):
     """Удаляет сообщение через указанное количество секунд"""
@@ -1140,10 +1252,11 @@ async def faq_callback(callback: types.CallbackQuery):
         
         text += "\n<b>Не нашли ответ?</b> Нажмите '📞 Свяжитесь с нами'!"
     
-    await update_message(callback.from_user.id, text,
-                        reply_markup=keyboards.faq_menu(faq_list),
-                        parse_mode="HTML",
-                        bot=callback.bot)
+    await callback.message.edit_text(
+        text,
+        reply_markup=keyboards.faq_menu(faq_list),
+        parse_mode="HTML"
+    )
 
 @router.callback_query(F.data.startswith("faq_"))
 async def faq_answer_callback(callback: types.CallbackQuery):
@@ -1269,6 +1382,531 @@ async def show_reviews_handler(user_id: int, bot):
 
 # ===== КОНТАКТЫ И ОПЕРАТОР =====
 
+@router.callback_query(F.data == "event_registration")
+async def event_registration_callback(callback: types.CallbackQuery):
+    """Регистрация на мероприятия"""
+    await callback.answer()
+
+    user_id = callback.from_user.id
+    log_user_action(user_id, "Открыл регистрацию на мероприятия")
+
+    restaurant_phone = database.get_setting('restaurant_phone', config.RESTAURANT_PHONE)
+    clean_phone = clean_phone_for_link(restaurant_phone)
+
+    text = f"""🎉 <b>Регистрация на мероприятия</b>
+
+Мы регулярно проводим интересные мероприятия в нашем ресторане.
+
+Для регистрации на мероприятия свяжитесь с нами:
+
+📞 <a href="tel:{clean_phone}">{restaurant_phone}</a>
+
+<i>Наши менеджеры расскажут о предстоящих событиях и помогут с регистрацией!</i>"""
+
+    try:
+        await callback.message.edit_text(
+            text,
+            reply_markup=keyboards.event_registration_menu(),
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        logger.error(f"Ошибка редактирования сообщения в event_registration_callback: {e}")
+        # Если редактирование не удалось, отправляем новое сообщение
+        await safe_send_message(
+            callback.bot,
+            user_id,
+            text,
+            reply_markup=keyboards.event_registration_menu(),
+            parse_mode="HTML"
+        )
+
+async def send_private_event_application_to_admin(user_id: int, bot, event_type: str = None):
+    """Отправка СРОЧНОЙ заявки на частное мероприятие администратору"""
+    try:
+        # Получаем данные пользователя
+        user_data = database.get_user_complete_data(user_id)
+        name = user_data.get('name', 'Не указано') if user_data else 'Не указано'
+        phone = user_data.get('phone', 'Не указано') if user_data else 'Не указано'
+        
+        # Получаем username
+        username = None
+        try:
+            user_info = await bot.get_chat(user_id)
+            username = user_info.username
+        except:
+            username = None
+        
+        # Определяем тип мероприятия для отображения
+        event_type_display = {
+            'день_рождения': '🎂 День рождения',
+            'свадьба': '💒 Свадьба',
+            'корпоратив': '🏢 Корпоратив',
+            'юбилей': '🎊 Юбилей',
+            'детский_праздник': '🎈 Детский праздник',
+            'другое': '🎭 Другое мероприятие'
+        }
+        
+        event_display = event_type_display.get(event_type, '🎉 Частное мероприятие') if event_type else '🎉 Частное мероприятие'
+        
+        # Формируем СРОЧНОЕ сообщение для админа
+        from datetime import datetime
+        admin_text = f"""🚨 <b>ЗАЯВКА НА ЧАСТНОЕ МЕРОПРИЯТИЕ</b>
+
+🎉 <b>Тип:</b> {event_display}
+
+👤 <b>Клиент:</b> {name}
+📱 <b>Телефон:</b> {phone}
+🆔 <b>Telegram:</b> @{username if username else 'не указан'}
+🆔 <b>ID:</b> {user_id}
+
+⚡ <b>ПОВЫШЕННЫЙ ПРИОРИТЕТ!</b>
+
+⏰ <b>Время:</b> {datetime.now().strftime('%d.%m.%Y %H:%M')}"""
+        
+        # Отправляем всем админам
+        all_users = database.get_all_users()
+        admin_ids = [user[0] for user in all_users if database.is_admin(user[0])]
+        for admin_id in admin_ids:
+            try:
+                await bot.send_message(admin_id, admin_text, parse_mode="HTML")
+            except Exception as e:
+                logger.error(f"Ошибка отправки срочной заявки на мероприятие админу {admin_id}: {e}")
+        
+        logger.info(f"СРОЧНАЯ заявка на частное мероприятие ({event_type}) от пользователя {user_id} отправлена админам")
+        
+    except Exception as e:
+        logger.error(f"Ошибка отправки срочной заявки на частное мероприятие: {e}")
+
+@router.callback_query(F.data == "show_main_menu_after_private_event")
+async def show_main_menu_after_private_event_callback(callback: types.CallbackQuery):
+    """Показать основное меню после регистрации на частное мероприятие"""
+    await callback.answer()
+    
+    try:
+        # Отправляем основное меню (PDF)
+        menu_path = "files/menu/Menu.pdf"
+        if os.path.exists(menu_path):
+            with open(menu_path, 'rb') as menu_file:
+                await callback.bot.send_document(
+                    callback.from_user.id,
+                    BufferedInputFile(menu_file.read(), filename="Основное_меню.pdf"),
+                    caption="📋 <b>Основное меню ресторана Mashkov</b>\n\nВот наше полное меню с актуальными ценами!",
+                    parse_mode="HTML"
+                )
+        else:
+            await callback.bot.send_message(
+                callback.from_user.id,
+                "📋 <b>Основное меню</b>\n\nК сожалению, файл меню временно недоступен. Свяжитесь с нами для получения актуального меню.",
+                parse_mode="HTML"
+            )
+        
+        # Редактируем исходное сообщение
+        await callback.message.edit_text(
+            "✅ <b>Основное меню отправлено!</b>\n\nНаш менеджер скоро свяжется с вами для обсуждения деталей мероприятия.",
+            reply_markup=types.InlineKeyboardMarkup(inline_keyboard=[
+                [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+            ]),
+            parse_mode="HTML"
+        )
+        
+    except Exception as e:
+        logger.error(f"Ошибка отправки основного меню после частного мероприятия: {e}")
+
+@router.callback_query(F.data == "show_banquet_menu_after_private_event")
+async def show_banquet_menu_after_private_event_callback(callback: types.CallbackQuery):
+    """Показать банкетное меню после регистрации на частное мероприятие"""
+    await callback.answer()
+    
+    try:
+        # Отправляем банкетное меню (Excel)
+        banquet_menu_path = "files/menu/MenuBanket.xlsx"
+        if os.path.exists(banquet_menu_path):
+            with open(banquet_menu_path, 'rb') as banquet_file:
+                await callback.bot.send_document(
+                    callback.from_user.id,
+                    BufferedInputFile(banquet_file.read(), filename="Банкетное_меню.xlsx"),
+                    caption="🍾 <b>Банкетное меню ресторана Mashkov</b>\n\nСпециальные предложения для торжественных мероприятий!",
+                    parse_mode="HTML"
+                )
+        else:
+            await callback.bot.send_message(
+                callback.from_user.id,
+                "🍾 <b>Банкетное меню</b>\n\nК сожалению, файл банкетного меню временно недоступен. Свяжитесь с нами для получения актуального предложения.",
+                parse_mode="HTML"
+            )
+        
+        # Редактируем исходное сообщение
+        await callback.message.edit_text(
+            "✅ <b>Банкетное меню отправлено!</b>\n\nНаш менеджер скоро свяжется с вами для обсуждения деталей мероприятия.",
+            reply_markup=types.InlineKeyboardMarkup(inline_keyboard=[
+                [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+            ]),
+            parse_mode="HTML"
+        )
+        
+    except Exception as e:
+        logger.error(f"Ошибка отправки банкетного меню после частного мероприятия: {e}")
+
+@router.callback_query(F.data == "show_both_menus_after_private_event")
+async def show_both_menus_after_private_event_callback(callback: types.CallbackQuery):
+    """Показать оба меню после регистрации на частное мероприятие"""
+    await callback.answer()
+    
+    try:
+        # Отправляем основное меню (PDF)
+        menu_path = "files/menu/Menu.pdf"
+        if os.path.exists(menu_path):
+            with open(menu_path, 'rb') as menu_file:
+                await callback.bot.send_document(
+                    callback.from_user.id,
+                    BufferedInputFile(menu_file.read(), filename="Основное_меню.pdf"),
+                    caption="📋 <b>Основное меню ресторана Mashkov</b>",
+                    parse_mode="HTML"
+                )
+        
+        # Отправляем банкетное меню (Excel)
+        banquet_menu_path = "files/menu/MenuBanket.xlsx"
+        if os.path.exists(banquet_menu_path):
+            with open(banquet_menu_path, 'rb') as banquet_file:
+                await callback.bot.send_document(
+                    callback.from_user.id,
+                    BufferedInputFile(banquet_file.read(), filename="Банкетное_меню.xlsx"),
+                    caption="🍾 <b>Банкетное меню ресторана Mashkov</b>\n\nСпециальные предложения для торжественных мероприятий!",
+                    parse_mode="HTML"
+                )
+        
+        # Редактируем исходное сообщение
+        await callback.message.edit_text(
+            "✅ <b>Оба меню отправлены!</b>\n\nТеперь вы можете ознакомиться с нашими предложениями. Наш менеджер скоро свяжется с вами для обсуждения деталей мероприятия.",
+            reply_markup=types.InlineKeyboardMarkup(inline_keyboard=[
+                [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+            ]),
+            parse_mode="HTML"
+        )
+        
+    except Exception as e:
+        logger.error(f"Ошибка отправки обоих меню после частного мероприятия: {e}")
+
+@router.callback_query(F.data == "event_application")
+async def event_application_callback(callback: types.CallbackQuery, state: FSMContext):
+    """Начало процесса подачи заявки на мероприятие"""
+    await callback.answer()
+    
+    user_id = callback.from_user.id
+    log_user_action(user_id, "Начал подачу заявки на мероприятие")
+    
+    # Проверяем регистрацию пользователя
+    if check_user_registration_fast(user_id) != 'completed':
+        # Для незарегистрированных пользователей запускаем процесс регистрации
+        from .handlers_registration import ask_for_event_registration_phone, EventRegistrationStates
+        await ask_for_event_registration_phone(user_id, callback.bot, "event_registration")
+        await state.set_state(EventRegistrationStates.waiting_for_phone)
+        return
+    
+    # Если пользователь уже зарегистрирован, отправляем заявку
+    await send_event_application_to_admin(user_id, callback.bot)
+    
+    # Всегда редактируем сообщение с благодарностью и кнопкой "Назад"
+    text = """✅ <b>Спасибо за заявку!</b>
+
+С вами скоро свяжутся для выяснения деталей и подтверждения регистрации.
+
+📞 Если у вас есть срочные вопросы, вы можете связаться с нами напрямую."""
+    
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back_main")]
+    ])
+    
+    try:
+        await callback.message.edit_text(
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+        logger.info(f"Сообщение успешно отредактировано для пользователя {user_id}")
+    except Exception as e:
+        logger.error(f"Ошибка редактирования сообщения в event_application_callback: {e}")
+        # Если редактирование не удалось, отправляем новое сообщение
+        await safe_send_message(
+            callback.bot,
+            user_id,
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+
+@router.message(Command("event"))
+async def event_command(message: types.Message):
+    """Команда /event - показать меню мероприятий"""
+    user_id = message.from_user.id
+    log_user_action(user_id, "Использовал команду /event")
+
+    restaurant_phone = database.get_setting('restaurant_phone', config.RESTAURANT_PHONE)
+    clean_phone = clean_phone_for_link(restaurant_phone)
+
+    text = f"""🎉 <b>Регистрация на мероприятия</b>
+
+Мы регулярно проводим интересные мероприятия в нашем ресторане.
+
+Для регистрации на мероприятия свяжитесь с нами:
+
+📞 <a href="tel:{clean_phone}">{restaurant_phone}</a>
+
+<i>Наши менеджеры расскажут о предстоящих событиях и помогут с регистрацией!</i>"""
+
+    try:
+        await safe_send_message(
+            message.bot,
+            user_id,
+            text,
+            reply_markup=keyboards.event_registration_menu(),
+            parse_mode="HTML"
+        )
+        logger.info(f"Отправлено меню мероприятий по команде /event пользователю {user_id}")
+    except Exception as e:
+        logger.error(f"Ошибка отправки меню мероприятий по команде /event пользователю {user_id}: {e}")
+
+async def show_private_event_options_menu(user_id: int, bot):
+    """Показать опции для частных мероприятий с двумя кнопками"""
+    text = """🎉 <b>Организация частных мероприятий</b>
+
+Да, конечно! Я могу забронировать дату под ваше мероприятие, могу многое рассказать и дать ответы на большинство вопросов.
+
+Но лучше оставьте свой номер телефона и мы вам перезвоним в ближайшее время. 
+
+Также я могу позвать человека и он ответит на ваши вопросы прямо здесь! 📞"""
+
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="📱 Оставить телефон", callback_data="private_event_type_selection")],
+        [types.InlineKeyboardButton(text="👨‍💼 Позвать человека", callback_data="contact_us")],
+        [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+    ])
+
+    try:
+        await safe_send_message(
+            bot,
+            user_id,
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+        logger.info(f"Отправлено меню опций частных мероприятий пользователю {user_id}")
+    except Exception as e:
+        logger.error(f"Ошибка отправки меню опций частных мероприятий пользователю {user_id}: {e}")
+
+async def show_private_event_registration_menu(user_id: int, bot):
+    """Показать меню регистрации частных мероприятий (дни рождения, свадьбы, корпоративы)"""
+    restaurant_phone = database.get_setting('restaurant_phone', config.RESTAURANT_PHONE)
+
+    text = f"""🎉 <b>Организация частных мероприятий</b>
+
+Мы поможем организовать ваше идеальное мероприятие:
+
+🎂 <b>Дни рождения</b> - торжественные празднования
+💒 <b>Свадьбы</b> - незабываемые церемонии  
+🏢 <b>Корпоративы</b> - деловые встречи
+🎊 <b>Юбилеи</b> - особенные даты
+🎈 <b>Детские праздники</b> - веселье для малышей
+
+<b>⚡ СРОЧНО! Оставьте заявку, и наш менеджер свяжется с вами в течение 15 минут!</b>
+
+📞 Или звоните прямо сейчас: {restaurant_phone}"""
+
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="📝 ОСТАВИТЬ СРОЧНУЮ ЗАЯВКУ", callback_data="private_event_type_selection")],
+        [types.InlineKeyboardButton(text="⬅️ НАЗАД В ГЛАВНОЕ МЕНЮ", callback_data="back_main")]
+    ])
+
+    try:
+        await safe_send_message(
+            bot,
+            user_id,
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+        logger.info(f"Отправлено меню частных мероприятий пользователю {user_id}")
+    except Exception as e:
+        logger.error(f"Ошибка отправки меню частных мероприятий пользователю {user_id}: {e}")
+
+@router.callback_query(F.data == "private_event_type_selection")
+async def private_event_type_selection_callback(callback: types.CallbackQuery, state: FSMContext):
+    """Выбор типа частного мероприятия"""
+    await callback.answer()
+    
+    text = """🎉 <b>Выберите тип мероприятия</b>
+
+Какое мероприятие вы хотите организовать?"""
+
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="🎂 День рождения", callback_data="private_event_type:день_рождения")],
+        [types.InlineKeyboardButton(text="💒 Свадьба", callback_data="private_event_type:свадьба")],
+        [types.InlineKeyboardButton(text="🏢 Корпоратив", callback_data="private_event_type:корпоратив")],
+        [types.InlineKeyboardButton(text="🎊 Юбилей", callback_data="private_event_type:юбилей")],
+        [types.InlineKeyboardButton(text="🎈 Детский праздник", callback_data="private_event_type:детский_праздник")],
+        [types.InlineKeyboardButton(text="🎭 Другое мероприятие", callback_data="private_event_type:другое")],
+        [types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back_main")]
+    ])
+
+    try:
+        await callback.message.edit_text(
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        logger.error(f"Ошибка редактирования сообщения выбора типа мероприятия: {e}")
+        await safe_send_message(
+            callback.bot,
+            callback.from_user.id,
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+
+@router.callback_query(F.data.startswith("private_event_type:"))
+async def private_event_type_selected_callback(callback: types.CallbackQuery, state: FSMContext):
+    """Обработка выбора типа частного мероприятия"""
+    await callback.answer()
+    
+    user_id = callback.from_user.id
+    event_type = callback.data.split(":", 1)[1]
+    
+    # Сохраняем тип мероприятия в состоянии
+    await state.update_data(event_type=event_type, context='private_event_registration')
+    
+    log_user_action(user_id, f"Выбрал тип мероприятия: {event_type}")
+    
+    # Проверяем регистрацию пользователя
+    if check_user_registration_fast(user_id) != 'completed':
+        # Для незарегистрированных пользователей запускаем процесс регистрации
+        from .handlers_registration import ask_for_event_registration_phone, EventRegistrationStates
+        await ask_for_event_registration_phone(user_id, callback.bot, "private_event_registration")
+        await state.set_state(EventRegistrationStates.waiting_for_phone)
+        return
+    
+    # Если пользователь уже зарегистрирован, отправляем срочную заявку с типом мероприятия
+    await send_private_event_application_to_admin(user_id, callback.bot, event_type)
+    
+    # Показываем подтверждение с предложением меню
+    await show_private_event_confirmation_with_menu(user_id, callback.bot, callback.message, event_type)
+
+async def show_private_event_confirmation_with_menu(user_id: int, bot, message, event_type: str):
+    """Показать подтверждение заявки с предложением меню"""
+    event_type_emoji = {
+        'день_рождения': '🎂',
+        'свадьба': '💒',
+        'корпоратив': '🏢',
+        'юбилей': '🎊',
+        'детский_праздник': '🎈',
+        'другое': '🎭'
+    }
+    
+    emoji = event_type_emoji.get(event_type, '🎉')
+    event_name = event_type.replace('_', ' ').title()
+    
+    text = f"""{emoji} <b>СРОЧНАЯ ЗАЯВКА ПРИНЯТА!</b>
+
+⚡ Ваша заявка на организацию мероприятия "{event_name}" отправлена!
+
+📞 <b>Наш менеджер свяжется с вами в течение 15 минут!</b>
+
+А пока вы можете ознакомиться с нашим меню и банкетным предложением. Хотите, чтобы я выслал их вам?"""
+    
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="📋 Основное меню", callback_data="show_main_menu_after_private_event")],
+        [types.InlineKeyboardButton(text="🍾 Банкетное меню", callback_data="show_banquet_menu_after_private_event")],
+        [types.InlineKeyboardButton(text="📋 Оба меню", callback_data="show_both_menus_after_private_event")],
+        [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+    ])
+    
+    try:
+        await message.edit_text(
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+        logger.info(f"Показано подтверждение заявки на {event_type} для пользователя {user_id}")
+    except Exception as e:
+        logger.error(f"Ошибка показа подтверждения заявки: {e}")
+        await safe_send_message(
+            bot,
+            user_id,
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+
+async def show_event_registration_menu(user_id: int, bot):
+    """Показать меню регистрации на мероприятия"""
+    restaurant_phone = database.get_setting('restaurant_phone', config.RESTAURANT_PHONE)
+    clean_phone = clean_phone_for_link(restaurant_phone)
+
+    text = f"""🎉 <b>Регистрация на мероприятия</b>
+
+Мы регулярно проводим интересные мероприятия в нашем ресторане.
+
+Для регистрации на мероприятия свяжитесь с нами:
+
+📞 <a href="tel:{clean_phone}">{restaurant_phone}</a>
+
+<i>Наши менеджеры расскажут о предстоящих событиях и помогут с регистрацией!</i>"""
+
+    try:
+        await safe_send_message(
+            bot,
+            user_id,
+            text,
+            reply_markup=keyboards.event_registration_menu(),
+            parse_mode="HTML"
+        )
+        logger.info(f"Отправлено меню регистрации на мероприятия пользователю {user_id}")
+    except Exception as e:
+        logger.error(f"Ошибка отправки меню регистрации на мероприятия пользователю {user_id}: {e}")
+
+async def send_event_application_to_admin(user_id: int, bot):
+    """Отправка заявки на мероприятие администратору для зарегистрированного пользователя"""
+    try:
+        # Получаем данные пользователя
+        user_data = database.get_user_complete_data(user_id)
+        name = user_data.get('name', 'Не указано') if user_data else 'Не указано'
+        phone = user_data.get('phone', 'Не указано') if user_data else 'Не указано'
+        
+        # Получаем username
+        username = None
+        try:
+            user_info = await bot.get_chat(user_id)
+            username = user_info.username
+        except:
+            username = None
+        
+        # Формируем сообщение для админа
+        from datetime import datetime
+        admin_text = f"""🎉 <b>НОВАЯ ЗАЯВКА НА МЕРОПРИЯТИЕ</b>
+
+👤 <b>Пользователь:</b> {name}
+📱 <b>Телефон:</b> {phone}
+🆔 <b>Telegram:</b> @{username if username else 'не указан'}
+🆔 <b>ID:</b> {user_id}
+
+📝 <b>Тип заявки:</b> Регистрация на мероприятие
+
+⏰ <b>Время подачи:</b> {datetime.now().strftime('%d.%m.%Y %H:%M')}"""
+        
+        # Отправляем всем админам
+        all_users = database.get_all_users()
+        admin_ids = [user[0] for user in all_users if database.is_admin(user[0])]
+        for admin_id in admin_ids:
+            try:
+                await bot.send_message(admin_id, admin_text, parse_mode="HTML")
+            except Exception as e:
+                logger.error(f"Ошибка отправки заявки на мероприятие админу {admin_id}: {e}")
+        
+        logger.info(f"Заявка на мероприятие от пользователя {user_id} отправлена админам")
+        
+    except Exception as e:
+        logger.error(f"Ошибка отправки заявки на мероприятие: {e}")
+
 @router.callback_query(F.data == "contact_us")
 async def contact_us_callback(callback: types.CallbackQuery):
     """Быстрая связь с менеджером — с кликабельным телефоном"""
@@ -1297,12 +1935,10 @@ async def contact_us_callback(callback: types.CallbackQuery):
         [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
     ])
 
-    await update_message(
-        callback.from_user.id,
+    await callback.message.edit_text(
         text,
         reply_markup=keyboard,
-        parse_mode="HTML",
-        bot=callback.bot
+        parse_mode="HTML"
     )
 
 @router.callback_query(F.data == "chat_operator")
@@ -1433,6 +2069,385 @@ async def photos_callback(callback: types.CallbackQuery):
                         bot=callback.bot)
 
 @router.callback_query(F.data == "our_app")
+async def show_our_app_menu(user_id: int, bot):
+    """Показать меню приложений"""
+    text = f"""🎉 <b>У нас часто проводятся различные мероприятия!</b>
+
+Обычно мы публикуем анонсы в нашем приложении. Скачайте его и посмотрите ближайшие мероприятия в нем!
+
+<b>Преимущества нашего приложения:</b>
+• 🎉 Анонсы мероприятий и событий
+• 🍽️ Полное меню с фотографиями
+• 🛒 Удобная корзина для заказов
+• 💳 Онлайн оплата
+• 📍 Точное определение адреса
+• ⏱️ Отслеживание заказа
+
+Выберите вашу платформу:"""
+    
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="🍎 App Store", url=config.APP_IOS)],
+        [types.InlineKeyboardButton(text="🤖 Google Play", url=config.APP_ANDROID)],
+        [types.InlineKeyboardButton(text="🟦 RuStore", url=config.APP_RUSTORE)],
+        [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+    ])
+    
+    try:
+        await safe_send_message(
+            bot,
+            user_id,
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+        logger.info(f"Отправлено меню приложений пользователю {user_id}")
+    except Exception as e:
+        logger.error(f"Ошибка отправки меню приложений пользователю {user_id}: {e}")
+
+async def show_hall_photos(user_id: int, bot):
+    """Показать фотографии зала"""
+    try:
+        # Отправляем фото зала
+        hall_photos = ['rest_photos/holl1.jpg', 'rest_photos/holl2.jpg']
+        photos_sent = 0
+        
+        for i, photo_path in enumerate(hall_photos):
+            if os.path.exists(photo_path):
+                try:
+                    # Проверяем размер файла
+                    file_size = os.path.getsize(photo_path)
+                    logger.info(f"Отправляем фото {photo_path}, размер: {file_size / (1024*1024):.1f}MB")
+                    
+                    if file_size > 10 * 1024 * 1024:  # 10MB limit
+                        logger.warning(f"Файл {photo_path} слишком большой ({file_size / (1024*1024):.1f}MB), отправляем как документ")
+                        # Отправляем как документ
+                        with open(photo_path, 'rb') as photo:
+                            await bot.send_document(
+                                user_id,
+                                BufferedInputFile(photo.read(), filename=f"hall_{i+1}.jpg"),
+                                caption=f"🏛️ <b>Наш уютный зал</b> ({i+1}/{len(hall_photos)})" if i == 0 else f"🏛️ <b>Фото зала</b> ({i+1}/{len(hall_photos)})",
+                                parse_mode="HTML"
+                            )
+                            photos_sent += 1
+                    else:
+                        try:
+                            with open(photo_path, 'rb') as photo:
+                                caption = f"🏛️ <b>Наш уютный зал</b> ({i+1}/{len(hall_photos)})" if i == 0 else None
+                                await bot.send_photo(
+                                    user_id,
+                                    BufferedInputFile(photo.read(), filename=f"hall_{i+1}.jpg"),
+                                    caption=caption,
+                                    parse_mode="HTML"
+                                )
+                                photos_sent += 1
+                        except Exception as photo_send_error:
+                            # Если не удалось отправить как фото (например, PHOTO_INVALID_DIMENSIONS), отправляем как документ
+                            logger.warning(f"Не удалось отправить {photo_path} как фото ({photo_send_error}), отправляем как документ")
+                            try:
+                                with open(photo_path, 'rb') as photo:
+                                    await bot.send_document(
+                                        user_id,
+                                        BufferedInputFile(photo.read(), filename=f"hall_{i+1}.jpg"),
+                                        caption=f"🏛️ <b>Наш уютный зал</b> ({i+1}/{len(hall_photos)})" if i == 0 else f"🏛️ <b>Фото зала</b> ({i+1}/{len(hall_photos)})",
+                                        parse_mode="HTML"
+                                    )
+                                    photos_sent += 1
+                            except Exception as doc_error:
+                                logger.error(f"Не удалось отправить {photo_path} даже как документ: {doc_error}")
+                    
+                    logger.info(f"Фото {photo_path} отправлено успешно")
+                except Exception as photo_error:
+                    logger.error(f"Ошибка отправки фото {photo_path}: {photo_error}")
+            else:
+                logger.warning(f"Файл {photo_path} не найден")
+        
+        # Если не удалось отправить ни одного фото
+        if photos_sent == 0:
+            await safe_send_message(
+                bot,
+                user_id,
+                "🏛️ К сожалению, не удалось загрузить фотографии зала. Приходите к нам и увидите всё своими глазами! 😊",
+                parse_mode="HTML"
+            )
+        
+        # Отправляем сообщение с кнопкой назад
+        text = "🏛️ Вот наш просторный и уютный зал! Здесь проходят все наши мероприятия и банкеты."
+        
+        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+            [types.InlineKeyboardButton(text="📅 Забронировать столик", callback_data="booking")],
+            [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+        ])
+        
+        await safe_send_message(
+            bot,
+            user_id,
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+        
+        logger.info(f"Отправлены фото зала пользователю {user_id} (отправлено: {photos_sent})")
+    except Exception as e:
+        logger.error(f"Ошибка отправки фото зала пользователю {user_id}: {e}")
+
+async def show_bar_photos(user_id: int, bot):
+    """Показать фотографии бара"""
+    try:
+        # Отправляем фото бара
+        bar_photos = ['rest_photos/bar_1.jpg', 'rest_photos/bar_2.jpg']
+        
+        for i, photo_path in enumerate(bar_photos):
+            if os.path.exists(photo_path):
+                with open(photo_path, 'rb') as photo:
+                    caption = f"🍸 <b>Наш стильный бар</b> ({i+1}/{len(bar_photos)})" if i == 0 else None
+                    await bot.send_photo(
+                        user_id,
+                        BufferedInputFile(photo.read(), filename=f"bar_{i+1}.jpg"),
+                        caption=caption,
+                        parse_mode="HTML"
+                    )
+        
+        # Отправляем сообщение с кнопкой назад
+        text = "🍸 Вот наш стильный бар! Здесь вы можете насладиться широким выбором напитков и коктейлей."
+        
+        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+            [types.InlineKeyboardButton(text="🍽️ Открыть меню ресторана", callback_data="menu_food")],
+            [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+        ])
+        
+        await safe_send_message(
+            bot,
+            user_id,
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+        
+        logger.info(f"Отправлены фото бара пользователю {user_id}")
+    except Exception as e:
+        logger.error(f"Ошибка отправки фото бара пользователю {user_id}: {e}")
+
+async def show_kassa_photos(user_id: int, bot):
+    """Показать фотографии кассы"""
+    try:
+        # Отправляем фото кассы
+        kassa_photos = ['rest_photos/kassa1.jpg', 'rest_photos/kassa2.jpg']
+        photos_sent = 0
+        
+        for i, photo_path in enumerate(kassa_photos):
+            if os.path.exists(photo_path):
+                try:
+                    # Проверяем размер файла
+                    file_size = os.path.getsize(photo_path)
+                    logger.info(f"Отправляем фото {photo_path}, размер: {file_size / (1024*1024):.1f}MB")
+                    
+                    if file_size > 10 * 1024 * 1024:  # 10MB limit
+                        logger.warning(f"Файл {photo_path} слишком большой ({file_size / (1024*1024):.1f}MB), отправляем как документ")
+                        with open(photo_path, 'rb') as photo:
+                            await bot.send_document(
+                                user_id,
+                                BufferedInputFile(photo.read(), filename=f"kassa_{i+1}.jpg"),
+                                caption=f"💳 <b>Наша касса</b> ({i+1}/{len(kassa_photos)})" if i == 0 else f"💳 <b>Фото кассы</b> ({i+1}/{len(kassa_photos)})",
+                                parse_mode="HTML"
+                            )
+                            photos_sent += 1
+                    else:
+                        try:
+                            with open(photo_path, 'rb') as photo:
+                                caption = f"💳 <b>Наша касса</b> ({i+1}/{len(kassa_photos)})" if i == 0 else None
+                                await bot.send_photo(
+                                    user_id,
+                                    BufferedInputFile(photo.read(), filename=f"kassa_{i+1}.jpg"),
+                                    caption=caption,
+                                    parse_mode="HTML"
+                                )
+                                photos_sent += 1
+                        except Exception as photo_send_error:
+                            logger.warning(f"Не удалось отправить {photo_path} как фото ({photo_send_error}), отправляем как документ")
+                            try:
+                                with open(photo_path, 'rb') as photo:
+                                    await bot.send_document(
+                                        user_id,
+                                        BufferedInputFile(photo.read(), filename=f"kassa_{i+1}.jpg"),
+                                        caption=f"💳 <b>Наша касса</b> ({i+1}/{len(kassa_photos)})" if i == 0 else f"💳 <b>Фото кассы</b> ({i+1}/{len(kassa_photos)})",
+                                        parse_mode="HTML"
+                                    )
+                                    photos_sent += 1
+                            except Exception as doc_error:
+                                logger.error(f"Не удалось отправить {photo_path} даже как документ: {doc_error}")
+                    
+                    logger.info(f"Фото {photo_path} отправлено успешно")
+                except Exception as photo_error:
+                    logger.error(f"Ошибка отправки фото {photo_path}: {photo_error}")
+            else:
+                logger.warning(f"Файл {photo_path} не найден")
+        
+        # Если не удалось отправить ни одного фото
+        if photos_sent == 0:
+            await safe_send_message(
+                bot,
+                user_id,
+                "💳 К сожалению, не удалось загрузить фотографии кассы. Приходите к нам и увидите всё своими глазами! 😊",
+                parse_mode="HTML"
+            )
+        
+        # Отправляем сообщение с кнопкой назад
+        text = "💳 Вот наша касса! Здесь вы можете оплатить заказ наличными или картой."
+        
+        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+            [types.InlineKeyboardButton(text="🍽️ Посмотреть меню", callback_data="menu_food")],
+            [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+        ])
+        
+        await safe_send_message(
+            bot,
+            user_id,
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+        
+        logger.info(f"Отправлены фото кассы пользователю {user_id} (отправлено: {photos_sent})")
+    except Exception as e:
+        logger.error(f"Ошибка отправки фото кассы пользователю {user_id}: {e}")
+
+async def show_wc_photos(user_id: int, bot):
+    """Показать фотографии туалета"""
+    try:
+        # Отправляем фото туалета
+        wc_photos = ['rest_photos/wc1.jpg', 'rest_photos/wc2.jpg']
+        photos_sent = 0
+        
+        for i, photo_path in enumerate(wc_photos):
+            if os.path.exists(photo_path):
+                try:
+                    # Проверяем размер файла
+                    file_size = os.path.getsize(photo_path)
+                    logger.info(f"Отправляем фото {photo_path}, размер: {file_size / (1024*1024):.1f}MB")
+                    
+                    if file_size > 10 * 1024 * 1024:  # 10MB limit
+                        logger.warning(f"Файл {photo_path} слишком большой ({file_size / (1024*1024):.1f}MB), отправляем как документ")
+                        with open(photo_path, 'rb') as photo:
+                            await bot.send_document(
+                                user_id,
+                                BufferedInputFile(photo.read(), filename=f"wc_{i+1}.jpg"),
+                                caption=f"🚻 <b>Наш туалет</b> ({i+1}/{len(wc_photos)})" if i == 0 else f"🚻 <b>Фото туалета</b> ({i+1}/{len(wc_photos)})",
+                                parse_mode="HTML"
+                            )
+                            photos_sent += 1
+                    else:
+                        try:
+                            with open(photo_path, 'rb') as photo:
+                                caption = f"🚻 <b>Наш туалет</b> ({i+1}/{len(wc_photos)})" if i == 0 else None
+                                await bot.send_photo(
+                                    user_id,
+                                    BufferedInputFile(photo.read(), filename=f"wc_{i+1}.jpg"),
+                                    caption=caption,
+                                    parse_mode="HTML"
+                                )
+                                photos_sent += 1
+                        except Exception as photo_send_error:
+                            logger.warning(f"Не удалось отправить {photo_path} как фото ({photo_send_error}), отправляем как документ")
+                            try:
+                                with open(photo_path, 'rb') as photo:
+                                    await bot.send_document(
+                                        user_id,
+                                        BufferedInputFile(photo.read(), filename=f"wc_{i+1}.jpg"),
+                                        caption=f"🚻 <b>Наш туалет</b> ({i+1}/{len(wc_photos)})" if i == 0 else f"🚻 <b>Фото туалета</b> ({i+1}/{len(wc_photos)})",
+                                        parse_mode="HTML"
+                                    )
+                                    photos_sent += 1
+                            except Exception as doc_error:
+                                logger.error(f"Не удалось отправить {photo_path} даже как документ: {doc_error}")
+                    
+                    logger.info(f"Фото {photo_path} отправлено успешно")
+                except Exception as photo_error:
+                    logger.error(f"Ошибка отправки фото {photo_path}: {photo_error}")
+            else:
+                logger.warning(f"Файл {photo_path} не найден")
+        
+        # Если не удалось отправить ни одного фото
+        if photos_sent == 0:
+            await safe_send_message(
+                bot,
+                user_id,
+                "🚻 К сожалению, не удалось загрузить фотографии туалета. Приходите к нам и увидите всё своими глазами! 😊",
+                parse_mode="HTML"
+            )
+        
+        # Отправляем сообщение с кнопкой назад
+        text = "🚻 Вот наш туалет! Чистый и уютный для комфорта наших гостей."
+        
+        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+            [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+        ])
+        
+        await safe_send_message(
+            bot,
+            user_id,
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+        
+        logger.info(f"Отправлены фото туалета пользователю {user_id} (отправлено: {photos_sent})")
+    except Exception as e:
+        logger.error(f"Ошибка отправки фото туалета пользователю {user_id}: {e}")
+
+async def show_restaurant_menu(user_id: int, bot):
+    """Показать меню ресторана с проверкой возраста"""
+    try:
+        # Проверяем, подтверждал ли пользователь возраст
+        if user_id not in age_verification_cache:
+            # Показываем проверку возраста
+            text = """🔞 <b>Подтверждение возраста</b>
+
+Меню ресторана содержит информацию об алкогольных напитках.
+
+<b>Вам исполнилось 18 лет?</b>
+
+⚠️ Употребление алкоголя лицами до 18 лет запрещено законом."""
+            
+            keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+                [types.InlineKeyboardButton(text="✅ ДА, МНЕ ЕСТЬ 18 ЛЕТ", callback_data="confirm_age_18_menu")],
+                [types.InlineKeyboardButton(text="❌ НЕТ, МНЕ НЕТ 18 ЛЕТ", callback_data="deny_age_18_menu")],
+                [types.InlineKeyboardButton(text="⬅️ НАЗАД В ГЛАВНОЕ МЕНЮ", callback_data="back_main")]
+            ])
+            
+            await safe_send_message(
+                bot,
+                user_id,
+                text,
+                reply_markup=keyboard,
+                parse_mode="HTML"
+            )
+            return
+        
+        # Пользователь уже подтвердил возраст - показываем меню
+        text = """🍽️ <b>Меню ресторана</b>
+
+📱 <b>Электронное меню</b> — интерактивное меню с алкогольными напитками (требуется подтверждение возраста 18+)
+
+📋 <b>PDF меню</b> — полное меню с барной картой для скачивания
+
+🎉 <b>Банкетное меню</b> — специальные предложения для мероприятий
+
+Выберите удобный для вас вариант:"""
+        
+        keyboard = keyboards.food_menu()
+        
+        await safe_send_message(
+            bot,
+            user_id,
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+        
+        logger.info(f"Показано меню ресторана пользователю {user_id}")
+    except Exception as e:
+        logger.error(f"Ошибка показа меню ресторана пользователю {user_id}: {e}")
+
 async def our_app_callback(callback: types.CallbackQuery):
     """Наше приложение"""
     await callback.answer()
@@ -1457,10 +2472,22 @@ async def our_app_callback(callback: types.CallbackQuery):
         [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
     ])
     
-    await update_message(callback.from_user.id, text,
-                        reply_markup=keyboard,
-                        parse_mode="HTML",
-                        bot=callback.bot)
+    try:
+        await callback.message.edit_text(
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        logger.error(f"Ошибка редактирования сообщения в our_app_callback: {e}")
+        # Если редактирование не удалось, отправляем новое сообщение
+        await safe_send_message(
+            callback.bot,
+            callback.from_user.id,
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
 
 # ===== ТЕКСТОВЫЙ ОБРАБОТЧИК =====
 
@@ -1470,8 +2497,33 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
     user = message.from_user
     text = message.text.strip().lower()
     
+    logger.info(f"🔍 НАЧАЛО ОБРАБОТКИ СООБЩЕНИЯ: '{message.text}' от пользователя {user.id}")
+
     if text.startswith('/'):
         return
+
+    # Проверяем и сбрасываем лимит AI генераций при изменении баланса бонусов
+    from ai_assistant import check_and_reset_ai_limit
+    await check_and_reset_ai_limit(user.id)
+
+    # Проверяем статус чата - если на паузе, сохраняем сообщение в миниапп и игнорируем
+    try:
+        chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
+        chat_info = database.get_chat_by_id(chat_id)
+        if chat_info and chat_info.get('chat_status') == 'paused':
+            # Сохраняем сообщение в миниапп
+            database.save_chat_message(chat_id, 'user', message.text)
+            logger.info(f"Сообщение пользователя {user.id} сохранено в миниапп (чат на паузе): {message.text[:50]}...")
+
+            # Отправляем уведомление пользователю, что диалог на паузе
+            await safe_send_message(message.bot, user.id,
+                                   "🤖 <b>Диалог переведен в ручной режим</b>\n\n"
+                                   "Ваши сообщения будут обрабатываться администратором. "
+                                   "Пожалуйста, подождите ответа оператора.",
+                                   parse_mode="HTML")
+            return
+    except Exception as e:
+        logger.error(f"Ошибка проверки статуса чата для {user.id}: {e}")
 
     # Приветствия
     greetings = ['привет', 'добрый день', 'добрый вечер', 'здравствуйте', 'добро пожаловать', 'hi', 'hello']
@@ -1485,9 +2537,9 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
 • 📞 Связаться с администратором
 
 Выберите что вас интересует или напишите свой вопрос!"""
-        
+
         keyboard = keyboards.main_menu_with_profile(user.id)
-        await safe_send_message(message.bot, user.id, greeting_text, 
+        await safe_send_message(message.bot, user.id, greeting_text,
                                reply_markup=keyboard, parse_mode="HTML")
         return
 
@@ -1567,11 +2619,13 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
     message_lower = message.text.lower()
     is_booking_request = any(keyword in message_lower for keyword in booking_keywords)
 
+    user_id = message.from_user.id
+
     # Проверяем на сообщение с конкретными параметрами бронирования
     booking_details = parse_booking_message(message.text)
     if booking_details:
         logger.info(f"Обнаружен запрос бронирования с параметрами: {message.text}")
-        await process_direct_booking_request(user.id, message.bot, booking_details, state)
+        await process_direct_booking_request(user_id, message.bot, booking_details, state)
 
         # Сохраняем в чат для миниаппа
         try:
@@ -1696,9 +2750,9 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
         # Проверяем на показ категории
         if result.get('show_category'):
             category_name = result.get('show_category')
-            logger.info(f"Показываем категорию: {category_name} для пользователя {user.id}")
+            logger.info(f"Показываем категорию: {category_name} для пользователя {user_id}")
             from category_handler import handle_show_category
-            await handle_show_category(category_name, user.id, message.bot)
+            await handle_show_category(category_name, user_id, message.bot)
 
             # Сохраняем в чат
             try:
@@ -1709,26 +2763,88 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
 
             return
 
-        # Проверяем на парсинг бронирования
-        if result.get('parse_booking'):
-            await safe_send_message(message.bot, user.id, result['text'])
+        # Проверяем на показ отзывов
+        if result.get('show_reviews'):
+            await show_reviews_handler(user_id, message.bot)
+            return
+
+        # Проверяем на показ приложений
+        if result.get('show_apps'):
+            # Показываем меню приложений (оно уже содержит нужный текст)
+            await show_our_app_menu(user.id, message.bot)
+            return
+
+        # Проверяем на показ фото зала
+        if result.get('show_hall_photos'):
+            await show_hall_photos(user.id, message.bot)
+            return
+
+        # Проверяем на показ фото бара
+        if result.get('show_bar_photos'):
+            await show_bar_photos(user.id, message.bot)
+            return
+
+        # Проверяем на показ фото кассы
+        if result.get('show_kassa_photos'):
+            await show_kassa_photos(user.id, message.bot)
+            return
+
+        # Проверяем на показ фото туалета
+        if result.get('show_wc_photos'):
+            await show_wc_photos(user.id, message.bot)
+            return
+
+        # Проверяем на показ меню ресторана
+        if result.get('show_restaurant_menu'):
+            logger.info(f"Обрабатываем show_restaurant_menu для пользователя {user_id}")
+            # Сначала отправляем ответ AI
+            await safe_send_message(message.bot, user_id, result['text'])
             # Сохраняем ответ бота
             try:
                 chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
                 database.save_chat_message(chat_id, 'bot', result['text'])
             except Exception as e:
                 logger.error(f"Ошибка сохранения ответа бота: {e}")
-            # Показываем меню бронирования
-            await show_booking_options(user.id, message.bot)
+            # Затем показываем меню ресторана
+            await show_restaurant_menu(user.id, message.bot)
+            return
+
+        # Проверяем на парсинг бронирования
+        if result.get('parse_booking'):
+            await safe_send_message(message.bot, user_id, result['text'])
+            # Сохраняем ответ бота
+            try:
+                chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
+                database.save_chat_message(chat_id, 'bot', result['text'])
+            except Exception as e:
+                logger.error(f"Ошибка сохранения ответа бота: {e}")
+            
+            # Парсим детали бронирования из исходного сообщения пользователя
+            booking_details = parse_booking_message(message.text)
+            if booking_details:
+                # Обрабатываем прямое бронирование
+                await process_direct_booking_request(user_id, message.bot, booking_details, state)
+            else:
+                # Если не удалось распарсить, показываем меню бронирования
+                await show_booking_options(user_id, message.bot)
             return
 
 
 
         if result['type'] == 'text':
+            logger.info(f"Обрабатываем result['type'] == 'text' для пользователя {user_id}")
             # Проверяем нужны ли кнопки с приложениями
             if result.get('show_booking_options', False):
                 # Показываем меню бронирования напрямую
                 await show_booking_options(user.id, message.bot)
+                return
+            elif result.get('show_private_event_registration', False):
+                # Показываем опции частных мероприятий
+                await show_private_event_options_menu(user.id, message.bot)
+                return
+            elif result.get('show_event_registration', False):
+                # Показываем меню регистрации на мероприятия
+                await show_event_registration_menu(user.id, message.bot)
                 return
             elif result.get('show_delivery_apps', False):
                 keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
@@ -1740,7 +2856,7 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                 await safe_send_message(message.bot, user.id, result['text'], reply_markup=keyboard, parse_mode="HTML")
             elif result.get('show_delivery_button', False):
                 keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-                    [types.InlineKeyboardButton(text="🚚 Заказать доставку", web_app=types.WebAppInfo(url="https://glittery-starlight-5cb21d.netlify.app/"))]
+                    [types.InlineKeyboardButton(text="🚚 Заказать доставку", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))]
                 ])
                 await safe_send_message(message.bot, user.id, result['text'], reply_markup=keyboard, parse_mode="HTML")
             else:
@@ -1765,7 +2881,7 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                 await message.answer_photo(result['photo_url'], caption=result['text'], reply_markup=keyboard, parse_mode="HTML")
             elif result.get('show_delivery_button', False):
                 keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-                    [types.InlineKeyboardButton(text="🚚 Заказать доставку", web_app=types.WebAppInfo(url="https://glittery-starlight-5cb21d.netlify.app/"))]
+                    [types.InlineKeyboardButton(text="🚚 Заказать доставку", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))]
                 ])
                 await message.answer_photo(result['photo_url'], caption=result['text'], reply_markup=keyboard, parse_mode="HTML")
             else:
@@ -1911,9 +3027,12 @@ def parse_booking_message(text):
     text = text.lower().strip()
 
     # Регулярное выражение для поиска количества гостей
-    guests_match = re.search(r'(\d+)\s*(человек|чел|гост|гостя)', text)
+    guests_match = re.search(r'(\d+)\s*(человек|чел|гост|гостя|гостей)', text)
     if not guests_match:
-        return None
+        # Дополнительный поиск для "столик на X"
+        guests_match = re.search(r'столик\s+на\s+(\d+)', text)
+        if not guests_match:
+            return None
 
     guests = int(guests_match.group(1))
     if guests < 1 or guests > 10:
@@ -1957,8 +3076,8 @@ def parse_booking_message(text):
     if not target_date:
         return None
 
-    # Регулярное выражение для времени
-    time_match = re.search(r'(\d{1,2})[:\.](\d{2})', text)
+    # Регулярное выражение для времени (поддерживает :, ., пробел)
+    time_match = re.search(r'(\d{1,2})[:\.\s](\d{2})', text)
     if not time_match:
         return None
 
@@ -1987,6 +3106,31 @@ async def process_direct_booking_request(user_id: int, bot, booking_details: dic
     from .handlers_booking import BookingStates
 
     logger.info(f"Обрабатываю прямую бронь: {booking_details}")
+
+    # Проверяем количество гостей - если больше 4, предлагаем связаться с оператором
+    if booking_details['guests'] > 4:
+        text = (
+            f"👥 <b>Бронирование на {booking_details['guests']} человек</b>\n\n"
+            f"📅 Дата: {booking_details['date_str']}\n"
+            f"🕐 Время: {booking_details['time_str']}\n\n"
+            f"❌ <b>Автоматическое бронирование недоступно</b>\n\n"
+            f"Бронь стола доступна в автоматическом режиме до 4 человек.\n"
+            f"Для компании от 5 человек свяжитесь с оператором.\n\n"
+            f"💡 <b>Варианты решения:</b>\n"
+            f"• 📞 Позвонить нам для бронирования\n"
+            f"• 💬 Написать оператору в чате\n"
+            f"• 🔄 Сделать несколько броней на 2-4 человека"
+        )
+        
+        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+            [types.InlineKeyboardButton(text="📞 Позвонить", callback_data="call_us")],
+            [types.InlineKeyboardButton(text="💬 Написать оператору", callback_data="chat_operator")],
+            [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+        ])
+        
+        await safe_send_message(bot, user_id, text, reply_markup=keyboard, parse_mode="HTML")
+        await state.clear()
+        return
 
     # Проверяем регистрацию
     if check_user_registration_fast(user_id) != 'completed':

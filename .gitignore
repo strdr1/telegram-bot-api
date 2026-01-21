@@ -1,0 +1,62 @@
+# Конфиденциальные файлы
+.env
+config.py
+ai_ref/token.txt
+restaurant.db
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Cache files
+files/menu_cache.json
+files/all_menus_cache.json
+files/cart_cache.json
+files/presto_cache/
+
+# Temporary files
+temp/
+*.tmp
+*.temp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Batch files (могут содержать токены)
+start.bat
+stop.bat

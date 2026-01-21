@@ -1,0 +1,16 @@
+{
+  "booking": {
+    "hall": 9195,
+    "table": 9203,
+    "visitors": 2
+  },
+  "comment": "Бронь через Telegram бот. Пользователь: @Kizarak1337",
+  "customer": {
+    "blacklisted": false,
+    "name": "Даниил",
+    "phone": "+79955922011"
+  },
+  "datetime": "2026-01-22 19:30:00",
+  "externalId": "019bdc38-a1c8-7e5a-aa13-b55a119b9a3d",
+  "nomenclatures": null
+}

@@ -4,14 +4,17 @@ ai_assistant.py - AI помощник для общения с пользова�
 
 import asyncio
 import json
-import requests
 import subprocess
 import os
 import re
 import random
-from typing import Optional, Dict, List
+from typing import Optional, Dict, List, Any
 import logging
 import database
+import cache_manager
+
+# Импорт requests
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -27,35 +30,17 @@ def load_token() -> str:
         return ""
 
 def refresh_token() -> str:
-    """Обновление токена GigaChat"""
+    """Получение токена Polza AI (постоянный токен из конфига)"""
     try:
-        import uuid
-        
-        url = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
-        auth_key = "MDE5YmIyNGEtMmMyYS03YmYyLWE1YTctYzBiOTk0ZDNiODI3OjNkNmJkNDg5LTU4MzUtNGE0My1iMmQzLWRhMzQzZmE4MTMzNQ=="
-        
-        headers = {
-            "Content-Type": "application/x-www-form-urlencoded",
-            "Accept": "application/json",
-            "RqUID": str(uuid.uuid4()),
-            "Authorization": f"Basic {auth_key}"
-        }
-        
-        data = {"scope": "GIGACHAT_API_PERS"}
-        
-        response = requests.post(url, headers=headers, data=data, verify=False)
-        
-        if response.status_code == 200:
-            token = response.json()['access_token']
-            with open('ai_ref/token.txt', 'w') as f:
-                f.write(token)
-            logger.info("Токен успешно обновлен")
-            return token
-        else:
-            logger.error(f"Ошибка получения токена: {response.status_code}")
-            return ""
+        # Новый токен Polza AI
+        polza_token = "ak_MUlqpkRNU2jE5Xo3tf2yOfZImxVP90gcvvcN2Neif2g"
+
+        with open('ai_ref/token.txt', 'w') as f:
+            f.write(polza_token)
+        logger.info("Polza AI токен обновлен")
+        return polza_token
     except Exception as e:
-        logger.error(f"Ошибка обновления токена: {e}")
+        logger.error(f"Ошибка сохранения Polza AI токена: {e}")
         return ""
 
 def load_menu_cache() -> Dict:
@@ -86,75 +71,199 @@ def get_ai_notes() -> str:
     return database.get_setting('ai_notes', '')
 
 def search_in_faq(query: str) -> Optional[str]:
-    """Поиск ответа в FAQ"""
+    """Поиск ответа в FAQ с улучшенной логикой"""
     faq_list = database.get_faq()
-    query_lower = query.lower()
-    
-    # Точное совпадение
+    query_lower = query.lower().strip()
+
+    # Ключевые слова, которые НЕ должны возвращать FAQ о доставке/парковке
+    menu_keywords = ['пиво', 'водка', 'вино', 'вина', 'джин', 'ром', 'виски', 'текила', 'коньяк', 'ликер', 'коктейль', 'салат', 'суп', 'паста', 'пицца', 'бургер', 'стейк', 'рыба', 'мясо', 'десерт', 'торт', 'мороженое', 'кофе', 'чай', 'сок', 'вода']
+
+    # Если запрос содержит ключевые слова меню - НЕ ищем в FAQ
+    if any(keyword in query_lower for keyword in menu_keywords):
+        return None
+
+    # Точное совпадение (более строгое)
     for faq_id, question, answer in faq_list:
-        if query_lower in question.lower() or question.lower() in query_lower:
+        question_lower = question.lower().strip()
+        # Проверяем точное совпадение или очень близкое
+        if query_lower == question_lower or question_lower in query_lower:
             return answer
-    
-    # Поиск по ключевым словам
+
+    # Поиск по ключевым словам с фильтрацией
     from difflib import SequenceMatcher
     best_match = None
     best_score = 0.0
-    
+
     for faq_id, question, answer in faq_list:
-        score = SequenceMatcher(None, query_lower, question.lower()).ratio()
+        question_lower = question.lower().strip()
+        score = SequenceMatcher(None, query_lower, question_lower).ratio()
+
+        # Фильтруем неподходящие совпадения
+        if 'доставк' in answer.lower() and any(menu_word in query_lower for menu_word in menu_keywords):
+            continue  # Не возвращаем доставку для вопросов о меню
+        if 'парковк' in answer.lower() and any(menu_word in query_lower for menu_word in menu_keywords):
+            continue  # Не возвращаем парковку для вопросов о меню
+
         if score > best_score:
             best_score = score
             best_match = answer
-    
-    # Возвращаем только если совпадение > 60%
-    if best_score > 0.6:
+
+    # Возвращаем только если совпадение > 70% (более строго)
+    if best_score > 0.7:
         return best_match
-    
+
     return None
 
-async def gen_image(prompt: str, user_id: int = 0) -> Optional[str]:
-    """Генерация изображения через редактирование с использованием референсов персонажей"""
+def check_existing_character_generation(character_name: str) -> Optional[Dict[str, Any]]:
+    """Проверка существующих генераций персонажа"""
+    try:
+        with database.get_cursor() as cursor:
+            cursor.execute('''
+            SELECT character_name, dish_name, image_url, created_at
+            FROM character_generations
+            WHERE character_name = ?
+            ORDER BY created_at DESC
+            LIMIT 1
+            ''', (character_name,))
+
+            result = cursor.fetchone()
+            if result:
+                return {
+                    'character_name': result[0],
+                    'dish_name': result[1],
+                    'image_url': result[2],
+                    'created_at': result[3]
+                }
+        return None
+    except Exception as e:
+        logger.error(f"Ошибка проверки существующих генераций: {e}")
+        return None
+
+async def gen_image(character_name: str, user_id: int = 0, admin_prompt: str = "") -> Optional[str]:
+    """Генерация изображения через Kie AI"""
     try:
         import random
         from character_parser import ensure_character_references, get_character_reference_images, save_character_result, character_parser
 
-        # Извлекаем имя персонажа из промпта синхронно
-        character_name = character_parser._extract_character_name(prompt)
+        # Проверяем, есть ли уже сгенерированный персонаж
+        existing_generation = check_existing_character_generation(character_name)
+        if existing_generation:
+            logger.info(f"🎯 Персонаж '{character_name}' уже генерировался ранее, используем существующие данные")
+            logger.info(f"📸 Существующее изображение: {existing_generation['image_url']}")
+            logger.info(f"🍽️ Блюдо из предыдущей генерации: {existing_generation['dish_name']}")
 
-        # Выбираем случайное фото стола
-        images = {
-            'files/tables_holl.jpg': 'sitting on couch at center table near window',
-            'files/table_for_1.jpg': 'sitting on a chair at the table for two',
-            'files/big_table.jpg': 'sitting together at big table'  # Для групп
-        }
+            # Возвращаем существующий URL вместо генерации нового
+            return existing_generation['image_url']
 
-        # Проверяем на множественное число (команды, группы)
-        prompt_lower = prompt.lower()
-        is_group = any(keyword in prompt_lower for keyword in [
-            'team', 'avengers', 'together', 'group', 'squad', 'crew',
-            'команд', 'мстител', 'групп', 'вместе'
-        ])
+        # Получаем меню для выбора случайного блюда
+        menu_data = load_menu_cache()
+        random_dish = get_random_delivery_dish(menu_data)
 
-        # Находим подходящее фото по промпту
-        selected_image = None
+        # Создаем базовый английский промпт - подчеркиваем реализм
+        if random_dish:
+            prompt = f"{character_name} sitting at a restaurant table with {random_dish['name'].lower()} on the table, character is eating the food, extremely photorealistic image, real people not cartoon, highly detailed facial features, professional photography, natural lighting, authentic restaurant atmosphere, food clearly visible on table"
+        else:
+            prompt = f"{character_name} sitting at a restaurant table with food on the table, extremely photorealistic image, real people not cartoon, highly detailed facial features, professional photography, natural lighting, authentic restaurant atmosphere"
+
+        # Добавляем админский промпт если есть
+        if admin_prompt:
+            prompt += f", {admin_prompt}"
+
+        # Выбираем фото стола: 2 для одиночных персонажей, 1 для компании
+        single_character_images = [
+            'files/tables_holl.jpg',  # диван у окна
+            'files/table_for_1.jpg'   # столик на двоих
+        ]
+        company_image = 'files/big_table.jpg'  # большой стол для компании
+
+        # Определяем через AI является ли персонаж одиночным или группой
+        is_group = False  # Default to single
+
+        # Проверяем на известные группы сначала (быстрый способ)
+        group_keywords = [
+            'черепашки ниндзя', 'teenage mutant ninja turtles', 'tmnt', 'ninja turtles',
+            'мстители', 'avengers', 'avengers team',
+            'команда', 'team', 'группа', 'group',
+            'семья', 'family', 'банда', 'gang', 'отряд', 'squad',
+            'герои', 'heroes', 'супергерои', 'superheroes',
+            'мстители marvel', 'marvel avengers',
+            'черепашки-ниндзя', 'черепашкининдзя'
+        ]
+
+        character_lower = character_name.lower()
+        for keyword in group_keywords:
+            if keyword in character_lower:
+                is_group = True
+                logger.info(f"🎯 Быстро определено как ГРУППА по ключевому слову '{keyword}': '{character_name}'")
+                break
+
+        # Если не нашли по ключевым словам, используем AI
+        if not is_group:
+            try:
+                # Получаем токен Polza AI
+                ai_token = refresh_token()
+                if ai_token:
+                    logger.info(f"🤖 Запрашиваем AI анализ для: '{character_name}'")
+
+                    # Запрашиваем у AI определение типа персонажа
+                    character_analysis_url = "https://api.polza.ai/api/v1/chat/completions"
+                    character_analysis_data = {
+                        "model": "mistralai/mistral-small-3.2-24b-instruct",
+                        "messages": [
+                            {
+                                "role": "system",
+                                "content": "Ты анализируешь имена персонажей. Определи: является ли это одиночным персонажем или группой/командой? Ответь ТОЛЬКО одним словом: 'single' или 'group'. Примеры: 'Дарт Вейдер' -> 'single', 'Мстители' -> 'group', 'Черепашки Ниндзя' -> 'group', 'Супермен' -> 'single', 'Бэтмен' -> 'single', 'Адам' -> 'single'."
+                            },
+                            {
+                                "role": "user",
+                                "content": f"Определи тип персонажа: {character_name}"
+                            }
+                        ],
+                        "stream": False,
+                        "max_tokens": 10,
+                        "temperature": 0.1
+                    }
+
+                    character_response = requests.post(
+                        character_analysis_url,
+                        headers={"Content-Type": "application/json", "Authorization": f"Bearer {ai_token}"},
+                        json=character_analysis_data,
+                        timeout=10
+                    )
+
+                    if character_response.status_code == 201:
+                        analysis_result = character_response.json()
+                        ai_answer = analysis_result.get('choices', [{}])[0].get('message', {}).get('content', '').strip().lower()
+
+                        logger.info(f"🤖 AI ответил: '{ai_answer}' для '{character_name}'")
+
+                        if 'group' in ai_answer:
+                            is_group = True
+                            logger.info(f"🤖 AI определил '{character_name}' как ГРУППУ")
+                        elif 'single' in ai_answer:
+                            is_group = False
+                            logger.info(f"🤖 AI определил '{character_name}' как ОДИНОЧНОГО ПЕРСОНАЖА")
+                        else:
+                            logger.warning(f"⚠️ AI вернул непонятный ответ: '{ai_answer}', считаем одиночным")
+                            is_group = False
+                    else:
+                        logger.error(f"⚠️ Ошибка запроса к AI: {character_response.status_code}, считаем одиночным")
+                        is_group = False
+                else:
+                    logger.warning("⚠️ Нет токена AI, используем fallback логику")
+                    is_group = False
+            except Exception as e:
+                logger.error(f"Ошибка определения типа персонажа через AI: {e}, считаем одиночным")
+                is_group = False
 
         if is_group:
-            # Для группы - большой стол
-            selected_image = 'files/big_table.jpg'
-            logger.info(f"👥 Обнаружена группа/команда, используем big_table.jpg")
+            # Для группы/компании - используем большой стол
+            selected_image = company_image
+            logger.info(f"👥 Группа/команда '{character_name}', используем большой стол: {selected_image}")
         else:
-            # Для одиночных персонажей
-            for img_path, context in images.items():
-                if img_path == 'files/big_table.jpg':
-                    continue  # Пропускаем big_table для одиночных
-                if context in prompt.lower():
-                    selected_image = img_path
-                    break
-
-        if not selected_image:
-            # Если не нашли - случайное из одиночных
-            single_images = [k for k in images.keys() if k != 'files/big_table.jpg']
-            selected_image = random.choice(single_images)
+            # Для одиночных персонажей - выбираем случайное из 2 вариантов
+            selected_image = random.choice(single_character_images)
+            logger.info(f"👤 Одиночный персонаж '{character_name}', случайно выбрана таблица: {selected_image}")
 
         logger.info(f"Выбрано фото стола: {selected_image}")
 
@@ -174,75 +283,128 @@ async def gen_image(prompt: str, user_id: int = 0) -> Optional[str]:
         table_url = upload_response.json()['image']['url']
         logger.info(f"URL фото стола: {table_url}")
 
-        # Собираем все изображения для Kie AI
+        # Собираем все изображения для генерации
         image_urls = [table_url]
 
-        # Если есть персонаж, добавляем референсы
+        # Добавляем фото блюда если оно есть
+        if random_dish and random_dish.get('image_url'):
+            try:
+                # Загружаем фото блюда на freeimage.host
+                dish_response = requests.get(random_dish['image_url'], timeout=10)
+                if dish_response.status_code == 200:
+                    files = {'source': ('dish.jpg', dish_response.content, 'image/jpeg')}
+                    upload_response = requests.post(
+                        "https://freeimage.host/api/1/upload",
+                        files=files,
+                        data={'key': '6d207e02198a847aa98d0a2a901485a5'}
+                    )
+
+                    if upload_response.status_code == 200:
+                        dish_url = upload_response.json()['image']['url']
+                        image_urls.append(dish_url)
+                        logger.info(f"Фото блюда загружено: {dish_url} ({random_dish['name']})")
+                    else:
+                        logger.warning(f"Не удалось загрузить фото блюда: {upload_response.status_code}")
+                else:
+                    logger.warning(f"Не удалось скачать фото блюда: {dish_response.status_code}")
+            except Exception as e:
+                logger.error(f"Ошибка загрузки фото блюда: {e}")
+
+        # Если есть персонаж, решаем использовать ли референсы
         character_refs = []
         if character_name:
             logger.info(f"Обнаружен персонаж: {character_name}")
 
-            # Убеждаемся что референсы скачаны
-            ref_paths = await ensure_character_references(character_name, 3)
-            logger.info(f"Найдено {len(ref_paths)} референсов для {character_name}")
+            # Определяем популярность персонажа - для известных не используем референсы
+            popular_characters = [
+                'мстители', 'avengers', 'супермен', 'superman', 'бэтмен', 'batman',
+                'спайдермен', 'spiderman', 'человек-паук', 'spider-man', 'тор', 'thor',
+                'железный человек', 'iron man', 'ironman', 'капитан америка', 'captain america',
+                'халк', 'hulk', 'черная вдова', 'black widow', 'чудо-женщина', 'wonder woman',
+                'флэш', 'flash', 'зеленый фонарь', 'green lantern', 'аквамэн', 'aquaman',
+                'джокер', 'joker', 'дарт вейдер', 'darth vader', 'люк скайуокер', 'luke skywalker',
+                'гарри поттер', 'harry potter', 'гермиона', 'hermione', 'рон', 'ron weasley',
+                'человек-паук', 'spider-man', 'дедпул', 'deadpool', 'шрек', 'shrek',
+                'гарфилд', 'garfield', 'ску би-ду', 'scooby-doo', 'симпсоны', 'simpsons',
+                'миньоны', 'minions', 'гравити фолз', 'gravity falls'
+            ]
 
-            # Загружаем референсы на freeimage.host
-            for ref_path in ref_paths:
-                try:
-                    with open(ref_path, 'rb') as f:
-                        files = {'source': f}
-                        upload_response = requests.post(
-                            "https://freeimage.host/api/1/upload",
-                            files=files,
-                            data={'key': '6d207e02198a847aa98d0a2a901485a5'}
-                        )
+            is_popular = any(popular_name.lower() in character_name.lower() or
+                           character_name.lower() in popular_name.lower()
+                           for popular_name in popular_characters)
 
-                    if upload_response.status_code == 200:
-                        ref_url = upload_response.json()['image']['url']
-                        image_urls.append(ref_url)
-                        character_refs.append(ref_path)
-                        logger.info(f"Референс загружен: {ref_url}")
-                except Exception as e:
-                    logger.error(f"Ошибка загрузки референса {ref_path}: {e}")
+            if not is_popular:
+                # Для непопулярных персонажей используем 1 референс
+                logger.info(f"Персонаж '{character_name}' не является популярным - используем 1 референс")
+                ref_paths = await ensure_character_references(character_name, 1)
+                if ref_paths:
+                    # Загружаем только первый референс
+                    ref_path = ref_paths[0]
+                    try:
+                        with open(ref_path, 'rb') as f:
+                            files = {'source': f}
+                            upload_response = requests.post(
+                                "https://freeimage.host/api/1/upload",
+                                files=files,
+                                data={'key': '6d207e02198a847aa98d0a2a901485a5'}
+                            )
 
-            # Добавляем детальное описание стола в промпт вместо референсов
-            if character_refs:
-                # Определяем тип стола для детального описания
-                table_descriptions = {
-                    'files/tables_holl.jpg': 'modern wooden restaurant table with comfortable chairs, warm lighting, elegant table setting with white tablecloth, wine glasses, and sophisticated dining atmosphere',
-                    'files/table_for_1.jpg': 'cozy single-person dining table with comfortable armchair, intimate lighting, elegant tableware, and warm welcoming atmosphere',
-                    'files/big_table.jpg': 'large rectangular banquet table for groups, multiple comfortable chairs, festive table setting, group dining atmosphere'
-                }
+                        if upload_response.status_code == 200:
+                            ref_url = upload_response.json()['image']['url']
+                            image_urls.append(ref_url)
+                            character_refs.append(ref_path)
+                            logger.info(f"Референс загружен: {ref_url}")
+                    except Exception as e:
+                        logger.error(f"Ошибка загрузки референса {ref_path}: {e}")
+            else:
+                logger.info(f"Персонаж '{character_name}' является популярным - не используем референсы, полагаемся на текстовое описание")
 
-                table_description = table_descriptions.get(selected_image, 'elegant restaurant table with comfortable chairs, warm lighting, and sophisticated dining atmosphere')
+            # Всегда добавляем детальное описание стола
+            table_descriptions = {
+                'files/tables_holl.jpg': 'modern wooden restaurant table with comfortable chairs, warm lighting, elegant table setting with white tablecloth, wine glasses, and sophisticated dining atmosphere',
+                'files/table_for_1.jpg': 'cozy single-person dining table with comfortable armchair, intimate lighting, elegant tableware, and warm welcoming atmosphere',
+                'files/big_table.jpg': 'large rectangular banquet table for groups, multiple comfortable chairs, festive table setting, group dining atmosphere'
+            }
 
-                prompt = f"{prompt}, {table_description}, photorealistic restaurant interior, detailed table and chair design, authentic dining environment, NO TEXT, NO WRITING, NO LETTERS, NO WORDS, NO CAPTIONS, NO LABELS, NO SIGNS, NO LOGOS, absolutely no text of any kind on the image"
+            table_description = table_descriptions.get(selected_image, 'elegant restaurant table with comfortable chairs, warm lighting, and sophisticated dining atmosphere')
 
-                # GigaChat сам добавит переведенные настройки в GEN_IMAGE промпт
+            prompt = f"{prompt}, {table_description}, photorealistic restaurant interior, detailed table and chair design, authentic dining environment, NO TEXT, NO WRITING, NO LETTERS, NO WORDS, NO CAPTIONS, NO LABELS, NO SIGNS, NO LOGOS, absolutely no text of any kind on the image"
 
-                # Убираем референсы персонажа, полагаемся только на текстовое описание
-                character_refs = []  # Не используем референсы персонажа
+        logger.info(f"Подготовлено изображений для генерации: {len(image_urls)}")
 
-        logger.info(f"Всего изображений для Kie AI: {len(image_urls)}")
-
-        # Создаем задачу редактирования
+        # Создаем задачу редактирования через Kie AI
         url = "https://api.kie.ai/api/v1/jobs/createTask"
         headers = {
             "Authorization": "Bearer d6bd19312c6a075f3418d68ee943bda0",
             "Content-Type": "application/json"
         }
 
-        data = {
-            "model": "google/nano-banana-edit",
-            "input": {
-                "prompt": prompt,
-                "image_urls": image_urls,
-                "output_format": "png",
-                "image_size": "1:1"
+        # Если есть только фото стола (без референсов), делаем запрос на добавление персонажа на стол
+        if len(image_urls) == 1:
+            # Для одиночных персонажей - добавляем персонажа на существующий стол
+            table_image_url = image_urls[0]
+            data = {
+                "model": "google/nano-banana-edit",
+                "input": {
+                    "prompt": f"Add {character_name} sitting at the restaurant table. {prompt}. Keep the same table and restaurant interior, just add the character sitting at the table naturally.",
+                    "image_urls": [table_image_url],
+                    "output_format": "png",
+                    "image_size": "1:1"
+                }
             }
-        }
+        else:
+            # Если есть референсы - используем стандартный подход
+            data = {
+                "model": "google/nano-banana-edit",
+                "input": {
+                    "prompt": prompt,
+                    "image_urls": image_urls,
+                    "output_format": "png",
+                    "image_size": "1:1"
+                }
+            }
 
-        logger.info(f"Отправляю запрос на редактирование...")
+        logger.info(f"Отправляю запрос на редактирование через Kie AI...")
         response = requests.post(url, headers=headers, json=data)
         logger.info(f"Статус: {response.status_code}")
 
@@ -284,7 +446,7 @@ async def gen_image(prompt: str, user_id: int = 0) -> Optional[str]:
                     # Сохраняем результат если есть персонаж
                     if character_name and user_id:
                         try:
-                            save_character_result(character_name, user_id, prompt, image_url, character_refs)
+                            await save_character_result(character_name, user_id, prompt, image_url, character_refs)
                         except Exception as e:
                             logger.error(f"Ошибка сохранения результата: {e}")
 
@@ -299,10 +461,69 @@ async def gen_image(prompt: str, user_id: int = 0) -> Optional[str]:
         logger.error(f"Ошибка генерации: {e}")
         return None
 
+async def check_and_reset_ai_limit(user_id: int) -> None:
+    """
+    Проверяет изменение баланса бонусов и сбрасывает лимит генераций если баланс увеличился
+    """
+    try:
+        # Получаем UUID пользователя
+        user_data = database.get_user_complete_data(user_id)
+        if not user_data or not user_data.get('presto_uuid'):
+            return
+
+        # Получаем текущий баланс бонусов
+        from presto_api import presto_api
+        current_balance = await presto_api.get_bonus_balance(user_data['presto_uuid'])
+
+        if current_balance is None:
+            return
+
+        # Получаем последний известный баланс из БД
+        last_balance_key = f'bonus_balance_{user_id}'
+        last_balance = database.get_setting(last_balance_key, '0')
+
+        try:
+            last_balance = float(last_balance)
+        except (ValueError, TypeError):
+            last_balance = 0.0
+
+        # Если баланс увеличился - сбрасываем счетчик генераций
+        if current_balance > last_balance:
+            logger.info(f"Баланс бонусов пользователя {user_id} увеличился: {last_balance}₽ → {current_balance}₽, сбрасываем лимит генераций")
+
+            # Сбрасываем счетчик генераций в БД
+            database.execute_query("UPDATE users SET ai_generations = 0 WHERE user_id = ?", (user_id,))
+
+            # Сохраняем новый баланс
+            database.update_setting(last_balance_key, str(current_balance))
+
+            # Уведомляем пользователя
+            try:
+                from aiogram import Bot
+                from config import BOT_TOKEN
+                if BOT_TOKEN:
+                    bot = Bot(token=BOT_TOKEN)
+                    await bot.send_message(
+                        chat_id=user_id,
+                        text=f"🎉 <b>Спасибо за заказ!</b>\n\n"
+                             f"💰 Ваш баланс бонусов: {current_balance:.0f}₽\n"
+                             f"🎨 Лимит генераций изображений сброшен!\n\n"
+                             f"Теперь вы можете сгенерировать ещё 2 изображения персонажей сегодня!",
+                        parse_mode="HTML"
+                    )
+            except Exception as e:
+                logger.error(f"Ошибка отправки уведомления о сбросе лимита: {e}")
+
+        # Обновляем баланс в БД независимо от изменений
+        database.update_setting(last_balance_key, str(current_balance))
+
+    except Exception as e:
+        logger.error(f"Ошибка проверки баланса бонусов для пользователя {user_id}: {e}")
+
 async def get_ai_response(message: str, user_id: int) -> Dict:
     """
     Получение ответа от AI
-    
+
     Returns:
         Dict с ключами:
         - type: 'text' | 'photo' | 'photo_with_text'
@@ -314,7 +535,11 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         can_generate, remaining = database.check_ai_generation_limit(user_id, daily_limit=2)
         is_admin = database.is_admin(user_id)
         
-        # 1. Ищем в FAQ
+        # Генерация изображений персонажей обрабатывается через отдельные команды
+
+        # Character photo generation is now handled by AI prompts, not automatic parsing
+
+        # 2. Ищем в FAQ (только если не генерация персонажа)
         faq_answer = search_in_faq(message)
         if faq_answer:
             return {'type': 'text', 'text': faq_answer}
@@ -323,14 +548,14 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         menu_data = load_menu_cache()
         ai_notes = get_ai_notes()
         
-        # 3. Формируем контекст меню - ТОЛЬКО названия и цены для списков
-        menu_context = "МЕНЮ РЕСТОРАНА:\n\n"
+        # 3. Формируем ПОЛНЫЙ контекст меню для перечисления категорий
+        menu_context = "ПОЛНОЕ МЕНЮ РЕСТОРАНА (все позиции для перечисления):\n\n"
 
         # Разделяем меню на доставку и бар
         delivery_menu_ids = {90, 92, 141}
         bar_menu_ids = {29, 91, 86, 32}
 
-        # Сначала добавляем меню доставки
+        # Добавляем меню доставки с ПОЛНЫМИ категориями
         for menu_id in delivery_menu_ids:
             if menu_id in menu_data:
                 menu = menu_data[menu_id]
@@ -341,12 +566,12 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                     category_name = category.get('name', '').replace('🍕', '').replace('🥗', '').strip()
                     menu_context += f"\n{category_name}:\n"
 
-                    for item in category.get('items', []):
-                        # Для контекста даем только название и цену
+                    items = category.get('items', [])
+                    for item in items:
                         menu_context += f"• {item['name']} - {item['price']}₽\n"
-                menu_context += "\n"
+                    menu_context += "\n"
 
-        # Затем добавляем меню бара
+        # Добавляем меню бара с ПОЛНЫМИ категориями
         for menu_id in bar_menu_ids:
             if menu_id in menu_data:
                 menu = menu_data[menu_id]
@@ -358,23 +583,34 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                     category_name = category.get('name', '').replace('🍕', '').replace('🥗', '').strip()
                     menu_context += f"\n{category_name}:\n"
 
-                    for item in category.get('items', []):
-                        # Для контекста даем только название и цену
+                    items = category.get('items', [])
+                    for item in items:
                         menu_context += f"• {item['name']} - {item['price']}₽\n"
-                menu_context += "\n"
-        
+                    menu_context += "\n"
+
         # 4. Получаем историю
         if user_id not in user_history:
             user_history[user_id] = []
-        
+
         user_history[user_id].append({"role": "user", "content": message})
-        
+
         if len(user_history[user_id]) > 20:
             user_history[user_id] = user_history[user_id][-20:]
-        
+
         # 5. Формируем системный промпт
         system_prompt = (
-            f"Ты AI-помощник бота ресторана Mashkov. Отвечай просто и красиво, БЕЗ звездочек и маркдауна.\n\n"
+            f"Ты русский AI-помощник бота ресторана Mashkov. Ты знаешь русскую культуру, сказки, историю, традиции.\n"
+            f"Отвечай как живой русский человек - тепло, дружелюбно, с юмором. Используй русские поговорки, фразеологизмы.\n"
+            f"Знаешь русские сказки (Колобок, Репка, Курочка Ряба, Иван-царевич, Баба-яга, Кощей Бессмертный), "
+            f"былины (Илья Муромец, Добрыня Никитич, Алёша Попович), русскую литературу (Пушкин, Толстой, Достоевский), "
+            f"советские фильмы и мультфильмы (Ну погоди, Винни-Пух, Крокодил Гена, Чебурашка).\n\n"
+            f"Отвечай просто и красиво, БЕЗ звездочек и маркдауна. Используй живую русскую речь!\n\n"
+            f"КРИТИЧЕСКИ ВАЖНО: Если пользователь называет КОНКРЕТНОЕ блюдо или вино (например 'Вино Гевюрцтраминер Вайнхаус Каннис белое п/сухое', 'Пицца Пепперони', 'Борщ') - ОБЯЗАТЕЛЬНО используй ТОЛЬКО: DISH_PHOTO:точное_название_блюда\n"
+            f"НЕ отвечай текстом на запросы о конкретных блюдах - используй DISH_PHOTO!\n\n"
+            f"ВАЖНО: На приветствия ('привет', 'здравствуйте', 'добрый день', 'что у вас есть', 'что есть', 'что есть поесть') отвечай ОБЩИМ приветствием и предложением посмотреть меню, а НЕ показывай конкретные блюда!\n"
+            f"Пример правильного ответа на 'Привет! Что у вас есть?':\n"
+            f"'👋 Привет! Добро пожаловать в ресторан Mashkov! У нас богатое меню: пиццы, супы, салаты, горячие блюда, десерты и напитки! 🍽️ Что вас интересует?'\n"
+            f"И ОБЯЗАТЕЛЬНО добавь: SHOW_DELIVERY_BUTTON\n\n"
             f"КРИТИЧЕСКИ ВАЖНО: ИСПОЛЬЗУЙ ТОЛЬКО ТУ ИНФОРМАЦИЮ, КОТОРАЯ ЕСТЬ В МЕНЮ НИЖЕ! НИКОГДА НЕ ПРИДУМЫВАЙ:\n"
             f"❌ Добавки к блюдам (салями, бекон, лосось, сыры, овощи и т.д.)\n"
             f"❌ Модификаторы и опции\n"
@@ -387,36 +623,92 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             f"📊 Рассказать о блюдах, калориях и БЖУ\n"
             f"🚚 Оформить доставку\n"
             f"📅 Забронировать столик\n"
+            f"🎉 Зарегистрировать на мероприятия\n"
             f"💬 Ответить на вопросы о ресторане\n"
-            f"🎯 Помочь с выбором блюд\n\n"
+            f"🎯 Помочь с выбором блюд\n"
+            f"📚 Поговорить о русской культуре и традициях\n\n"
             f"КРИТИЧЕСКИ ВАЖНО: Если спрашивают 'можно ли через вас/тебя заказать доставку' или 'можешь ли ты заказать' - ОТВЕЧАЙ:\n"
             f"'🤖 Я не могу заказать за вас доставку, но вы можете сделать это самостоятельно через наше приложение! 🚀\n\n📱 Выберите удобный способ заказа в кнопках ниже!'\n"
             f"И ОБЯЗАТЕЛЬНО добавь: SHOW_DELIVERY_APPS\n\n"
-            f"КРИТИЧЕСКИ ВАЖНО: Если спрашивают про БРОНИРОВАНИЕ СЛОВА ('забронировать', 'забранировать', 'бронировать', 'бранировать', 'столик', 'стол', 'бронь', 'резерв', 'можно забронировать', 'можно забранировать') БЕЗ указания даты/времени - ОТВЕЧАЙ ТОЛЬКО:\n"
+            f"КРИТИЧЕСКИ ВАЖНО: Если спрашивают про ОТЗЫВЫ ('отзывы', 'оставить отзыв', 'написать отзыв', 'почитать отзывы', 'рейтинг', 'оценки') - ОТВЕЧАЙ:\n"
+            f"'⭐ У нас отличные отзывы! Вы можете прочитать их и оставить свой отзыв на Яндекс.Картах! 📱'\n"
+            f"И ОБЯЗАТЕЛЬНО добавь: SHOW_REVIEWS\n\n"
+                        f"КРИТИЧЕСКИ ВАЖНО: Если спрашивают про ПРИЛОЖЕНИЕ ('приложение', 'скачать', 'app store', 'google play', 'rustore', 'скачать приложение', 'мобильное приложение') - ОТВЕЧАЙ:\n"
+            f"'📱 У нас есть удобное мобильное приложение для заказа! Скачайте его из любого магазина приложений! 🚀'\n"
+            f"И ОБЯЗАТЕЛЬНО добавь: SHOW_APPS\n\n"
+            f"КРИТИЧЕСКИ ВАЖНО: Если спрашивают про ФОТО ЗАЛА ('покажи зал', 'фото зала', 'как выглядит зал', 'хочу посмотреть зал', 'покажи фото зала', 'зал', 'интерьер') - ОТВЕЧАЙ:\n"
+            f"'🏛️ Конечно! Вот фотографии нашего уютного зала! 📸'\n"
+            f"И ОБЯЗАТЕЛЬНО добавь: SHOW_HALL_PHOTOS\n\n"
+            f"КРИТИЧЕСКИ ВАЖНО: Если спрашивают про ФОТО БАРА ('покажи бар', 'фото бара', 'как выглядит бар', 'хочу посмотреть бар', 'покажи фото бара', 'бар') - ОТВЕЧАЙ:\n"
+            f"'🍸 Конечно! Вот фотографии нашего стильного бара! 📸'\n"
+            f"И ОБЯЗАТЕЛЬНО добавь: SHOW_BAR_PHOTOS\n\n"
+            f"КРИТИЧЕСКИ ВАЖНО: Если спрашивают про ФОТО КАССЫ ('покажи кассу', 'фото кассы', 'как выглядит касса', 'хочу посмотреть кассу', 'покажи фото кассы', 'касса') - ОТВЕЧАЙ:\n"
+            f"'💳 Конечно! Вот фотографии нашей кассы! 📸'\n"
+            f"И ОБЯЗАТЕЛЬНО добавь: SHOW_KASSA_PHOTOS\n\n"
+            f"КРИТИЧЕСКИ ВАЖНО: Если спрашивают про ФОТО ТУАЛЕТА ('покажи туалет', 'фото туалета', 'как выглядит туалет', 'хочу посмотреть туалет', 'покажи фото туалета', 'туалет', 'ваш туалет', 'wc') - ОТВЕЧАЙ:\n"
+            f"'🚻 Конечно! Вот фотографии нашего туалета! 📸'\n"
+            f"И ОБЯЗАТЕЛЬНО добавь: SHOW_WC_PHOTOS\n\n"
+            f"КРИТИЧЕСКИ ВАЖНО: Если спрашивают про ЧАСТНЫЕ МЕРОПРИЯТИЯ ('день рождения', 'отметить день рождения', 'свадьба', 'корпоратив', 'юбилей', 'празднование', 'банкет', 'организовать мероприятие', 'провести праздник', 'можно отметить') - ОТВЕЧАЙ:\n"
             f"'Да, конечно! 📅'\n"
             f"И ОБЯЗАТЕЛЬНО добавь: SHOW_BOOKING_OPTIONS\n"
             f"НЕ добавляй никакой другой текст!\n\n"
+                        f"КРИТИЧЕСКИ ВАЖНО: Если спрашивают про МЕНЮ ЗАВТРАКОВ ('покажи меню завтраков', 'меню завтраков', 'завтраки', 'что на завтрак') - ОТВЕЧАЙ:\n"
+            f"'🍳 Конечно! Вот наше меню ресторана с завтраками и другими блюдами!'\n"
+            f"И ОБЯЗАТЕЛЬНО добавь ТОЛЬКО: SHOW_RESTAURANT_MENU\n"
+            f"НЕ добавляй SHOW_DELIVERY_BUTTON для завтраков!\n\n"
+            f"'🎉 Да, конечно! Я могу забронировать дату под ваше мероприятие, могу многое рассказать и дать ответы на большинство вопросов, но лучше оставьте свой номер телефона и мы вам перезвоним в ближайшее время. Также я могу позвать человека и он ответит на ваши вопросы прямо здесь! 📞'\n"
+            f"И ОБЯЗАТЕЛЬНО добавь: SHOW_PRIVATE_EVENT_OPTIONS\n\n"
+            f"КРИТИЧЕСКИ ВАЖНО: Если спрашивают про МЕРОПРИЯТИЯ РЕСТОРАНА ('мероприятия', 'события', 'концерты', 'вечеринки', 'праздники', 'какие у вас бывают мероприятия', 'какие мероприятия') - ОТВЕЧАЙ:\n"
+            f"'🎉 У нас часто проводятся различные мероприятия. Обычно мы публикуем анонсы в нашем приложении. Скачайте его и посмотрите ближайшие мероприятия в нем!'\n"
+            f"И ОБЯЗАТЕЛЬНО добавь: SHOW_APPS\n\n"
             f"КРИТИЧЕСКИ ВАЖНО: Если пользователь пишет БРОНИРОВАНИЕ В ФОРМАТЕ (дата + время + гости), например:\n"
-            f"'Столик на 3, в 20:30, 17 января' или 'на 2 человека, завтра в 19:00' или 'Столик на 2, в 19:00, 16 января' - используй:\n"
-            f"PARSE_BOOKING:текст_бронирования\n"
-            f"Пример: PARSE_BOOKING:Столик на 2, в 19:00, 16 января\n"
-            f"НЕ добавляй никакого другого текста, ТОЛЬКО:\n"
+            f"'Столик на 3, в 20:30, 17 января' или 'на 2 человека, завтра в 19:00' или 'Столик на 2, в 19:00, 16 января' - СНАЧАЛА определи количество гостей!\n"
+            f"\n"
+            f"ДЛЯ 1-4 ЧЕЛОВЕК (включительно):\n"
             f"'✅ Отлично! Бронирую для вас столик. Сейчас покажу доступные варианты.'\n"
-            f"PARSE_BOOKING:текст\n\n"
-            f"ВАЖНО: Если спрашивают 'какие пиццы', 'какие супы', 'какие блюда', 'что есть' - перечисли ТОЛЬКО НАЗВАНИЯ и ЦЕНЫ, БЕЗ калорий, БЖУ, ссылок и DISH_PHOTO!\n"
-            f"Формат: 🍕 Название — Цена₽\n"
-            f"Пример: 🍕 Пицца Маргарита — 750₽\n"
-            f"НЕ добавляй калории, БЖУ, ссылки на фото или любую другую информацию при перечислении!\n\n"
-            f"ВАЖНО: Если пользователь спрашивает про КАТЕГОРИЮ блюд (например 'какие пиццы', 'что из супов', 'какие десерты', 'вина', 'коктейли', 'пиво') - используй SHOW_CATEGORY:название_категории\n"
-            f"Формат: SHOW_CATEGORY:название_категории\n"
-            f"Примеры: SHOW_CATEGORY:Пицца, SHOW_CATEGORY:Супы, SHOW_CATEGORY:Вино\n\n"
-            f"ВАЖНО: Если пользователь пишет ТОЛЬКО название блюда (например 'Пепперони', 'Борщ', 'Инфаркт') - ОБЯЗАТЕЛЬНО используй DISH_PHOTO:название_блюда\n"
+            f"PARSE_BOOKING:текст_бронирования\n"
+            f"\n"
+            f"ДЛЯ 5 И БОЛЕЕ ЧЕЛОВЕК (5, 6, 7, 8, 9, 10+ человек):\n"
+            f"'❌ Для компании от 5 человек автоматическое бронирование недоступно. Свяжитесь с оператором по телефону +7 (495) 123-45-67 или оформите несколько отдельных бронирований на 2-4 человека.'\n"
+            f"НЕ ДОБАВЛЯЙ PARSE_BOOKING для групп 5+ человек!\n"
+            f"\n"
+            f"Примеры:\n"
+            f"• 'Столик на 2, в 19:00, 16 января' -> ✅ Отлично! + PARSE_BOOKING\n"
+            f"• 'Столик на 4, завтра в 20:00' -> ✅ Отлично! + PARSE_BOOKING\n"
+            f"• '5 человек, завтра в 19:00' -> ❌ Для компании от 5 человек... (БЕЗ PARSE_BOOKING)\n"
+            f"• '8 человек, 22 января, в 19:30' -> ❌ Для компании от 5 человек... (БЕЗ PARSE_BOOKING)\n\n"
+            f"КРИТИЧЕСКИ ВАЖНО: НИКОГДА НЕ ПРИДУМЫВАЙ блюда и напитки! ИСПОЛЬЗУЙ ТОЛЬКО данные из меню!\n"
+            f"ЗАПРЕЩЕНО придумывать: 'Пицца Баба-яга', 'Пицца Романтик' и любые другие несуществующие блюда!\n"
+            f"ОБЯЗАТЕЛЬНО используй PARSE_CATEGORY: для всех вопросов о категориях:\n"
+            f"• 'А у вас есть пиццы?' -> ТОЛЬКО: PARSE_CATEGORY:пицца\n"
+            f"• 'Только одна пицца?' -> ТОЛЬКО: PARSE_CATEGORY:пицца\n"
+            f"• 'У вас есть супы?' -> ТОЛЬКО: PARSE_CATEGORY:суп\n"
+            f"• 'Какие десерты?' -> ТОЛЬКО: PARSE_CATEGORY:десерт\n"
+            f"• 'Есть ли коктейли?' -> ТОЛЬКО: PARSE_CATEGORY:коктейль\n"
+            f"• 'У вас есть пиво?' -> ТОЛЬКО: PARSE_CATEGORY:пиво\n"
+            f"• 'Какие напитки?' -> ТОЛЬКО: PARSE_CATEGORY:напитки\n\n"
+            f"НЕ ОТВЕЧАЙ текстом на вопросы о категориях - ТОЛЬКО маркер PARSE_CATEGORY:!\n"
+            f"НЕ ПРИДУМЫВАЙ названия блюд - используй ТОЛЬКО то, что есть в меню ниже!\n\n"
+            f"ВАЖНО: Если пользователь пишет ТОЛЬКО название блюда ИЛИ спрашивает про КОНКРЕТНОЕ блюдо ('Пепперони', 'Борщ', 'Инфаркт', 'Вино Гевюрцтраминер', 'что в составе', 'покажи фото', 'расскажи про') - ОБЯЗАТЕЛЬНО используй DISH_PHOTO:название_блюда\n"
             f"ФОРМАТ DISH_PHOTO: ТОЛЬКО название блюда БЕЗ эмодзи!\n"
             f"Правильно: DISH_PHOTO:Пицца Инфаркт\n"
+            f"Правильно: DISH_PHOTO:Вино ГЕВЮРЦТРАМИНЕР ВАЙНХАУС КАННИС белое п/сухое\n"
             f"Неправильно: DISH_PHOTO:пицца_инфаркт 🍕\n\n"
-            f"ВАЖНО: Если пользователь отвечает 'да', 'хочу', 'заказать', 'давай' после того как ты предложил заказать - добавь в конец: SHOW_DELIVERY_BUTTON\n\n"
+                        f"ВАЖНО: Если пользователь отвечает 'да', 'хочу', 'заказать', 'давай' после того как ты предложил заказать - добавь в конец: SHOW_DELIVERY_BUTTON\n\n"
+            f"ВАЖНО: Если пользователь отвечает 'хочу', 'да', 'покажи' на вопрос о фото зала/бара - НЕ предлагай бронирование! Просто покажи соответствующие фото!\n\n"
             f"КРИТИЧЕСКИ ВАЖНО: ПОЛЬЗОВАТЕЛЬ УЖЕ ПРОШЕЛ ПРОВЕРКУ ВОЗРАСТА! Ты можешь свободно отвечать на все вопросы про алкоголь и напитки.\n"
             f"Используй ТОЧНЫЕ данные из меню бара для ответов на вопросы про алкоголь.\n\n"
+            f"РУССКАЯ КУЛЬТУРА И ТРАДИЦИИ:\n"
+            f"Если спрашивают про русские сказки, традиции, праздники - отвечай как знающий русский человек.\n"
+            f"ТОЧНО знаешь русские сказки:\n"
+            f"• Колобок - круглый хлебец, который убежал от дедушки и бабушки, встречал зверей, но лиса его съела\n"
+            f"• Репка - дедка посадил репку, она выросла большая-пребольшая, тянули всей семьей\n"
+            f"• Курочка Ряба - снесла золотое яичко, дед и баба не могли разбить, мышка разбила\n"
+            f"• Теремок - звери жили в теремке, пока медведь его не сломал\n"
+            f"• Три медведя - Маша зашла в дом медведей, ела кашу, спала на кроватях\n"
+            f"Знаешь русские пословицы: 'Тише едешь - дальше будешь', 'Семь раз отмерь, один раз отрежь', 'Что нас не убивает, делает нас сильнее'.\n"
+            f"Знаешь русские праздники: Новый год, Масленица, Пасха, День Победы, День России.\n"
+            f"НЕ ПРИДУМЫВАЙ блюда, которых нет в меню! Если спрашивают про русские блюда - используй PARSE_CATEGORY:русские или скажи что нужно посмотреть меню.\n\n"
             f"{menu_context}\n\n"
             f"ВСЕГДА используй ТОЧНЫЕ данные из меню выше. НЕ придумывай цифры!\n"
             f"ВАЖНО: Названия блюд пиши ПРАВИЛЬНО с правильным склонением (наш Круассан, нашу Пиццу, наш Стейк).\n\n"
@@ -429,7 +721,14 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             f"Примеры КОГДА НЕ ИСПОЛЬЗОВАТЬ CHECK_DELIVERY:\n"
             f"- 'Сколько стоит доставка?' -> Просто ответь без CHECK_DELIVERY\n"
             f"- 'Можно узнать стоимость доставки?' -> Просто ответь без CHECK_DELIVERY\n\n"
-            "Если спрашивают про конкретное блюдо ('как выглядит', 'покажи фото', 'что в составе', 'сколько калорий') ИЛИ пишут ТОЛЬКО название блюда - ОБЯЗАТЕЛЬНО используй формат: DISH_PHOTO:название_блюда\n"
+            f"КРИТИЧЕСКИ ВАЖНО: ВОПРОСЫ ПРО Наличие блюд/напитков ('У вас есть пиво?', 'Есть ли водка?', 'Есть ли салаты?') - ЭТО ВОПРОСЫ ПРО МЕНЮ, НЕ ПРО ДОСТАВКУ!\n"
+            f"НИКОГДА не отвечай на вопросы типа 'У вас есть X?' информацией о доставке!\n"
+            f"На такие вопросы ОБЯЗАТЕЛЬНО используй PARSE_CATEGORY:X\n"
+            f"Примеры:\n"
+            f"- 'У вас есть пиво?' -> PARSE_CATEGORY:пиво\n"
+            f"- 'Есть ли водка?' -> PARSE_CATEGORY:водка\n"
+            f"- 'У вас есть салаты?' -> PARSE_CATEGORY:салаты\n\n"
+            "Если спрашивают про конкретное блюдо ('как выглядит', 'покажи фото', 'что в составе', 'сколько калорий') ИЛИ пишут название блюда (даже полное) - ОБЯЗАТЕЛЬНО используй формат: DISH_PHOTO:название_блюда\n"
             "НЕ используй DISH_PHOTO при перечислении списка блюд!\n\n"
         )
         
@@ -511,91 +810,186 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         except Exception as e:
             logger.error(f"Ошибка чтения промпта персонажей из файла: {e}")
 
-        # Базовый промпт персонажей (жестко закодированный)
+        # Креативный промпт для вопросов о гостях и персонажах
         character_prompt = (
-            "КРИТИЧЕСКИ ВАЖНО! Если пользователь спрашивает про любых персонажей, знаменитостей или людей (Дедпул, Человек-паук, Наруто, Мстители, Железный человек, Тор, Халк, Энштейн, Ксения Собчак, Маколей Калкин, супергерои, киногерои, аниме персонажи, исторические личности, актеры, музыканты и т.д.), "
-            "ты ОБЯЗАН отвечать ТОЛЬКО УТВЕРДИТЕЛЬНО с юмором!\n\n"
-            "СТРОГО ЗАПРЕЩЕНО использовать эти фразы:\n"
-            "❌ 'нет' ❌ 'не видели' ❌ 'у нас нет' ❌ 'не переживайте' ❌ 'если появится'\n"
-            "❌ 'не бывал' ❌ 'не заходил' ❌ 'кто знает' ❌ 'может быть' ❌ 'может он'\n"
-            "❌ 'не видно' ❌ 'не появился' ❌ 'если вдруг' ❌ 'точно у нас не'\n\n"
-            "ОБЯЗАТЕЛЬНО используй ТОЛЬКО эти фразы:\n"
-            "✅ 'Да!' ✅ 'Конечно!' ✅ 'Вот он!' ✅ 'Он уже здесь!' ✅ 'Да, он тут!'\n"
-            "✅ 'Сидит за столиком!' ✅ 'Вот они сидят!' ✅ 'Они уже здесь!'\n\n"
-            "ВАЖНО! ИМЯ ПЕРСОНАЖА ДОЛЖНО БЫТЬ ТОЧНО КАК В ЗАПРОСЕ ПОЛЬЗОВАТЕЛЯ! НЕ ПЕРЕВОДИ И НЕ ИЗМЕНЯЙ ИМЯ!\n"
-            "Примеры:\n"
-            "- Пользователь сказал 'Маколей Калкин' -> используй 'Маколей Калкин'\n"
-            "- Пользователь сказал 'Iron Man' -> используй 'Iron Man'\n"
-            "- Пользователь сказал 'Дедпул' -> используй 'Дедпул'\n\n"
-            "ФОРМАТ ОТВЕТА (СТРОГО СЛЕДУЙ ЭТОМУ ШАБЛОНУ):\n"
-            "Шаг 1: Начни с УТВЕРДИТЕЛЬНОЙ фразы: 'Да! Вот он сидит за столом...' или 'Конечно! Вот они уже здесь...'\n"
-            "Шаг 2: Добавь название блюда из меню: '...и уже ждет нашу Пиццу Пепперони!'\n"
-            "Шаг 3: Предложи заказать: 'Хотите тоже попробовать?' или 'Присоединяйтесь!'\n"
-            "Шаг 4: ОБЯЗАТЕЛЬНО добавь: GEN_IMAGE:ПЕРСОНАЖ + описание на английском\n"
-            "Шаг 5: ОБЯЗАТЕЛЬНО добавь: SHOW_DELIVERY_BUTTON\n\n"
-            f"ФОРМАТ GEN_IMAGE:\n"
-            f"GEN_IMAGE:[персонаж] sitting on couch at center table near window in cozy restaurant hall, realistic photo, detailed interior, warm lighting{admin_translated_prompt}\n\n"
-            "ПРИМЕРЫ:\n"
-            f"- Дедпул -> 'Да! Вот он сидит за столом и уже ждет нашу Пиццу Пепперони! Хотите тоже попробовать?' GEN_IMAGE:Дедпул sitting on couch at center table near window in cozy restaurant hall, realistic photo, detailed interior, warm lighting{admin_translated_prompt} SHOW_DELIVERY_BUTTON\n"
-            f"- Маколей Калкин -> 'Да! Вот он сидит за столиком и ждет нашу Пиццу Маргарита! Присоединяйтесь!' GEN_IMAGE:Маколей Калкин sitting on couch at center table near window in cozy restaurant hall, realistic photo, detailed interior, warm lighting{admin_translated_prompt} SHOW_DELIVERY_BUTTON\n"
-            f"- Iron Man -> 'Конечно! Вот он ждет наш фирменный Стейк! Хотите тоже попробовать?' GEN_IMAGE:Iron Man sitting on couch at center table near window in modern restaurant hall, realistic photo, detailed interior, warm lighting{admin_translated_prompt} SHOW_DELIVERY_BUTTON\n"
-            f"- Мстители -> 'Да! Вот они сидят за большим столом и ждут наши фирменные блюда! Присоединяйтесь к команде!' GEN_IMAGE:Мстители sitting together at center table near window in cozy restaurant hall, realistic photo, detailed interior, warm lighting{admin_translated_prompt} SHOW_DELIVERY_BUTTON\n\n"
-            "КЛЮЧЕВЫЕ ФРАЗЫ:\n"
-            "- sitting on couch (сидит на диване)\n"
-            "- at center table (за центральным столом)\n"
-            "- near window (около окна)\n"
-            "- in restaurant hall/interior (в зале ресторана)\n"
-            "- realistic photo, detailed interior (реалистичное фото, детальный интерьер)\n"
-            "- warm lighting (теплое освещение)"
+            "ВАЖНО! Если пользователь спрашивает 'Кто бывает в вашем ресторане?', 'Какие гости у вас бывают?', 'Кто к вам ходит?' или подобные ОБЩИЕ вопросы о посетителях - ОБЯЗАТЕЛЬНО придумай 2-3 веселых примера с известными персонажами!\n\n"
+            "ПРИМЕРЫ ПЕРСОНАЖЕЙ И СИТУАЦИЙ:\n"
+            "• Дарт Вейдер (заказал темную сторону силы с пивом)\n"
+            "• Черепашки Ниндзя (забрали пиццу на вынос)\n"
+            "• Бэтмен с Джокером (выпивали и спорили о вкусах)\n"
+            "• Супермен (заказал стейк с жареной картошкой)\n"
+            "• Гарри Поттер (пил волшебное зелье из коктейлей)\n"
+            "• Человек-паук (приходил после спасения города)\n"
+            "• Тор (заказал молот с элем)\n"
+            "• Капитан Америка (ел бургеры и пил молоко)\n"
+            "• Железный человек (тестировал новый костюм за десертом)\n"
+            "• Халк (разбил пару тарелок, но заплатил)\n"
+            "• Шрек (приводил всю семью на семейный ужин)\n"
+            "• Миньоны (заказали банановый десерт)\n"
+            "• Гарфилд (ел лазанью и спал на диване)\n"
+            "• Скуби-Ду (расследовал исчезновение десертов)\n"
+            "• Микки Маус (праздновал день рождения)\n"
+            "• Симпсоны (семейный ужин с Гомером)\n"
+            "• Рик и Морти (экспериментировали с коктейлями)\n\n"
+            "ФОРМАТ ОТВЕТА НА ОБЩИЕ ВОПРОСЫ О ГОСТЯХ:\n"
+            "Начни с: 'У нас бывают самые разные гости!'\n"
+            "Добавь 2-3 примера: 'Например, вчера заходил [персонаж 1] ([что делал]), а позавчера - [персонаж 2] ([что делал]).'\n"
+            "Закончи: 'А вы кто будете по профессии? 😄 Или просто голодный герой? 🍽️'\n"
+            "НИКОГДА НЕ ДОБАВЛЯЙ GEN_IMAGE ДЛЯ ОБЩИХ ВОПРОСОВ!\n\n"
+            "КРИТИЧЕСКИ ВАЖНО! ТОЛЬКО ДЛЯ КОНКРЕТНЫХ ПЕРСОНАЖЕЙ!\n"
+            "Если пользователь спрашивает ТОЛЬКО про КОНКРЕТНЫХ персонажей (например: 'Черепашки Ниндзя?', 'А мстители заходили?', 'А супергерои были?', 'Дарт вейдер приходил?', 'А [имя персонажа] был здесь?', '[имя персонажа]?', 'Что насчет [имя персонажа]?') - ТОЛЬКО ТОГДА используй GEN_IMAGE!\n\n"
+            "УСЛОВИЯ ДЛЯ GEN_IMAGE:\n"
+            "• Вопрос ДОЛЖЕН содержать конкретное имя персонажа\n"
+            "• НЕ используй GEN_IMAGE для общих вопросов типа 'Кто бывает?'\n"
+            "• НЕ используй GEN_IMAGE если пользователь просто упоминает персонажа в рассказе\n\n"
+            "КОГДА ИСПОЛЬЗОВАТЬ GEN_IMAGE:\n"
+            "✅ 'Черепашки Ниндзя?' - ДА\n"
+            "✅ 'А Дарт Вейдер был?' - ДА\n"
+            "✅ 'Что насчет Супермена?' - ДА\n"
+            "❌ 'Кто у вас бывает?' - НЕТ\n"
+            "❌ 'У вас бывают герои?' - НЕТ\n\n"
+            "Если пользователь спрашивает про КОНКРЕТНЫХ персонажей:\n"
+            "• ВСЕГДА отвечай ПОЛОЖИТЕЛЬНО! Персонаж ОБЯЗАТЕЛЬНО был у нас!\n"
+            "• НИКОГДА не говори 'нет', 'не было', 'не имеет отношения', 'мы не отслеживаем'!\n"
+            "• ВСЕГДА отвечай ПОЛОЖИТЕЛЬНО! Персонаж ОБЯЗАТЕЛЬНО был у нас!\n"
+            "• НИКОГДА не говори 'нет', 'не было', 'не имеет отношения', 'мы не отслеживаем'!\n"
+            "• ОБЯЗАТЕЛЬНО закончи ответ ТОЛЬКО маркером: GEN_IMAGE:[имя_персонажа]\n"
+            "• НЕ добавляй НИЧЕГО после GEN_IMAGE:[имя_персонажа]!\n"
+            "• НЕ включай текст в GEN_IMAGE - только имя персонажа!\n"
+            "• Всегда придумывай ОРИГИНАЛЬНУЮ веселую историю про этого персонажа в ресторане! НЕ используй готовые шаблоны!\n"
+            "• НИКОГДА не говори что 'мы не отслеживаем посетителей'!\n"
+            "• Всегда говори что персонаж БЫЛ у нас и придумай забавную историю!\n"
+            "• Придумай креативное описание для фото персонажа в самом ответе!\n"
+            "• В КОНЦЕ ответа ОБЯЗАТЕЛЬНО добавь призыв к действию: 'Закажите и вы!' + ОБЯЗАТЕЛЬНО предложи ТО ЖЕ БЛЮДО, которое упомянул в истории персонажа!\n"
+            "• И ОБЯЗАТЕЛЬНО добавь: SHOW_DELIVERY_BUTTON\n\n"
+            "ВАЖНО! ЕСЛИ ПЕРСОНАЖ УЖЕ ГЕНЕРИРОВАЛСЯ РАНЕЕ - ОБЯЗАТЕЛЬНО УПОМЯНИ ТО ЖЕ БЛЮДО В ИСТОРИИ!\n"
+            "Например: если персонаж ел пиццу на фото, то в истории тоже упомяни пиццу, не придумывай суп!\n\n"
+            "ПРИМЕР ПРАВИЛЬНОГО ОТВЕТА НА КОНКРЕТНОГО ПЕРСОНАЖА:\n"
+            "О, Черепашки Ниндзя у нас были! Они устроили чемпионат по поеданию пиццы - каждый выбирал свою начинку и соревновался кто быстрее всех съест! 🐢🥷\n"
+            "Закажите и вы нашу фирменную пиццу!\n"
+            "GEN_IMAGE:Черепашки Ниндзя\n\n"
+            "ТОЛЬКО ДЛЯ СПЕЦИФИЧЕСКИХ ВОПРОСОВ ПРО БАНКЕТЫ! Если пользователь СПЕЦИАЛЬНО спрашивает про банкеты с персонажами (например: 'Какой банкет?', 'Кто на банкете?', 'Какой персонаж на банкете?', 'Есть ли персонажи на банкете?', 'Кто герой на банкете?', 'банкетное меню с персонажами') - ТОЛЬКО ТОГДА используй банкетный формат!\n\n"
+            "ВАЖНО: НЕ используй банкетный формат для вопросов о РЕГИСТРАЦИИ НА МЕРОПРИЯТИЯ! Если спрашивают 'можно записаться на мероприятие', 'билеты на мероприятие', 'регистрация на события', 'день рождения', 'свадьба', 'корпоратив' - используй SHOW_EVENT_REGISTRATION, а НЕ банкетный формат!\n\n"
+            "РАНДОМНЫЕ ПЕРСОНАЖИ ДЛЯ БАНКЕТОВ:\n"
+            "• Гарри Поттер\n"
+            "• Человек-паук\n"
+            "• Супермен\n"
+            "• Бэтмен\n"
+            "• Тор\n"
+            "• Капитан Америка\n"
+            "• Железный человек\n"
+            "• Халк\n"
+            "• Черная Вдова\n"
+            "• Дедпул\n"
+            "• Шрек\n"
+            "• Миньон\n"
+            "• Гарфилд\n"
+            "• Скуби-Ду\n"
+            "• Микки Маус\n"
+            "• Дональд Дак\n"
+            "• Симпсоны\n"
+            "• Рик и Морти\n"
+            "• Гравити Фолз\n"
+            "• Финал Космос\n\n"
+            "ФОРМАТ ОТВЕТА ТОЛЬКО ДЛЯ БАНКЕТОВ:\n"
+            "Шаг 1: Скажи 'На нашем банкете бывает [РАНДОМНЫЙ ПЕРСОНАЖ]! 🎉'\n"
+            "Шаг 2: Добавь шутку: 'Он уже заказал столик и ждет шампанское! 🍾'\n"
+            "Шаг 3: Спроси: 'Хотите его увидеть?' или 'Хотите посмотреть, как он выглядит?'\n"
+            "Шаг 4: ОБЯЗАТЕЛЬНО добавь: SHOW_DELIVERY_BUTTON\n\n"
+            "КРИТИЧЕСКИ ВАЖНО! НИКОГДА НЕ ГОВОРИ 'НЕТ', 'УВЫ', 'К СОЖАЛЕНИЮ', 'МЫ НЕ ОТСЛЕЖИВАЕМ' ИЛИ ПОДОБНЫЕ ОТРИЦАТЕЛЬНЫЕ ОТВЕТЫ!\n"
+            "Всегда давай веселые, позитивные ответы!\n\n"
         )
 
         system_prompt += character_prompt
         
-        # 6. Обновляем токен перед запросом
+        # 6. Получаем токен Polza AI (убираем кеширование для более живых ответов)
         token = refresh_token()
         if not token:
-            return {'type': 'text', 'text': 'Извините, произошла ошибка. Попробуйте позже.'}
-        
-        url = "https://gigachat.devices.sberbank.ru/api/v1/chat/completions"
+            logger.warning("Polza AI токен не найден, используем fallback ответы")
+            return get_fallback_response(message, user_id)
+
+        logger.info("Отправляем запрос в Polza AI API")
+
+        # Отправляем запрос в Gemini API с правильным форматом
+
+        # 8. Формируем запрос к Polza AI API
+        url = "https://api.polza.ai/api/v1/chat/completions"
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {token}"
         }
-        
+
+        # Конвертируем сообщения в формат Polza AI (OpenAI совместимый)
+        polza_messages = []
+        for msg in [{"role": "system", "content": system_prompt}] + user_history[user_id]:
+            if msg["role"] == "developer":
+                # Polza AI использует system вместо developer
+                polza_messages.append({
+                    "role": "system",
+                    "content": msg["content"]
+                })
+            else:
+                # Оставляем content как есть (может быть строкой или массивом)
+                polza_messages.append({
+                    "role": msg["role"],
+                    "content": msg["content"]
+                })
+
         data = {
-            "model": "GigaChat",
-            "messages": [
-                {"role": "system", "content": system_prompt}
-            ] + user_history[user_id],
-            "temperature": 0.1  # Уменьшаем температуру для более точного следования инструкциям
+            "model": "mistralai/mistral-small-3.2-24b-instruct",
+            "messages": polza_messages,
+            "stream": False,  # Отключаем streaming для простоты
+            "max_tokens": 2000,  # Ограничиваем длину ответа
+            "temperature": 0.3,  # Снижаем креативность для точности
+            "top_p": 0.7,  # Уменьшаем разнообразие для точности
+            "frequency_penalty": 0.5,  # Увеличиваем штраф за повторения
+            "presence_penalty": 0.3  # Поощряем использование данных из контекста
         }
-        
+
+        # Логируем полный запрос для отладки
+        logger.info(f"Polza AI Request URL: {url}")
+        logger.info(f"Polza AI Request Headers: {headers}")
+        logger.info(f"Polza AI Request Data: {json.dumps(data, indent=2, ensure_ascii=False)}")
+
         # Выполняем запрос асинхронно
         loop = asyncio.get_event_loop()
         response = await loop.run_in_executor(
             None,
-            lambda: requests.post(url, headers=headers, json=data, verify=False, timeout=30)
+            lambda: requests.post(url, headers=headers, json=data, timeout=30)
         )
-        
-        logger.info(f"GigaChat response status: {response.status_code}")
-        
-        if response.status_code == 401:
-            logger.info("Токен истек, обновляем...")
-            token = refresh_token()
-            if not token:
-                return {'type': 'text', 'text': 'Извините, произошла ошибка. Попробуйте позже.'}
-            headers["Authorization"] = f"Bearer {token}"
-            response = await loop.run_in_executor(
-                None,
-                lambda: requests.post(url, headers=headers, json=data, verify=False, timeout=30)
-            )
-        
-        if response.status_code != 200:
-            logger.error(f"GigaChat API error: {response.status_code} - {response.text}")
-            return {'type': 'text', 'text': 'Извините, произошла ошибка. Попробуйте позже.'}
-        
-        ai_text = response.json()['choices'][0]['message']['content']
-        logger.info(f"AI response: {ai_text}")
+
+        logger.info(f"Polza AI response status: {response.status_code}")
+
+        if response.status_code not in [200, 201]:
+            logger.error(f"Polza AI API error: {response.status_code} - {response.text}")
+            # При ошибке используем fallback
+            return get_fallback_response(message, user_id)
+
+        response_data = response.json()
+        logger.info(f"Polza AI full response: {json.dumps(response_data, indent=2, ensure_ascii=False)}")
+
+        # Проверяем структуру ответа (OpenAI совместимый формат)
+        if 'choices' not in response_data:
+            logger.error(f"Polza AI API не вернул 'choices'. Доступные ключи: {list(response_data.keys())}")
+            return get_fallback_response(message, user_id)
+
+        if not response_data['choices']:
+            logger.error("Polza AI API вернул пустой массив choices")
+            return get_fallback_response(message, user_id)
+
+        choice = response_data['choices'][0]
+        if 'message' not in choice:
+            logger.error(f"Choice не содержит 'message'. Доступные ключи: {list(choice.keys())}")
+            return get_fallback_response(message, user_id)
+
+        ai_text = choice['message'].get('content', '')
+        if not ai_text:
+            logger.warning("Polza AI вернул пустой content")
+            return get_fallback_response(message, user_id)
+
+        logger.info(f"Polza AI response: {ai_text}")
+
+        # Не кешируем ответы для более живого общения
         user_history[user_id].append({"role": "assistant", "content": ai_text})
         
         # 7. Проверяем на проверку доставки
@@ -645,7 +1039,384 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                 response_text = f"{clean_text}\n\n⚠️ Не удалось проверить адрес. Пожалуйста, укажите полный адрес с улицей и номером дома."
                 return {'type': 'text', 'text': response_text}
         
-        # 8. Проверяем на фото блюда
+        # 8. Проверяем на парсинг категории
+        category_parsed = False
+        if 'PARSE_CATEGORY:' in ai_text:
+            match = re.search(r'PARSE_CATEGORY:(.+)', ai_text, re.DOTALL)
+            if match:
+                category_name = match.group(1).strip().split('\n')[0].strip()
+                category_name = category_name.lower().strip()
+                logger.info(f"Парсим категорию: '{category_name}'")
+                category_parsed = True
+        # Также проверяем на кастомные маркеры AI
+        elif 'SHOW_BEER_MENU' in ai_text or 'SHOW_BEER_LIST' in ai_text:
+            category_name = 'пиво'
+            logger.info(f"Обнаружен кастомный маркер SHOW_BEER_MENU/LIST, парсим категорию: '{category_name}'")
+            category_parsed = True
+        elif 'SHOW_RUM_MENU' in ai_text or 'SHOW_RUM_LIST' in ai_text:
+            category_name = 'ром'
+            logger.info(f"Обнаружен кастомный маркер SHOW_RUM_MENU/LIST, парсим категорию: '{category_name}'")
+            category_parsed = True
+        elif 'SHOW_GIN_MENU' in ai_text or 'SHOW_GIN_LIST' in ai_text:
+            category_name = 'джин'
+            logger.info(f"Обнаружен кастомный маркер SHOW_GIN_MENU/LIST, парсим категорию: '{category_name}'")
+            category_parsed = True
+        elif 'SHOW_VODKA_MENU' in ai_text or 'SHOW_VODKA_LIST' in ai_text:
+            category_name = 'водка'
+            logger.info(f"Обнаружен кастомный маркер SHOW_VODKA_MENU/LIST, парсим категорию: '{category_name}'")
+            category_parsed = True
+        elif 'SHOW_WHISKEY_MENU' in ai_text or 'SHOW_WHISKEY_LIST' in ai_text:
+            category_name = 'виски'
+            logger.info(f"Обнаружен кастомный маркер SHOW_WHISKEY_MENU/LIST, парсим категорию: '{category_name}'")
+            category_parsed = True
+
+        if category_parsed:
+                # Специальная обработка для супов
+                if 'суп' in category_name or category_name in ['суп', 'супы', 'супов']:
+                    # Ищем категорию "СУПЫ" точно по названию или ID
+                    found_items = []
+                    found_category_names = []
+
+                    for menu_id, menu in menu_data.items():
+                        for cat_id, category in menu.get('categories', {}).items():
+                            cat_name = category.get('name', '').lower().strip()
+                            cat_display = category.get('display_name', '').lower().strip()
+
+                            # Ищем ТОЛЬКО категории супов по точному совпадению
+                            is_soup_category = (
+                                cat_name == 'супы' or 
+                                cat_display == '🍲 супы' or
+                                cat_id in ['4819', '4722'] or  # Известные ID категорий супов
+                                (cat_name == 'суп' and 'чай' not in cat_display and 'напитки' not in cat_display)
+                            )
+                            
+                            if is_soup_category:
+                                items = category.get('items', [])
+                                if items:
+                                    # Дополнительная фильтрация: исключаем чай и напитки по названию блюда
+                                    soup_items = []
+                                    for item in items:
+                                        item_name_lower = item.get('name', '').lower()
+                                        # Исключаем чай, глинтвейн и другие напитки
+                                        if not any(drink_word in item_name_lower for drink_word in [
+                                            'чайник', 'чай', 'глинтвейн', 'напиток', 'коктейль', 'сок', 'вода'
+                                        ]):
+                                            soup_items.append(item)
+                                    
+                                    found_items.extend(soup_items)
+                                    cat_display_name = category.get('display_name') or category.get('name', cat_name)
+                                    if cat_display_name not in found_category_names:
+                                        found_category_names.append(cat_display_name)
+
+                    # Формируем специальный ответ для супов
+                    if found_items:
+                        text = f"🍲 У нас есть отличные супы!\n\n"
+
+                        # Убираем дубликаты по ID блюда
+                        unique_items = {}
+                        for item in found_items:
+                            item_id = item.get('id')
+                            if item_id not in unique_items:
+                                unique_items[item_id] = item
+
+                        for item in unique_items.values():
+                            text += f"• {item['name']} — {item['price']}₽\n"
+
+                        text += "\nСпросите про конкретный суп, чтобы увидеть фото и подробное описание!"
+
+                        logger.info(f"Парсили супы: найдено {len(unique_items)} уникальных позиций из {len(found_items)} общих")
+                        return {'type': 'text', 'text': text}
+
+                # Специальная обработка для пиццы
+                if 'пицц' in category_name or category_name in ['пицца', 'пиццы', 'пиццей']:
+                    # Ищем все пиццы
+                    found_items = []
+                    found_category_names = []
+
+                    for menu_id, menu in menu_data.items():
+                        for cat_id, category in menu.get('categories', {}).items():
+                            cat_name = category.get('name', '').lower().strip()
+                            cat_display = category.get('display_name', '').lower().strip()
+
+                            # Проверяем, является ли категория пиццей
+                            is_pizza_category = (
+                                'пицц' in cat_name or 
+                                'пицц' in cat_display or
+                                cat_name == 'пицца'
+                            )
+                            
+                            if is_pizza_category:
+                                items = category.get('items', [])
+                                if items:
+                                    found_items.extend(items)
+                                    cat_display = category.get('display_name') or category.get('name', cat_name)
+                                    if cat_display not in found_category_names:
+                                        found_category_names.append(cat_display)
+
+                    # Формируем специальный ответ для пицц
+                    if found_items:
+                        text = f"🍕 У нас есть отличные пиццы!\n\n"
+
+                        # Убираем дубликаты по ID блюда
+                        unique_items = {}
+                        for item in found_items:
+                            item_id = item.get('id')
+                            if item_id not in unique_items:
+                                unique_items[item_id] = item
+
+                        for item in unique_items.values():
+                            text += f"• {item['name']} — {item['price']}₽\n"
+
+                        text += "\nСпросите про конкретную пиццу, чтобы увидеть фото и подробное описание!"
+
+                        logger.info(f"Парсили пиццы: найдено {len(unique_items)} уникальных позиций из {len(found_items)} общих")
+                        return {'type': 'text', 'text': text}
+
+                # Специальная обработка для пива
+                if 'пив' in category_name or category_name in ['пиво', 'пива', 'пивом']:
+                    # Ищем все категории пива
+                    found_items = []
+                    found_category_names = []
+
+                    for menu_id, menu in menu_data.items():
+                        for cat_id, category in menu.get('categories', {}).items():
+                            cat_name = category.get('name', '').lower().strip()
+                            cat_display = category.get('display_name', '').lower().strip()
+
+                            # Проверяем, является ли категория пивной
+                            is_beer_category = (
+                                'пив' in cat_name or 
+                                'пив' in cat_display or
+                                'beer' in cat_name.lower()
+                            )
+                            
+                            if is_beer_category:
+                                items = category.get('items', [])
+                                if items:
+                                    found_items.extend(items)
+                                    cat_display = category.get('display_name') or category.get('name', cat_name)
+                                    if cat_display not in found_category_names:
+                                        found_category_names.append(cat_display)
+
+                    # Формируем специальный ответ для пива
+                    if found_items:
+                        text = f"У нас есть отличное пиво! 🍺\n\n"
+
+                        # Убираем дубликаты по ID блюда
+                        unique_items = {}
+                        for item in found_items:
+                            item_id = item.get('id')
+                            if item_id not in unique_items:
+                                unique_items[item_id] = item
+
+                        # Группируем пиво по типам (светлое, темное, нефильтрованное и т.д.)
+                        beer_types = {}
+                        for item in unique_items.values():
+                            item_name_lower = item['name'].lower()
+                            if 'светлое' in item_name_lower or 'helles' in item_name_lower or 'lager' in item_name_lower:
+                                beer_type = '🍺 Светлое пиво'
+                            elif 'темное' in item_name_lower or 'dark' in item_name_lower or 'porter' in item_name_lower:
+                                beer_type = '🍺 Темное пиво'
+                            elif 'нефильтрованное' in item_name_lower or 'wheat' in item_name_lower or 'weizen' in item_name_lower:
+                                beer_type = '🍺 Нефильтрованное пиво'
+                            elif 'ipa' in item_name_lower or 'ale' in item_name_lower:
+                                beer_type = '🍺 Крафтовое пиво'
+                            else:
+                                beer_type = '🍺 Другое пиво'
+
+                            if beer_type not in beer_types:
+                                beer_types[beer_type] = []
+                            beer_types[beer_type].append(item)
+
+                        # Выводим по группам по 2 позиции для каждой подкатегории
+                        for beer_type, items in beer_types.items():
+                            text += f"{beer_type}:\n"
+                            for item in items[:2]:  # Ограничиваем до 2 позиций на подкатегорию
+                                text += f"• {item['name']} — {item['price']}₽\n"
+                            if len(items) > 2:
+                                text += f"• ... и ещё {len(items) - 2} позиций\n"
+                            text += "\n"
+
+                        text += "Спросите про конкретное пиво, чтобы увидеть фото и подробное описание!"
+
+                        logger.info(f"Парсили пиво: найдено {len(unique_items)} уникальных позиций из {len(found_items)} общих")
+                        return {'type': 'text', 'text': text}
+                if 'вин' in category_name or category_name in ['вино', 'вина', 'вином']:
+                    # Ищем все категории вин
+                    wine_categories = ['белое', 'красное', 'розовое', 'игристое', 'вино', 'вина']
+                    found_items = []
+                    found_category_names = []
+
+                    for menu_id, menu in menu_data.items():
+                        for cat_id, category in menu.get('categories', {}).items():
+                            cat_name = category.get('name', '').lower().strip()
+                            cat_display = category.get('display_name', '').lower().strip()
+
+                            # Проверяем, является ли категория винной
+                            is_wine_category = (
+                                any(wine_type in cat_name for wine_type in wine_categories) or
+                                any(wine_type in cat_display for wine_type in wine_categories) or
+                                'вин' in cat_name
+                            )
+                            
+                            if is_wine_category:
+                                items = category.get('items', [])
+                                if items:
+                                    # Дополнительная фильтрация: только вина
+                                    wine_items = []
+                                    for item in items:
+                                        item_name_lower = item.get('name', '').lower()
+                                        # Включаем только вина
+                                        if 'вино' in item_name_lower or 'игристое' in item_name_lower:
+                                            wine_items.append(item)
+                                    
+                                    found_items.extend(wine_items)
+                                    cat_display = category.get('display_name') or category.get('name', cat_name)
+                                    if cat_display not in found_category_names:
+                                        found_category_names.append(cat_display)
+
+                    # Формируем специальный ответ для вин
+                    if found_items:
+                        text = f"У нас есть отличное вино! 🍷\n\n"
+
+                        # Убираем дубликаты по ID блюда
+                        unique_items = {}
+                        for item in found_items:
+                            item_id = item.get('id')
+                            if item_id not in unique_items:
+                                unique_items[item_id] = item
+
+                        # Группируем по типам
+                        wine_types = {}
+                        for item in unique_items.values():
+                            item_name_lower = item['name'].lower()
+                            if 'белое' in item_name_lower or 'белый' in item_name_lower:
+                                wine_type = '🥂 Белые вина'
+                            elif 'красное' in item_name_lower or 'красный' in item_name_lower:
+                                wine_type = '🍷 Красные вина'
+                            elif 'розовое' in item_name_lower or 'розов' in item_name_lower:
+                                wine_type = '🌸 Розовые вина'
+                            elif 'игрист' in item_name_lower or 'шампан' in item_name_lower:
+                                wine_type = '🍾 Игристые вина'
+                            else:
+                                wine_type = '🍷 Другие вина'
+
+                            if wine_type not in wine_types:
+                                wine_types[wine_type] = []
+                            wine_types[wine_type].append(item)
+
+                        # Выводим по группам по 3 позиции для каждой подкатегории
+                        for wine_type, items in wine_types.items():
+                            text += f"{wine_type}:\n"
+                            for item in items[:3]:  # Ограничиваем до 3 позиций на подкатегорию
+                                text += f"• {item['name']} — {item['price']}₽\n"
+                            if len(items) > 3:
+                                text += f"• ... и ещё {len(items) - 3} позиций\n"
+                            text += "\n"
+
+                        text += "Спросите про конкретное вино, чтобы увидеть фото и подробное описание!"
+
+                        logger.info(f"Парсили вино: найдено {len(unique_items)} уникальных позиций из {len(found_items)} общих")
+                        return {'type': 'text', 'text': text}
+
+                # Находим все позиции из категории (улучшенная логика)
+                found_items = []
+                category_display_name = ""
+
+                for menu_id, menu in menu_data.items():
+                    for cat_id, category in menu.get('categories', {}).items():
+                        cat_name = category.get('name', '').lower().strip()
+                        cat_display_name = category.get('display_name', cat_name).lower().strip()
+
+                        # Более точное совпадение категории
+                        exact_match = (category_name == cat_name or 
+                                     category_name == cat_display_name.replace('🍕', '').replace('🍲', '').replace('🥗', '').replace('🍰', '').replace('🍸', '').replace('🍺', '').replace('🍷', '').replace('🍵', '').strip())
+                        
+                        partial_match = (category_name in cat_name and len(category_name) > 2) or (category_name in cat_display_name and len(category_name) > 2)
+
+                        # Дополнительная проверка для исключения неподходящих категорий
+                        is_relevant_category = True
+                        
+                        # Исключаем чай и напитки если ищем еду
+                        if category_name in ['пиво', 'водка', 'вино', 'коктейль', 'напитки']:
+                            # Для алкоголя и напитков - разрешаем
+                            pass
+                        elif 'чай' in cat_name or 'напитки' in cat_name:
+                            # Если ищем не напитки, а категория содержит чай/напитки - исключаем
+                            if category_name not in ['чай', 'напитки', 'напиток']:
+                                is_relevant_category = False
+
+                        if (exact_match or partial_match) and is_relevant_category:
+                            items = category.get('items', [])
+                            if items:
+                                # Дополнительная фильтрация по названию блюда
+                                filtered_items = []
+                                for item in items:
+                                    item_name_lower = item.get('name', '').lower()
+                                    
+                                    # Исключаем неподходящие блюда
+                                    exclude_item = False
+                                    
+                                    # Если ищем супы - исключаем чай и напитки
+                                    if category_name in ['суп', 'супы']:
+                                        if any(drink_word in item_name_lower for drink_word in [
+                                            'чайник', 'чай', 'глинтвейн', 'коктейль', 'сок', 'вода', 'напиток'
+                                        ]):
+                                            exclude_item = True
+                                    
+                                    # Если ищем пиццу - исключаем не-пиццы
+                                    elif category_name in ['пицца', 'пиццы']:
+                                        if 'пицца' not in item_name_lower:
+                                            exclude_item = True
+                                    
+                                    if not exclude_item:
+                                        filtered_items.append(item)
+                                
+                                found_items.extend(filtered_items)
+                                if not category_display_name:
+                                    category_display_name = category.get('display_name') or category.get('name', category_name)
+
+                # Формируем ответ со списком блюд
+                if found_items:
+                    emoji_map = {
+                        'пицца': '🍕', 'пицц': '🍕',
+                        'суп': '🍲', 'супы': '🍲', 'супов': '🍲',
+                        'десерт': '🍰', 'десерты': '🍰', 'десертов': '🍰',
+                        'коктейль': '🍸', 'коктейли': '🍸', 'коктейлей': '🍸',
+                        'пиво': '🍺', 'пива': '🍺',
+                        'вино': '🍷', 'вин': '🍷', 'вина': '🍷',
+                        'белое': '🥂', 'красное': '🍷', 'розовое': '🌸', 'игристое': '🍾',
+                        'чай': '🍵', 'напитки': '🥤', 'напиток': '🥤'
+                    }
+
+                    emoji = '🍽️'
+                    for key, em in emoji_map.items():
+                        if key in category_name:
+                            emoji = em
+                            break
+
+                    text = f"У нас есть {category_display_name.lower()}! {emoji}\n\n"
+
+                    # Убираем дубликаты по ID блюда
+                    unique_items = {}
+                    for item in found_items:
+                        item_id = item.get('id')
+                        if item_id not in unique_items:
+                            unique_items[item_id] = item
+
+                    for item in unique_items.values():
+                        text += f"• {item['name']} — {item['price']}₽\n"
+
+                    text += "\nСпросите про конкретное блюдо/напиток, чтобы увидеть фото и подробное описание!"
+
+                    logger.info(f"Парсили категорию '{category_name}': найдено {len(unique_items)} уникальных позиций из {len(found_items)} общих")
+                    return {'type': 'text', 'text': text}
+
+                else:
+                    logger.warning(f"Категория '{category_name}' не найдена при парсинге")
+                    return {'type': 'text', 'text': f"Категория '{category_name}' не найдена. Попробуйте уточнить запрос."}
+
+        # 9. Проверяем на фото блюда
         if 'DISH_PHOTO:' in ai_text:
             match = re.search(r'DISH_PHOTO:(.+)', ai_text, re.DOTALL)
             if match:
@@ -655,40 +1426,55 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                 dish_name = dish_name.replace('_', ' ').strip()
                 logger.info(f"Ищу фото блюда: '{dish_name}'")
                 
-                # Ищем блюдо в меню (улучшенный поиск)
+                # Ищем блюдо в меню (улучшенный поиск с приоритетом)
                 found = False
-                for menu_id, menu in menu_data.get('all_menus', {}).items():
+                best_match = None
+                best_score = 0
+
+                for menu_id, menu in menu_data.items():
                     for category_id, category in menu.get('categories', {}).items():
                         for item in category.get('items', []):
                             item_name = item['name'].lower().strip()
                             search_name = dish_name.lower().strip()
-                            
-                            # Проверяем точное совпадение или вхождение
-                            if search_name in item_name or item_name in search_name:
-                                photo_url = item.get('image_url')
-                                if photo_url:
-                                    caption = f"🍽️ <b>{item['name']}</b>\n\n"
-                                    caption += f"💰 Цена: {item['price']}₽\n"
-                                    if item.get('calories'):
-                                        caption += f"🔥 Калории: {item['calories']} ккал\n"
-                                    if item.get('proteins') or item.get('fats') or item.get('carbs'):
-                                        caption += f"\n🧃 БЖУ:\n"
-                                        if item.get('proteins'):
-                                            caption += f"• Белки: {item['proteins']}г\n"
-                                        if item.get('fats'):
-                                            caption += f"• Жиры: {item['fats']}г\n"
-                                        if item.get('carbs'):
-                                            caption += f"• Углеводы: {item['carbs']}г\n"
-                                    if item.get('description'):
-                                        caption += f"\n{item['description']}"
-                                    
-                                    logger.info(f"Найдено блюдо: {item['name']}")
-                                    found = True
-                                    return {
-                                        'type': 'photo_with_text',
-                                        'photo_url': photo_url,
-                                        'text': caption
-                                    }
+
+                            # Вычисляем степень совпадения
+                            score = 0
+                            if item_name == search_name:
+                                score = 100  # Точное совпадение
+                            elif item_name.startswith(search_name):
+                                score = 90  # Начинается с поискового запроса
+                            elif search_name in item_name:
+                                score = len(search_name) / len(item_name) * 50  # Процент вхождения
+
+                            # Обновляем лучший результат
+                            if score > best_score and item.get('image_url'):
+                                best_score = score
+                                best_match = item
+
+                # Возвращаем лучший результат
+                if best_match:
+                    caption = f"🍽️ <b>{best_match['name']}</b>\n\n"
+                    caption += f"💰 Цена: {best_match['price']}₽\n"
+                    if best_match.get('calories'):
+                        caption += f"🔥 Калории: {best_match['calories']} ккал\n"
+                    if best_match.get('proteins') or best_match.get('fats') or best_match.get('carbs'):
+                        caption += f"\n🧃 БЖУ:\n"
+                        if best_match.get('proteins'):
+                            caption += f"• Белки: {best_match['proteins']}г\n"
+                        if best_match.get('fats'):
+                            caption += f"• Жиры: {best_match['fats']}г\n"
+                        if best_match.get('carbs'):
+                            caption += f"• Углеводы: {best_match['carbs']}г\n"
+                    if best_match.get('description'):
+                        caption += f"\n{best_match['description']}"
+
+                    logger.info(f"Найдено блюдо: {best_match['name']} (score: {best_score})")
+                    found = True
+                    return {
+                        'type': 'photo_with_text',
+                        'photo_url': best_match['image_url'],
+                        'text': caption
+                    }
                 
                 if not found:
                     logger.warning(f"Блюдо '{dish_name}' не найдено в меню")
@@ -710,7 +1496,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
 
                 # Убираем GEN_IMAGE и SHOW_DELIVERY_BUTTON из текста
                 clean_text = re.sub(r'GEN_IMAGE:.+', '', ai_text, flags=re.DOTALL).strip()
-                clean_text = re.sub(r'SHOW_DELIVERY_BUTTON', '', clean_text).strip()
+                clean_text = re.sub(r'SHOW_DELIVERY_BUTTON\s*', '', clean_text).strip()
 
                 # Добавляем веселый ответ к основному тексту
                 final_text = f"{clean_text}\n\n{funny_text}"
@@ -723,34 +1509,53 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
 
             match = re.search(r'GEN_IMAGE:(.+)', ai_text, re.DOTALL)
             if match:
-                prompt = match.group(1).strip()
-                # Убираем SHOW_DELIVERY_BUTTON из промпта если есть
-                prompt = re.sub(r'SHOW_DELIVERY_BUTTON', '', prompt).strip()
+                character_name_raw = match.group(1).strip()
+                # Очищаем имя персонажа от эмодзи и лишнего текста
+                # Убираем эмодзи, специальные символы и лишний текст, оставляем только буквы и пробелы
+                character_name = re.sub(r'[^\sa-zA-Zа-яёА-ЯЁ]', '', character_name_raw).strip()
+                # Убираем лишние пробелы и слова вроде "ой", "ой,", etc.
+                character_name = re.sub(r'\s+', ' ', character_name).strip()
+                # Убираем короткие слова в конце (типа "ой", "и", "а")
+                words = character_name.split()
+                if words:
+                    # Фильтруем слова короче 2 символов, кроме определенных исключений
+                    filtered_words = []
+                    for word in words:
+                        if len(word) >= 2 or word.lower() in ['я', 'он', 'мы', 'ты']:
+                            filtered_words.append(word)
+                    character_name = ' '.join(filtered_words)
 
-                logger.info(f"Генерирую изображение: {prompt}")
-                
+                # Убираем SHOW_DELIVERY_BUTTON и другие маркеры из имени персонажа
+                character_name = character_name.replace('SHOW_DELIVERY_BUTTON', '').replace('SHOWDELIVERYBUTTON', '').strip()
+
+                # Если имя получилось пустым или слишком коротким, используем fallback
+                if not character_name or len(character_name) < 2:
+                    character_name = "персонаж"
+
+                logger.info(f"Генерирую изображение для персонажа: '{character_name}' (очищено из '{character_name_raw}')")
+
                 # Генерируем изображение (теперь асинхронно)
-                image_url = await gen_image(prompt, user_id)
-                
+                image_url = await gen_image(character_name, user_id, admin_translated_prompt)
+
                 # Увеличиваем счетчик генераций (только для не-админов)
                 if not is_admin:
                     database.increment_ai_generation(user_id)
                     logger.info(f"Увеличен счетчик генераций для пользователя {user_id}")
-                
-                # Только ПОСЛЕ получения фото от kie.ai возвращаем результат
+
+                # Только ПОСЛЕ получения фото возвращаем результат
                 if image_url:
                     # Убираем GEN_IMAGE и SHOW_DELIVERY_BUTTON из текста
                     clean_text = re.sub(r'GEN_IMAGE:.+', '', ai_text, flags=re.DOTALL).strip()
-                    clean_text = re.sub(r'SHOW_DELIVERY_BUTTON', '', clean_text).strip()
-                    
-                    # Проверяем наличие маркера для кнопки доставки
-                    show_button = 'SHOW_DELIVERY_BUTTON' in ai_text
-                    
+                    clean_text = re.sub(r'SHOW_DELIVERY_BUTTON\s*', '', clean_text).strip()
+
+                    # ОБЯЗАТЕЛЬНО показываем кнопку доставки при генерации изображений персонажей
+                    show_button = True
+
                     # Возвращаем результат - теперь "Печатает..." остановится
                     return {
                         'type': 'photo_with_text',
                         'photo_url': image_url,
-                        'text': clean_text or 'Вот ваше изображение! 😊',
+                        'text': clean_text,
                         'show_delivery_button': show_button
                     }
         
@@ -774,6 +1579,14 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         show_delivery_button = 'SHOW_DELIVERY_BUTTON' in ai_text
         show_delivery_apps = 'SHOW_DELIVERY_APPS' in ai_text
         show_booking_options = 'SHOW_BOOKING_OPTIONS' in ai_text or direct_booking_menu
+        show_event_registration = 'SHOW_EVENT_REGISTRATION' in ai_text
+        show_private_event_registration = 'SHOW_PRIVATE_EVENT_OPTIONS' in ai_text
+        show_apps = 'SHOW_APPS' in ai_text
+        show_hall_photos = 'SHOW_HALL_PHOTOS' in ai_text or 'SHOW_HALL_PHALL_PHOTOS' in ai_text
+        show_bar_photos = 'SHOW_BAR_PHOTOS' in ai_text
+        show_kassa_photos = 'SHOW_KASSA_PHOTOS' in ai_text
+        show_wc_photos = 'SHOW_WC_PHOTOS' in ai_text
+        show_restaurant_menu = 'SHOW_RESTAURANT_MENU' in ai_text
         show_category = None
 
         if 'SHOW_CATEGORY:' in ai_text:
@@ -788,16 +1601,46 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             if match:
                 parse_booking = match.group(1).strip().split('\n')[0].strip()
 
-        ai_text = re.sub(r'SHOW_DELIVERY_BUTTON', '', ai_text).strip()
-        ai_text = re.sub(r'SHOW_DELIVERY_APPS', '', ai_text).strip()
-        ai_text = re.sub(r'SHOW_BOOKING_OPTIONS', '', ai_text).strip()
+        # Убираем маркеры из текста, но сохраняем логику показа кнопок
+        ai_text = re.sub(r'SHOW_DELIVERY_BUTTON\s*', '', ai_text).strip()
+        ai_text = re.sub(r'SHOW_DELIVERY_APPS\s*', '', ai_text).strip()
+        ai_text = re.sub(r'SHOW_BOOKING_OPTIONS\s*', '', ai_text).strip()
+        ai_text = re.sub(r'SHOW_EVENT_REGISTRATION\s*', '', ai_text).strip()
+        ai_text = re.sub(r'SHOW_PRIVATE_EVENT_OPTIONS\s*', '', ai_text).strip()
+        ai_text = re.sub(r'SHOW_APPS\s*', '', ai_text).strip()
+        ai_text = re.sub(r'SHOW_HALL_PHOTOS?\s*', '', ai_text).strip()
+        ai_text = re.sub(r'SHOW_HALL_PHALL_PHOTOS?\s*', '', ai_text).strip()
+        ai_text = re.sub(r'SHOW_BAR_PHOTOS\s*', '', ai_text).strip()
+        ai_text = re.sub(r'SHOW_KASSA_PHOTOS\s*', '', ai_text).strip()
+        ai_text = re.sub(r'SHOW_WC_PHOTOS\s*', '', ai_text).strip()
+        ai_text = re.sub(r'SHOW_RESTAURANT_MENU\s*', '', ai_text).strip()
         ai_text = re.sub(r'SHOW_CATEGORY:.+', '', ai_text).strip()
         ai_text = re.sub(r'PARSE_BOOKING:.+', '', ai_text).strip()
         ai_text = re.sub(r'DISH_PHOTO:.+?(\s|$)', '', ai_text).strip()
 
+        # ДОПОЛНИТЕЛЬНАЯ ЛОГИКА: показываем кнопку доставки только для конкретных случаев
+        # - Когда AI явно указал SHOW_DELIVERY_BUTTON
+        # - Для вопросов про доставку, заказы, меню
+        # - НЕ показываем для общих вопросов вроде "Кто у вас бывает?"
+        # - НЕ показываем для завтраков (они используют SHOW_RESTAURANT_MENU)
+        if not show_delivery_button and not show_delivery_apps:
+            message_lower = message.lower()
+            # Исключаем завтраки из автоматической активации доставки
+            is_breakfast_request = any(breakfast_word in message_lower for breakfast_word in ['завтрак', 'завтраков', 'меню завтрак'])
+            
+            if not is_breakfast_request:
+                # Показываем кнопку только для релевантных запросов
+                delivery_keywords = ['заказ', 'доставк', 'купить', 'меню', 'пицца', 'еда', 'блюда', 'пиво', 'вино', 'коктейль', 'напит']
+                booking_keywords = ['забронир', 'столик', 'бронь', 'резерв']
+                show_delivery_button = any(keyword in message_lower for keyword in delivery_keywords)
+                show_booking_options = show_booking_options or any(keyword in message_lower for keyword in booking_keywords)
+
         # Проверяем на подтверждение возраста
         confirm_age_verification = 'CONFIRM_AGE_VERIFICATION' in ai_text
         ai_text = re.sub(r'CONFIRM_AGE_VERIFICATION', '', ai_text).strip()
+
+        # Информация о генерациях убрана из основного AI
+        # Kie AI используется только в специальных случаях через отдельные команды
 
         return {
             'type': 'text',
@@ -805,6 +1648,14 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             'show_delivery_button': show_delivery_button,
             'show_delivery_apps': show_delivery_apps,
             'show_booking_options': show_booking_options,
+            'show_event_registration': show_event_registration,
+            'show_private_event_registration': show_private_event_registration,
+            'show_apps': show_apps,
+            'show_hall_photos': show_hall_photos,
+            'show_bar_photos': show_bar_photos,
+            'show_kassa_photos': show_kassa_photos,
+            'show_wc_photos': show_wc_photos,
+            'show_restaurant_menu': show_restaurant_menu,
             'show_category': show_category,
             'parse_booking': parse_booking,
             'confirm_age_verification': confirm_age_verification
@@ -813,5 +1664,128 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
     except Exception as e:
         logger.error(f"Ошибка в AI помощнике: {e}", exc_info=True)
         return {'type': 'text', 'text': 'Извините, произошла ошибка. Попробуйте позже.'}
+
+def get_fallback_response(message: str, user_id: int) -> Dict:
+    """
+    Fallback ответы когда AI недоступен - в русском стиле
+    """
+    message_lower = message.lower().strip()
+
+    # Простые ответы на распространенные вопросы
+    if 'привет' in message_lower or 'здравствуй' in message_lower or 'добрый' in message_lower:
+        return {
+            'type': 'text',
+            'text': '👋 Привет-привет! Добро пожаловать в ресторан Mashkov! Я ваш верный помощник - как Иван-царевич, только с меню! 🍽️ Чем могу помочь?'
+        }
+
+    if 'меню' in message_lower:
+        return {
+            'type': 'text',
+            'text': '🍽️ У нас меню богатое, как стол на русской свадьбе! 🎉\n\n🍳 Завтраки - чтобы день начался хорошо\n🍕 Основное меню - от души и с любовью\n🍷 Алкогольные напитки - для настроения\n🍰 Десерты - сладкая жизнь!\n\nСпрашивайте про любое блюдо - расскажу как на духу! 😊'
+        }
+
+    if 'доставк' in message_lower or 'заказать' in message_lower:
+        return {
+            'type': 'text',
+            'text': '🚚 Доставляем быстрее, чем Конек-Горбунок! 🐎\n\n📱 Скачайте наше приложение или закажите через мини-приложение в Telegram.\n\n💰 Стоимость доставки считается автоматически - без обмана, по-честному!',
+            'show_delivery_apps': True
+        }
+
+    if 'бронирова' in message_lower or 'столик' in message_lower or 'забронирова' in message_lower:
+        return {
+            'type': 'text',
+            'text': '📅 Столик забронировать? Легко! Как говорится - "Кто рано встает, тому Бог подает!" 🌅\n\nВы можете:\n• 📞 Позвонить - живой голос лучше всего\n• 💬 Написать оператору - быстро и удобно\n• 📱 Использовать конструктор бронирования\n\nРасскажите сколько вас человек и когда хотите прийти - все устроим!',
+            'show_booking_options': True
+        }
+
+    if 'отзыв' in message_lower or 'рейтинг' in message_lower:
+        return {
+            'type': 'text',
+            'text': '⭐ У нас отзывы хорошие, как в русских сказках - добро побеждает! 😊\n\nПосмотрите наши оценки и оставьте свой отзыв на Яндекс.Картах! Ваше мнение дороже золота! 💛',
+            'show_reviews': True
+        }
+
+    if 'приложени' in message_lower or 'скачать' in message_lower:
+        return {
+            'type': 'text',
+            'text': '📱 У нас есть приложение удобнее, чем скатерть-самобранка! 🍽️✨\n\nСкачайте из любого магазина приложений - и заказывайте с комфортом! 🚀',
+            'show_apps': True
+        }
+
+    if 'пиво' in message_lower:
+        return {
+            'type': 'text',
+            'text': '🍺 Пиво у нас есть - и не простое, а золотое! ✨\n\nРазные сорта из разных стран. Как говорится: "На вкус и цвет товарищей нет!" Спросите про конкретный сорт! 🍻'
+        }
+
+    if 'вино' in message_lower or 'вина' in message_lower:
+        return {
+            'type': 'text',
+            'text': '🍷 Винная карта у нас богатая, как в царских палатах! 👑\n\nБелые, красные, розовые и игристые - на любой вкус! Спросите про конкретное вино - расскажу все как есть! 🥂'
+        }
+
+    if 'водка' in message_lower:
+        return {
+            'type': 'text',
+            'text': '🥃 Водка у нас качественная, русская, настоящая! 🇷🇺\n\nРазные марки и сорта. Как дедушка говорил: "Хорошая водка - как хороший друг!" Спросите про конкретную! 😊'
+        }
+
+    if 'контакт' in message_lower or 'телефон' in message_lower or 'адрес' in message_lower:
+        return {
+            'type': 'text',
+            'text': '📞 Наши контакты - всегда к вашим услугам! 🤝\n\n📍 Адрес: ул. Ландау, д. 4\n📞 Телефон: +7 (903) 748-80-80\n🕐 Часы: ежедневно 08:00-22:00\n\n💬 Или напишите оператору - ответим быстрее ветра!'
+        }
+
+    # Для неизвестных вопросов - перенаправляем к оператору по-русски
+    return {
+        'type': 'text',
+        'text': '🤖 Извините, что-то я сегодня не в форме... Как говорится: "Не ошибается тот, кто ничего не делает!" 😅\n\n💬 Напишите оператору - он точно поможет с любым вопросом!\n\n📞 Или позвоните: +7 (903) 748-80-80',
+        'show_delivery_button': True
+    }
+
+def get_random_delivery_dish(menu_data: Dict) -> Optional[Dict]:
+    """
+    Получить случайное блюдо из меню доставки (без алкоголя)
+    """
+    try:
+        # ID меню доставки
+        delivery_menu_ids = {90, 92, 141}
+
+        # Собираем все блюда из меню доставки (исключая алкоголь)
+        all_dishes = []
+
+        for menu_id in delivery_menu_ids:
+            if menu_id in menu_data:
+                menu = menu_data[menu_id]
+                logger.info(f"🔍 Проверяем меню {menu_id}: {len(menu.get('categories', {}))} категорий")
+                for category_id, category in menu.get('categories', {}).items():
+                    # Исключаем алкогольные категории
+                    category_name = category.get('name', '').lower()
+                    if any(alcohol_word in category_name for alcohol_word in [
+                        'пиво', 'вино', 'водка', 'коньяк', 'виски', 'ром', 'текила', 'ликер', 'коктейль', 'алкоголь'
+                    ]):
+                        continue
+
+                    items = category.get('items', [])
+                    logger.info(f"📦 Категория '{category_name}': {len(items)} блюд")
+                    # ДОБАВЛЯЕМ ВСЕ БЛЮДА, НЕ ТОЛЬКО С ФОТО!
+                    for item in items:
+                        all_dishes.append(item)
+                        logger.debug(f"➕ Добавлено блюдо: {item.get('name', 'Без названия')} (фото: {bool(item.get('image_url'))})")
+
+        logger.info(f"📊 Всего найдено блюд: {len(all_dishes)}")
+
+        if all_dishes:
+            # Выбираем случайное блюдо
+            random_dish = random.choice(all_dishes)
+            logger.info(f"🎲 Выбрано случайное блюдо: {random_dish['name']} (ID: {random_dish.get('id', 'N/A')})")
+            return random_dish
+        else:
+            logger.warning("❌ Не найдено блюд в меню доставки")
+            return None
+
+    except Exception as e:
+        logger.error(f"❌ Ошибка при выборе случайного блюда: {e}")
+        return None
 
 print("✅ AI Assistant загружен!")

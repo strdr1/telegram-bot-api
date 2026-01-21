@@ -118,10 +118,10 @@ def cleanup_old_connections():
 
 def cleanup_cache():
     """Очистка устаревших записей в кэшах"""
-    global _admin_cache, _user_reg_cache, _last_cache_cleanup
-    
+    global _admin_cache, _user_reg_cache, _faq_cache, _faq_cache_time, _last_cache_cleanup
+
     current_time = time.time()
-    
+
     # Очищаем каждые cache_cleanup_interval секунд
     if current_time - _last_cache_cleanup > _cache_cleanup_interval:
         # Очищаем старые записи в кэше админов
@@ -129,31 +129,36 @@ def cleanup_cache():
         for user_id, (_, timestamp) in _admin_cache.items():
             if current_time - timestamp > _cache_ttl:
                 expired_keys.append(user_id)
-        
+
         for key in expired_keys:
             del _admin_cache[key]
-        
+
         # Очищаем старые записи в кэше регистрации
         expired_keys = []
         for user_id, (_, timestamp) in _user_reg_cache.items():
             if current_time - timestamp > _cache_ttl:
                 expired_keys.append(user_id)
-        
+
         for key in expired_keys:
             del _user_reg_cache[key]
-        
-        # Очищаем старые записи в кэше адресов
-        expired_keys = []
-        for user_id, timestamp in list(_user_addresses_cache_time.items()):
-            if current_time - timestamp > ADDRESSES_CACHE_TTL:
-                expired_keys.append(user_id)
-        
-        for user_id in expired_keys:
-            if user_id in _user_addresses_cache:
-                del _user_addresses_cache[user_id]
-            if user_id in _user_addresses_cache_time:
-                del _user_addresses_cache_time[user_id]
-        
+
+    # Очищаем старые записи в кэше адресов
+    expired_keys = []
+    for user_id, timestamp in list(_user_addresses_cache_time.items()):
+        if current_time - timestamp > ADDRESSES_CACHE_TTL:
+            expired_keys.append(user_id)
+
+    for user_id in expired_keys:
+        if user_id in _user_addresses_cache:
+            del _user_addresses_cache[user_id]
+        if user_id in _user_addresses_cache_time:
+            del _user_addresses_cache_time[user_id]
+
+    # Очищаем старые записи в кэше FAQ
+    if _faq_cache and (current_time - _faq_cache_time) > FAQ_CACHE_TTL:
+        _faq_cache = None
+        _faq_cache_time = 0
+
         _last_cache_cleanup = current_time
 
 def close_all_connections():
@@ -370,6 +375,38 @@ def init_database():
             PRIMARY KEY (user_id, generation_date)
         )
         ''')
+
+        # Генерации персонажей
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS character_generations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            character_name TEXT NOT NULL,
+            dish_name TEXT,
+            prompt TEXT,
+            image_url TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
+        )
+        ''')
+
+        # Добавляем dish_name колонку если её нет
+        try:
+            cursor.execute('ALTER TABLE character_generations ADD COLUMN dish_name TEXT')
+        except sqlite3.OperationalError:
+            # Колонка уже существует
+            pass
+
+        # Референсы персонажей
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS character_refs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            generation_id INTEGER NOT NULL,
+            ref_path TEXT NOT NULL,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (generation_id) REFERENCES character_generations (id) ON DELETE CASCADE
+        )
+        ''')
         
         # Чаты для миниаппа админа
         cursor.execute('''
@@ -387,16 +424,22 @@ def init_database():
         ''')
 
         # Сообщения чатов
-        cursor.execute('''
-        CREATE TABLE IF NOT EXISTS chat_messages (
+        cursor.execute('''CREATE TABLE IF NOT EXISTS chat_messages (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             chat_id INTEGER NOT NULL,
             sender TEXT NOT NULL, -- 'user' or 'admin'
             message_text TEXT NOT NULL,
             message_time TEXT DEFAULT CURRENT_TIMESTAMP,
+            sent INTEGER DEFAULT 0, -- 0 = не отправлено, 1 = отправлено
             FOREIGN KEY (chat_id) REFERENCES chats (id) ON DELETE CASCADE
-        )
-        ''')
+        )''')
+
+        # Добавляем поле sent если его нет (для существующих БД)
+        try:
+            cursor.execute('ALTER TABLE chat_messages ADD COLUMN sent INTEGER DEFAULT 0')
+        except sqlite3.OperationalError:
+            # Поле уже существует
+            pass
 
         # Настройки бота
         cursor.execute('''
@@ -459,7 +502,7 @@ def init_database():
                 ('Можно ли забронировать столик?', 'Да, вы можете забронировать столик через нашего бота или по телефону +7 (903) 748-80-80.'),
                 ('Какие способы оплаты вы принимаете?', 'Мы принимаем наличные, банковские карты и бесконтактную оплату.'),
                 ('Есть ли у вас вегетарианские блюда?', 'Да, в нашем меню есть раздел с вегетарианскими блюдами.'),
-                ('Можно ли провести мероприятие в вашем ресторане?', 'Да, мы предоставляем банкетные залы для мероприятий. Для уточнения деталей свяжитесь с нашим менеджером.'),
+                ('Можно ли забронировать банкетный зал?', 'Да, мы предоставляем банкетные залы для мероприятий. Для уточнения деталей свяжитесь с нашим менеджером.'),
                 ('Есть ли парковка?', 'Да, у ресторана есть бесплатная парковка для гостей.'),
                 ('Можно ли прийти с детьми?', 'Да, у нас есть детское меню и высокие стульчики для малышей.'),
             ]
@@ -2109,10 +2152,14 @@ def save_chat_message(chat_id: int, sender: str, message_text: str) -> bool:
     """Сохранение сообщения в чат"""
     try:
         with get_cursor() as cursor:
+            # Сообщения от админа сохраняем как неотправленные (sent=0)
+            # Сообщения от пользователей уже отправлены (sent=1)
+            sent_status = 0 if sender == 'admin' else 1
+
             cursor.execute('''
-            INSERT INTO chat_messages (chat_id, sender, message_text)
-            VALUES (?, ?, ?)
-            ''', (chat_id, sender, message_text))
+            INSERT INTO chat_messages (chat_id, sender, message_text, sent)
+            VALUES (?, ?, ?, ?)
+            ''', (chat_id, sender, message_text, sent_status))
 
             # Обновляем последнее сообщение и время в чате
             cursor.execute('''
@@ -2158,28 +2205,87 @@ def get_all_chats_for_admin() -> List[Dict[str, Any]]:
         logger.error(f"Ошибка получения чатов: {e}")
         return []
 
+def get_chat_by_id(chat_id: int) -> Optional[Dict[str, Any]]:
+    """Получение информации о чате по ID"""
+    try:
+        with get_cursor() as cursor:
+            cursor.execute('''
+            SELECT c.id, c.user_id, c.user_name, c.chat_status,
+                   c.last_message, c.last_message_time, c.created_at,
+                   COUNT(cm.id) as message_count
+            FROM chats c
+            LEFT JOIN chat_messages cm ON c.id = cm.chat_id
+            WHERE c.id = ?
+            GROUP BY c.id
+            ''', (chat_id,))
+
+            result = cursor.fetchone()
+            if result:
+                return {
+                    'id': result[0],
+                    'user_id': result[1],
+                    'user_name': result[2] or f'User {result[1]}',
+                    'chat_status': result[3],
+                    'last_message': result[4] or '',
+                    'last_message_time': result[5],
+                    'created_at': result[6],
+                    'message_count': result[7]
+                }
+            return None
+    except Exception as e:
+        logger.error(f"Ошибка получения чата {chat_id}: {e}")
+        return None
+
 def get_chat_messages(chat_id: int, limit: int = 50) -> List[Dict[str, Any]]:
     """Получение сообщений чата"""
     try:
         with get_cursor() as cursor:
-            cursor.execute('''
-            SELECT id, sender, message_text, message_time
-            FROM chat_messages
-            WHERE chat_id = ?
-            ORDER BY message_time ASC
-            LIMIT ?
-            ''', (chat_id, limit))
+            # Проверяем, есть ли поле sent в таблице
+            cursor.execute("PRAGMA table_info(chat_messages)")
+            columns = cursor.fetchall()
+            has_sent_column = any(col[1] == 'sent' for col in columns)
 
-            results = cursor.fetchall() or []
-            return [
-                {
-                    'id': row[0],
-                    'sender': row[1],
-                    'text': row[2],
-                    'time': row[3]
-                }
-                for row in results
-            ]
+            if has_sent_column:
+                cursor.execute('''
+                SELECT id, sender, message_text, message_time, sent
+                FROM chat_messages
+                WHERE chat_id = ?
+                ORDER BY message_time ASC
+                LIMIT ?
+                ''', (chat_id, limit))
+
+                results = cursor.fetchall() or []
+                return [
+                    {
+                        'id': row[0],
+                        'sender': row[1],
+                        'text': row[2],
+                        'time': row[3],
+                        'sent': bool(row[4]) if len(row) > 4 else False
+                    }
+                    for row in results
+                ]
+            else:
+                # Если поля sent нет, получаем без него
+                cursor.execute('''
+                SELECT id, sender, message_text, message_time
+                FROM chat_messages
+                WHERE chat_id = ?
+                ORDER BY message_time ASC
+                LIMIT ?
+                ''', (chat_id, limit))
+
+                results = cursor.fetchall() or []
+                return [
+                    {
+                        'id': row[0],
+                        'sender': row[1],
+                        'text': row[2],
+                        'time': row[3],
+                        'sent': False  # По умолчанию считаем не отправленным
+                    }
+                    for row in results
+                ]
     except Exception as e:
         logger.error(f"Ошибка получения сообщений чата {chat_id}: {e}")
         return []
@@ -2197,6 +2303,51 @@ def update_chat_status(chat_id: int, status: str) -> bool:
             return cursor.rowcount > 0
     except Exception as e:
         logger.error(f"Ошибка обновления статуса чата {chat_id}: {e}")
+        return False
+
+def get_unsent_admin_messages() -> List[Dict[str, Any]]:
+    """Получение неотправленных сообщений от админа"""
+    try:
+        with get_cursor() as cursor:
+            cursor.execute('''
+            SELECT cm.id, cm.chat_id, cm.message_text, cm.message_time,
+                   c.user_id, c.user_name
+            FROM chat_messages cm
+            JOIN chats c ON cm.chat_id = c.id
+            WHERE cm.sender = 'admin' AND (cm.sent IS NULL OR cm.sent = 0)
+            ORDER BY cm.message_time ASC
+            LIMIT 10
+            ''')
+
+            results = cursor.fetchall() or []
+            return [
+                {
+                    'id': row[0],
+                    'chat_id': row[1],
+                    'message_text': row[2],
+                    'message_time': row[3],
+                    'user_id': row[4],
+                    'user_name': row[5] or f'User {row[4]}'
+                }
+                for row in results
+            ]
+    except Exception as e:
+        logger.error(f"Ошибка получения неотправленных сообщений: {e}")
+        return []
+
+def mark_message_sent(message_id: int) -> bool:
+    """Отметить сообщение как отправленное"""
+    try:
+        with get_cursor() as cursor:
+            cursor.execute('''
+            UPDATE chat_messages
+            SET sent = 1
+            WHERE id = ?
+            ''', (message_id,))
+
+            return cursor.rowcount > 0
+    except Exception as e:
+        logger.error(f"Ошибка отметки сообщения {message_id} как отправленного: {e}")
         return False
 
 def get_chat_stats() -> Dict[str, Any]:
@@ -2279,6 +2430,35 @@ def update_user_setting(user_id: int, key: str, value: str) -> bool:
             logger.error(f"Ошибка обновления настройки возраста для {user_id}: {e}")
             return False
     return False
+
+# ===== ФУНКЦИИ ДЛЯ РАБОТЫ С ГЕНЕРАЦИЯМИ ПЕРСОНАЖЕЙ =====
+
+def save_character_generation(user_id: int, character_name: str, dish_name: str = None, prompt: str = None, image_url: str = None, ref_paths: List[str] = None) -> bool:
+    """Сохранение информации о генерации персонажа"""
+    try:
+        with get_cursor() as cursor:
+            # Сохраняем основную информацию о генерации
+            cursor.execute('''INSERT INTO character_generations
+                (user_id, character_name, dish_name, prompt, image_url, created_at)
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ''', (user_id, character_name, dish_name, prompt, image_url))
+
+            generation_id = cursor.lastrowid
+
+            # Сохраняем пути к референсам если есть
+            if ref_paths:
+                for ref_path in ref_paths:
+                    cursor.execute('''INSERT INTO character_refs
+                        (generation_id, ref_path, created_at)
+                        VALUES (?, ?, CURRENT_TIMESTAMP)
+                    ''', (generation_id, ref_path))
+
+            logger.info(f"Генерация персонажа '{character_name}' сохранена в БД для пользователя {user_id}")
+            return True
+
+    except Exception as e:
+        logger.error(f"Ошибка сохранения генерации персонажа: {e}")
+        return False
 
 # Синонимы для обратной совместимости
 log_action = fast_log_action

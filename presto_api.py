@@ -679,17 +679,17 @@ class PrestoAPI:
         """
         try:
             await self.init_session()
-            
+
             url = f"{self.base_url}/customer/find"
             params = {'phone': phone}
-            
+
             logger.info(f"🔍 Поиск клиента по телефону: {phone}")
-            
+
             async with self.session.get(url, params=params) as response:
                 if response.status == 200:
                     data = await response.json()
                     uuid = data.get('person')
-                    
+
                     if uuid:
                         logger.info(f"✅ UUID клиента найден: {uuid}")
                         return uuid
@@ -699,10 +699,48 @@ class PrestoAPI:
                 else:
                     logger.error(f"❌ Ошибка поиска клиента: {response.status}")
                     return None
-                    
+
         except Exception as e:
             logger.error(f"❌ Ошибка получения UUID клиента: {e}")
             return None
+
+    async def get_bonus_balance(self, external_id: str) -> Optional[float]:
+        """
+        Получение баланса бонусов клиента
+        GET /retail/customer/{externalId}/bonus-balance?pointId={pointId}
+        """
+        try:
+            await self.init_session()
+
+            url = f"{self.base_url}/retail/customer/{external_id}/bonus-balance"
+            params = {'pointId': self.point_id}
+
+            logger.info(f"💰 Получение баланса бонусов для клиента: {external_id}")
+
+            async with self.session.get(url, params=params) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    bonus_balance = data.get('bonusBalance')
+
+                    if bonus_balance is not None:
+                        logger.info(f"✅ Баланс бонусов: {bonus_balance}₽")
+                        return float(bonus_balance)
+                    else:
+                        logger.info(f"ℹ️ Оплата бонусами недоступна в этой точке")
+                        return 0.0
+                elif response.status == 404:
+                    # Клиент не найден в Presto - возвращаем 0
+                    logger.info(f"ℹ️ Клиент {external_id} не найден в Presto - баланс бонусов: 0₽")
+                    return 0.0
+                else:
+                    logger.error(f"❌ Ошибка получения баланса бонусов: {response.status}")
+                    # При других ошибках возвращаем 0, чтобы не блокировать функциональность
+                    return 0.0
+
+        except Exception as e:
+            logger.error(f"❌ Ошибка получения баланса бонусов: {e}")
+            # При любых ошибках возвращаем 0, чтобы бот продолжал работать
+            return 0.0
     
     async def validate_promocode(self, promocode: str, user_id: int) -> Dict:
         """

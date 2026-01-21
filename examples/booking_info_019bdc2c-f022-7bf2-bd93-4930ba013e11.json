@@ -1,0 +1,21 @@
+{
+  "comment": "Бронь через Telegram бот. Пользователь: @Kizarak1337",
+  "datetime": "2026-01-22 19:30:00",
+  "externalId": "019bdc2c-f022-7bf2-bd93-4930ba013e11",
+  "customer": {
+    "blacklisted": false,
+    "email": null,
+    "externalId": "f007055b-dcc9-4443-998b-fa7c35a51d78",
+    "lastname": "",
+    "name": "Даниил",
+    "patronymic": null,
+    "phone": "+7 995 592 20 11"
+  },
+  "booking": {
+    "hall": 9195,
+    "table": 9202,
+    "visitors": "2",
+    "woTable": false
+  },
+  "nomenclatures": {}
+}

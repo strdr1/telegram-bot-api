@@ -704,7 +704,7 @@ async def handle_banquet_menu_upload(message: Message, state: FSMContext):
 
 # ===== АДМИН КОМАНДЫ =====
 
-async def show_admin_panel(user_id: int, bot):
+async def show_admin_panel(user_id: int, bot, message_id: int = None):
     """Показать админ-панель с подтверждением доступа"""
     stats = database.get_stats()
 
@@ -720,10 +720,26 @@ async def show_admin_panel(user_id: int, bot):
 
 Выберите раздел для управления:"""
 
-    await update_message(user_id, text,
-                        reply_markup=keyboards.admin_menu(),
-                        parse_mode="HTML",
-                        bot=bot)
+    if message_id:
+        try:
+            await bot.edit_message_text(
+                chat_id=user_id,
+                message_id=message_id,
+                text=text,
+                reply_markup=keyboards.admin_menu(),
+                parse_mode="HTML"
+            )
+        except Exception as e:
+            logger.error(f"Ошибка редактирования админ-панели: {e}")
+            await update_message(user_id, text,
+                                reply_markup=keyboards.admin_menu(),
+                                parse_mode="HTML",
+                                bot=bot)
+    else:
+        await update_message(user_id, text,
+                            reply_markup=keyboards.admin_menu(),
+                            parse_mode="HTML",
+                            bot=bot)
 
 @router.message(Command("admin_menu"))
 async def admin_menu_command(message: types.Message):
@@ -859,7 +875,7 @@ async def admin_back_callback(callback: types.CallbackQuery, state: FSMContext):
     # Сбрасываем ВСЕ состояния промптов при выходе из меню
     await state.clear()
 
-    await show_admin_panel(callback.from_user.id, callback.bot)
+    await show_admin_panel(callback.from_user.id, callback.bot, callback.message.message_id)
 
 @router.callback_query(F.data == "admin_stats")
 async def admin_stats_callback(callback: types.CallbackQuery):
@@ -1810,26 +1826,79 @@ async def admin_delete_review_process(message: types.Message, state: FSMContext)
 @router.callback_query(F.data == "admin_delete_all_reviews")
 async def admin_delete_all_reviews_callback(callback: types.CallbackQuery):
     """Удаление всех отзывов"""
-    await callback.answer("⚠️ Вы уверены?", show_alert=True)
-    
+    await callback.answer()
+
     if not is_admin_fast(callback.from_user.id):
         return
-    
+
     text = """💣 <b>Удаление всех отзывов</b>
 
 ⚠️ <b>ВНИМАНИЕ!</b> Это действие удалит ВСЕ отзывы из базы данных!
 Данное действие необратимо.
 
-Для подтверждения удаления всех отзывов введите: <code>УДАЛИТЬ ВСЕ ОТЗЫВЫ</code>"""
-    
+<b>Вы уверены, что хотите удалить все отзывы?</b>"""
+
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="✅ Да, удалить все отзывы", callback_data="confirm_delete_all_reviews")],
         [types.InlineKeyboardButton(text="❌ Отмена", callback_data="admin_reviews")]
     ])
-    
-    await update_message(callback.from_user.id, text,
-                        reply_markup=keyboard,
-                        parse_mode="HTML",
-                        bot=callback.bot)
+
+    await callback.message.edit_text(
+        text,
+        reply_markup=keyboard,
+        parse_mode="HTML"
+    )
+
+@router.callback_query(F.data == "confirm_delete_all_reviews")
+async def confirm_delete_all_reviews_callback(callback: types.CallbackQuery):
+    """Подтверждение удаления всех отзывов"""
+    await callback.answer()
+
+    if not is_admin_fast(callback.from_user.id):
+        return
+
+    try:
+        # Удаляем все отзывы из базы данных
+        database.execute_query("DELETE FROM reviews")
+        
+        # Очищаем кэш отзывов
+        import cache_manager
+        cache_keys_to_clear = [key for key in cache_manager.cache._cache.keys() if 'reviews' in key]
+        for key in cache_keys_to_clear:
+            cache_manager.cache.delete(key)
+        
+        text = """✅ <b>Все отзывы удалены</b>
+
+Все отзывы были успешно удалены из базы данных.
+Кэш также очищен."""
+
+        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+            [types.InlineKeyboardButton(text="⬅️ Назад к управлению отзывами", callback_data="admin_reviews")]
+        ])
+
+        await callback.message.edit_text(
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+
+    except Exception as e:
+        logger.error(f"Ошибка удаления всех отзывов: {e}")
+        
+        text = f"""❌ <b>Ошибка удаления отзывов</b>
+
+Произошла ошибка при удалении отзывов:
+<code>{str(e)}</code>"""
+
+        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+            [types.InlineKeyboardButton(text="⬅️ Назад к управлению отзывами", callback_data="admin_reviews")]
+        ])
+
+        await callback.message.edit_text(
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
 
 # ===== УПРАВЛЕНИЕ FAQ =====
 
@@ -5250,48 +5319,77 @@ async def handle_prompt_upload(message: types.Message, state: FSMContext):
 @router.message(F.web_app_data)
 async def handle_web_app_data(message: types.Message):
     """Обработка данных от Telegram Web App (миниаппа)"""
+    user_id = message.from_user.id
+    logger.info(f"Получены данные от миниаппа от пользователя {user_id}")
+
     try:
         # Получаем данные от миниаппа
         web_app_data = message.web_app_data.data
+        logger.info(f"Сырые данные от миниаппа: {web_app_data}")
+
         data = json.loads(web_app_data)
+        logger.info(f"Распарсенные данные: {data}")
 
-        user_id = message.from_user.id
+        if data.get('action') == 'send_admin_message':
+            logger.info("Обработка действия send_admin_message")
 
-        if data['action'] == 'send_admin_message':
-            chat_id = data['chatId']
-            admin_message = data['message']
+            chat_id = data.get('chatId')
+            admin_message = data.get('message')
 
-            # Получаем информацию о чате
-            chat_info = database.get_chat_by_id(chat_id)
-            if not chat_info:
-                await safe_send_message(message.bot, user_id, "❌ Чат не найден")
+            logger.info(f"chat_id: {chat_id}, admin_message: {admin_message}")
+
+            if not chat_id or not admin_message:
+                logger.error("Отсутствует chat_id или admin_message")
+                await safe_send_message(message.bot, user_id, "❌ Неполные данные для отправки сообщения")
                 return
 
-            user_chat_id = chat_info['user_id']
-            user_name = chat_info['user_name']
+            # Получаем информацию о чате
+            logger.info(f"Получаем информацию о чате {chat_id}")
+            chat_info = database.get_chat_by_id(chat_id)
+            if not chat_info:
+                logger.error(f"Чат {chat_id} не найден в базе данных")
+                await safe_send_message(message.bot, user_id, f"❌ Чат не найден (ID: {chat_id})")
+                return
+
+            user_chat_id = chat_info.get('user_id')
+            user_name = chat_info.get('user_name', f'Пользователь {user_chat_id}')
+
+            logger.info(f"Отправляем сообщение пользователю {user_chat_id} ({user_name})")
 
             # Отправляем сообщение пользователю
             try:
-                await safe_send_message(message.bot, user_chat_id, admin_message)
+                send_result = await safe_send_message(message.bot, user_chat_id, admin_message)
+                if send_result:
+                    logger.info(f"Сообщение успешно отправлено пользователю {user_chat_id}")
+                else:
+                    logger.error(f"safe_send_message вернул None для пользователя {user_chat_id}")
+                    await safe_send_message(message.bot, user_id,
+                                           f"❌ Не удалось отправить сообщение пользователю {user_name}")
+                    return
 
                 # Сохраняем сообщение админа в базу данных
+                logger.info(f"Сохраняем сообщение в базу данных")
                 database.save_chat_message(chat_id, 'admin', admin_message)
 
                 await safe_send_message(message.bot, user_id,
                                        f"✅ Сообщение отправлено пользователю {user_name}")
 
-                logger.info(f"Админ {user_id} отправил сообщение в чат {chat_id}: {admin_message}")
+                logger.info(f"Админ {user_id} успешно отправил сообщение в чат {chat_id}: {admin_message}")
 
             except Exception as e:
                 logger.error(f"Ошибка отправки сообщения в чат {chat_id}: {e}")
                 await safe_send_message(message.bot, user_id,
-                                       f"❌ Ошибка отправки сообщения пользователю {user_name}")
+                                       f"❌ Ошибка отправки сообщения пользователю {user_name}: {str(e)}")
+
+        else:
+            logger.warning(f"Неизвестное действие: {data.get('action')}")
+            await safe_send_message(message.bot, user_id, f"❌ Неизвестное действие: {data.get('action')}")
 
     except json.JSONDecodeError as e:
-        logger.error(f"Ошибка парсинга данных от миниаппа: {e}")
+        logger.error(f"Ошибка парсинга JSON данных от миниаппа: {e}, сырые данные: {web_app_data}")
         await safe_send_message(message.bot, message.from_user.id,
-                               "❌ Ошибка обработки данных от миниаппа")
+                               "❌ Ошибка обработки данных от миниаппа (неправильный JSON)")
     except Exception as e:
         logger.error(f"Ошибка обработки web_app_data: {e}")
         await safe_send_message(message.bot, message.from_user.id,
-                               "❌ Произошла ошибка при обработке данных")
+                               f"❌ Произошла ошибка при обработке данных: {str(e)}")

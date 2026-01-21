@@ -23,6 +23,9 @@ def main_menu():
             InlineKeyboardButton(text="📅 БРОНИРОВАНИЕ СТОЛОВ", callback_data="booking"),
         ],
         [
+            InlineKeyboardButton(text="🎉 РЕГИСТРАЦИЯ НА МЕРОПРИЯТИЯ", callback_data="event_registration"),
+        ],
+        [
             InlineKeyboardButton(text="📍 КАК НАС НАЙТИ", callback_data="about_us"),
         ],
         [
@@ -207,12 +210,6 @@ def admin_menu():
         ],
         [
             InlineKeyboardButton(text="👥 УПРАВЛЕНИЕ АДМИНАМИ", callback_data="admin_manage_admins"),
-        ],
-        [
-            InlineKeyboardButton(text="🍽️ ПРОСМОТР ЗАКАЗОВ", callback_data="admin_orders"),
-        ],
-        [
-            InlineKeyboardButton(text="🎁 УПРАВЛЕНИЕ ПРОМОКОДАМИ", callback_data="admin_promocodes"),
         ],
         [
             InlineKeyboardButton(text="📢 УПРАВЛЕНИЕ РАССЫЛКАМИ", callback_data="admin_newsletter"),
@@ -491,6 +488,7 @@ def main_menu_with_profile(user_id: int = None) -> types.InlineKeyboardMarkup:
                 [types.InlineKeyboardButton(text="🍽️ МЕНЮ РЕСТОРАНА", callback_data="menu_food")],
                 [types.InlineKeyboardButton(text="🚚 ЗАКАЗАТЬ ДОСТАВКУ", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))],
                 [types.InlineKeyboardButton(text="📅 БРОНИРОВАНИЕ СТОЛОВ", callback_data="booking")],
+                [types.InlineKeyboardButton(text="🎉 РЕГИСТРАЦИЯ НА МЕРОПРИЯТИЯ", callback_data="event_registration")],
                 [types.InlineKeyboardButton(text="📱 НАШЕ ПРИЛОЖЕНИЕ", callback_data="our_app")],
                 [types.InlineKeyboardButton(text="👤 ЛИЧНЫЙ КАБИНЕТ", callback_data="personal_cabinet")],
                 [types.InlineKeyboardButton(text="📍 КАК НАС НАЙТИ", callback_data="about_us")],
@@ -503,6 +501,7 @@ def main_menu_with_profile(user_id: int = None) -> types.InlineKeyboardMarkup:
                 [types.InlineKeyboardButton(text="🍽️ МЕНЮ РЕСТОРАНА", callback_data="menu_food")],
                 [types.InlineKeyboardButton(text="🚚 ЗАКАЗАТЬ ДОСТАВКУ", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))],
                 [types.InlineKeyboardButton(text="📅 БРОНИРОВАНИЕ СТОЛОВ", callback_data="booking")],
+                [types.InlineKeyboardButton(text="🎉 РЕГИСТРАЦИЯ НА МЕРОПРИЯТИЯ", callback_data="event_registration")],
                 [types.InlineKeyboardButton(text="📱 НАШЕ ПРИЛОЖЕНИЕ", callback_data="our_app")],
                 [types.InlineKeyboardButton(text="📱 РЕГИСТРАЦИЯ/ВХОД", callback_data="register_or_login")],
                 [types.InlineKeyboardButton(text="📍 КАК НАС НАЙТИ", callback_data="about_us")],
@@ -516,6 +515,7 @@ def main_menu_with_profile(user_id: int = None) -> types.InlineKeyboardMarkup:
             [types.InlineKeyboardButton(text="🍽️ МЕНЮ РЕСТОРАНА", callback_data="menu_food")],
             [types.InlineKeyboardButton(text="🚚 ЗАКАЗАТЬ ДОСТАВКУ", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))],
             [types.InlineKeyboardButton(text="📅 БРОНИРОВАНИЕ СТОЛОВ", callback_data="booking")],
+            [types.InlineKeyboardButton(text="🎉 РЕГИСТРАЦИЯ НА МЕРОПРИЯТИЯ", callback_data="event_registration")],
             [types.InlineKeyboardButton(text="📱 НАШЕ ПРИЛОЖЕНИЕ", callback_data="our_app")],
             [types.InlineKeyboardButton(text="📱 РЕГИСТРАЦИЯ/ВХОД", callback_data="register_or_login")],
             [types.InlineKeyboardButton(text="📍 КАК НАС НАЙТИ", callback_data="about_us")],
@@ -686,3 +686,11 @@ def photos_menu():
 def empty_menu():
     """Пустая клавиатура (скрывает кнопки)"""
     return InlineKeyboardMarkup(inline_keyboard=[])
+
+def event_registration_menu():
+    """Меню регистрации на мероприятия"""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📝 ОСТАВИТЬ ЗАЯВКУ", callback_data="event_application")],
+        [InlineKeyboardButton(text="📞 СВЯЗАТЬСЯ С НАМИ", callback_data="contact_us")],
+        [InlineKeyboardButton(text="⬅️ НАЗАД В ГЛАВНОЕ МЕНЮ", callback_data="back_main")]
+    ])

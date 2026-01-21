@@ -88,12 +88,21 @@ async def personal_cabinet_handler(callback: types.CallbackQuery, state: FSMCont
     if not presto_uuid and user_data.get('phone'):
         presto_uuid = await fetch_and_save_presto_uuid(user_id, user_data['phone'])
     
+    # Получаем баланс бонусов
+    bonus_balance = None
+    if presto_uuid:
+        try:
+            bonus_balance = await presto_api.get_bonus_balance(presto_uuid)
+        except Exception as e:
+            logger.error(f"Ошибка получения баланса бонусов: {e}")
+
     text = f"""👤 <b>Личный кабинет</b>
 
 <b>Ваши данные:</b>
 👤 <b>Имя:</b> {user_data.get('full_name', 'Не указано')}
 📱 <b>Телефон:</b> {user_data.get('phone', 'Не указан')}
 🆔 <b>ID клиента:</b> {presto_uuid if presto_uuid else 'Не определен'}
+💰 <b>Бонусов:</b> {f"{bonus_balance:.0f}₽" if bonus_balance is not None else "Не определен"}
 
 <b>Выберите действие:</b>"""
     

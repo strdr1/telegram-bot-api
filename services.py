@@ -67,7 +67,57 @@ def _run_selenium_sync():
         chrome_options.page_load_strategy = 'eager'
         chrome_options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
         
-        service = Service(ChromeDriverManager().install())
+        # Используем webdriver-manager с правильной версией для Windows
+        import platform
+        import os
+
+        system = platform.system().lower()
+
+        if system == "windows":
+            # Для Windows исправляем путь webdriver-manager
+            try:
+                chrome_driver_manager = ChromeDriverManager()
+                reported_path = chrome_driver_manager.install()
+
+                # webdriver-manager возвращает путь к THIRD_PARTY_NOTICES.chromedriver,
+                # но нам нужен chromedriver.exe в той же директории
+                driver_dir = os.path.dirname(reported_path)
+                actual_driver_path = os.path.join(driver_dir, 'chromedriver.exe')
+
+                if os.path.exists(actual_driver_path):
+                    driver_path = actual_driver_path
+                    logger.info(f"Используем исправленный путь: {driver_path}")
+                else:
+                    # Если не нашли, используем reported_path (на всякий случай)
+                    driver_path = reported_path
+                    logger.warning(f"Не найден chromedriver.exe, используем: {driver_path}")
+
+                service = Service(driver_path)
+            except Exception as e:
+                logger.warning(f"Ошибка с webdriver-manager: {e}, пробуем альтернативный метод")
+                # Альтернативный метод - поиск существующего chromedriver
+                possible_paths = [
+                    'chromedriver.exe',
+                    'C:\\Windows\\chromedriver.exe',
+                    os.path.join(os.getcwd(), 'chromedriver.exe'),
+                    os.path.join(os.path.dirname(__file__), 'chromedriver.exe')
+                ]
+
+                driver_path = None
+                for path in possible_paths:
+                    if os.path.exists(path):
+                        driver_path = path
+                        break
+
+                if driver_path:
+                    service = Service(driver_path)
+                    logger.info(f"Найден chromedriver по пути: {driver_path}")
+                else:
+                    raise Exception("Не удалось найти chromedriver")
+        else:
+            # Для других ОС используем стандартный менеджер
+            chrome_driver_manager = ChromeDriverManager()
+            service = Service(chrome_driver_manager.install())
         
         driver = None
         try:

@@ -19,6 +19,8 @@ async def handle_show_category(category_name: str, user_id: int, bot):
         category_name = category_name.replace('_', ' ').strip()
         logger.info(f"Ищу категорию: '{category_name}'")
 
+
+
         # Ищем категорию в меню (улучшенный поиск)
         found = False
         for menu_id, menu in menu_cache.all_menus_cache.items():

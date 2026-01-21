@@ -1,0 +1,5 @@
+Персонаж: Черепашки Ниндзя
+Пользователь: 12345
+Время: 2026-01-21 18:15:24.343903
+Промпт: Черепашки Ниндзя sitting at a restaurant table with food on the table, extremely photorealistic image, real people not cartoon, highly detailed facial features, professional photography, natural lighting, authentic restaurant atmosphere, large rectangular banquet table for groups, multiple comfortable chairs, festive table setting, group dining atmosphere, photorealistic restaurant interior, detailed table and chair design, authentic dining environment, NO TEXT, NO WRITING, NO LETTERS, NO WORDS, NO CAPTIONS, NO LABELS, NO SIGNS, NO LOGOS, absolutely no text of any kind on the image
+Результат: https://tempfile.aiquickdraw.com/workers/nano/image_1769008518385_udvm0p.png

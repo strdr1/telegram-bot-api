@@ -3,12 +3,14 @@
 from aiogram import Router, F, types
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardRemove, BufferedInputFile
 import database
 import re
 import asyncio
 import logging
+import os
 from typing import Dict, List
+from datetime import datetime
 import config  # <-- ИМПОРТ КОНФИГА
 
 from .utils import update_message, check_user_registration_fast, clear_user_cache, safe_delete_message, safe_send_message
@@ -20,6 +22,10 @@ router = Router()
 _registration_messages: Dict[int, List[int]] = {}
 
 class RegistrationStates(StatesGroup):
+    waiting_for_phone = State()
+    waiting_for_name = State()
+
+class EventRegistrationStates(StatesGroup):
     waiting_for_phone = State()
     waiting_for_name = State()
 
@@ -281,6 +287,9 @@ async def handle_name_input(message: types.Message, state: FSMContext):
     agreement_accepted = True
     context = data.get('context', 'general')
     
+    # ВАЖНО: Сначала создаем/обновляем пользователя в БД
+    database.add_or_update_user(user.id, user.username, user.full_name)
+    
     database.update_user_phone(user.id, phone)
     database.update_user_name(user.id, text, accept_agreement=agreement_accepted)
     clear_user_cache(user.id)
@@ -310,11 +319,11 @@ async def handle_name_input(message: types.Message, state: FSMContext):
     # Удаляем ВСЕ сообщения регистрации
     await _cleanup_registration_messages(user.id, message.bot)
     
-    # Очищаем state
-    await state.clear()
-    
-    # Вызываем функцию перенаправления после регистрации
+    # Вызываем функцию перенаправления после регистрации ПЕРЕД очисткой state
     await handle_post_registration_redirect(user.id, message.bot, state, context, data)
+    
+    # Очищаем state ПОСЛЕ перенаправления
+    await state.clear()
 
 @router.callback_query(F.data.startswith("confirm_name:"))
 async def confirm_name_callback(callback: types.CallbackQuery, state: FSMContext):
@@ -330,6 +339,9 @@ async def confirm_name_callback(callback: types.CallbackQuery, state: FSMContext
     # Автоматическое согласие при регистрации
     agreement_accepted = True
     context = data.get('context', 'general')
+    
+    # ВАЖНО: Сначала создаем/обновляем пользователя в БД
+    database.add_or_update_user(callback.from_user.id, callback.from_user.username, callback.from_user.full_name)
     
     database.update_user_phone(callback.from_user.id, phone)
     database.update_user_name(callback.from_user.id, user_name, accept_agreement=agreement_accepted)
@@ -360,10 +372,12 @@ async def confirm_name_callback(callback: types.CallbackQuery, state: FSMContext
     
     # Удаляем ВСЕ сообщения регистрации
     await _cleanup_registration_messages(callback.from_user.id, callback.bot)
-    await state.clear()
     
-    # Вызываем функцию перенаправления после регистрации
+    # Вызываем функцию перенаправления после регистрации ПЕРЕД очисткой state
     await handle_post_registration_redirect(callback.from_user.id, callback.bot, state, context, data)
+    
+    # Очищаем state ПОСЛЕ перенаправления
+    await state.clear()
 
 @router.callback_query(F.data == "enter_different_name")
 async def enter_different_name_callback(callback: types.CallbackQuery, state: FSMContext):
@@ -435,7 +449,7 @@ async def handle_post_registration_redirect(user_id: int, bot, state: FSMContext
         
     elif context == 'booking':
         # Возвращаем к бронированию
-        from .handlers_booking import show_booking_options
+        from .handlers_main import show_booking_options
         await show_booking_options(user_id, bot)
     
     elif context == 'personal_cabinet':
@@ -443,9 +457,315 @@ async def handle_post_registration_redirect(user_id: int, bot, state: FSMContext
         from .handlers_main import show_main_menu
         await show_main_menu(user_id, bot)
         
+    elif context == 'private_event_registration':
+        # Специальная обработка для частных мероприятий
+        await handle_private_event_registration_completion(user_id, bot, state)
+        
     else:
         # По умолчанию возвращаем в главное меню
         from .handlers_main import show_main_menu
         await show_main_menu(user_id, bot)
 
-__all__ = ['router', 'RegistrationStates', 'ask_for_registration_phone', 'handle_post_registration_redirect']
+async def handle_private_event_registration_completion(user_id: int, bot, state: FSMContext):
+    """Обработка завершения регистрации для частного мероприятия"""
+    try:
+        # Получаем тип мероприятия из состояния
+        data = await state.get_data()
+        event_type = data.get('event_type', None)
+        
+        # Отправляем срочную заявку админу с типом мероприятия
+        from .handlers_main import send_private_event_application_to_admin
+        await send_private_event_application_to_admin(user_id, bot, event_type)
+        
+        # Определяем эмодзи и название для типа мероприятия
+        event_type_emoji = {
+            'день_рождения': '🎂',
+            'свадьба': '💒',
+            'корпоратив': '🏢',
+            'юбилей': '🎊',
+            'детский_праздник': '🎈',
+            'другое': '🎭'
+        }
+        
+        emoji = event_type_emoji.get(event_type, '🎉') if event_type else '🎉'
+        event_name = event_type.replace('_', ' ').title() if event_type else 'мероприятие'
+        
+        # Сообщение пользователю с предложением меню
+        text = f"""{emoji} <b>СРОЧНАЯ ЗАЯВКА ПРИНЯТА!</b>
+
+⚡ Ваша заявка на организацию мероприятия "{event_name}" отправлена!
+
+📞 <b>Наш менеджер свяжется с вами в течение 15 минут!</b>
+
+А пока вы можете ознакомиться с нашим меню и банкетным предложением. Хотите, чтобы я выслал их вам?"""
+        
+        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+            [types.InlineKeyboardButton(text="📋 Основное меню", callback_data="show_main_menu_after_private_event")],
+            [types.InlineKeyboardButton(text="🍾 Банкетное меню", callback_data="show_banquet_menu_after_private_event")],
+            [types.InlineKeyboardButton(text="📋 Оба меню", callback_data="show_both_menus_after_private_event")],
+            [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+        ])
+        
+        await safe_send_message(
+            bot,
+            user_id,
+            text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+        
+    except Exception as e:
+        logger.error(f"Ошибка в handle_private_event_registration_completion: {e}")
+        # Fallback - просто возвращаем в главное меню
+        from .handlers_main import show_main_menu
+        await show_main_menu(user_id, bot)
+
+# ===== РЕГИСТРАЦИЯ НА МЕРОПРИЯТИЯ =====
+
+async def ask_for_event_registration_phone(user_id: int, bot, context: str = "event_registration"):
+    """Запрос телефона для регистрации на мероприятие (улучшенная версия)"""
+    await _cleanup_registration_messages(user_id, bot)
+    
+    text = """📝 <b>Заявка на мероприятие</b>
+
+Для подачи заявки нам нужны ваши контактные данные.
+
+📱 <b>Поделитесь номером телефона или введите вручную:</b>
+
+<i>Нажимая кнопку "Поделиться номером", вы соглашаетесь на обработку персональных данных.</i>"""
+
+    # Создаем клавиатуру с кнопкой поделиться номером И кнопкой назад
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="📱 Поделиться номером", callback_data="share_phone_event")],
+        [types.InlineKeyboardButton(text="⬅️ Назад к мероприятиям", callback_data="event_registration")]
+    ])
+
+    msg = await bot.send_message(
+        user_id, 
+        text, 
+        reply_markup=keyboard, 
+        parse_mode="HTML"
+    )
+    if msg and msg.message_id:
+        _add_registration_message(user_id, msg.message_id)
+
+@router.callback_query(F.data == "share_phone_event")
+async def share_phone_event_callback(callback: types.CallbackQuery, state: FSMContext):
+    """Обработчик кнопки 'Поделиться номером' для мероприятий"""
+    await callback.answer()
+    
+    user_id = callback.from_user.id
+    
+    # Сохраняем контекст в state - по умолчанию event_registration, но может быть private_event_registration
+    current_state_data = await state.get_data()
+    context = current_state_data.get('context', 'event_registration')
+    await state.update_data(context=context)
+    
+    text = """📱 <b>Поделитесь номером телефона</b>
+
+Нажмите кнопку ниже или введите номер вручную в формате +7 XXX XXX XX XX"""
+
+    # Создаем reply клавиатуру для получения контакта
+    reply_keyboard = types.ReplyKeyboardMarkup(
+        keyboard=[[types.KeyboardButton(text="📱 Поделиться номером", request_contact=True)]],
+        resize_keyboard=True,
+        one_time_keyboard=True
+    )
+    
+    # Создаем inline клавиатуру с кнопкой "Назад"
+    inline_keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="⬅️ Назад к мероприятиям", callback_data="event_registration")]
+    ])
+    
+    # Редактируем сообщение
+    await callback.message.edit_text(
+        text,
+        reply_markup=inline_keyboard,
+        parse_mode="HTML"
+    )
+    
+    # Отправляем reply клавиатуру отдельным сообщением
+    msg = await callback.bot.send_message(
+        user_id,
+        "👆 Используйте кнопку выше или введите номер вручную:",
+        reply_markup=reply_keyboard
+    )
+    if msg and msg.message_id:
+        _add_registration_message(user_id, msg.message_id)
+    
+    # Устанавливаем состояние ожидания телефона
+    await state.set_state(EventRegistrationStates.waiting_for_phone)
+
+@router.message(EventRegistrationStates.waiting_for_phone)
+async def handle_event_phone_input(message: types.Message, state: FSMContext):
+    """Обработка ввода телефона для регистрации на мероприятие"""
+    user = message.from_user
+    user_id = user.id
+    
+    _add_registration_message(user_id, message.message_id)
+    
+    phone = None
+    if message.contact:
+        phone = message.contact.phone_number
+    elif message.text:
+        # Попытка извлечь номер из текста
+        import re
+        phone_match = re.search(r'[\+]?[0-9\s\-\(\)]{10,}', message.text)
+        if phone_match:
+            phone = phone_match.group().strip()
+    
+    if not phone:
+        text = """❌ <b>Некорректный номер телефона</b>
+
+Пожалуйста, поделитесь номером телефона через кнопку или введите корректный номер в формате +7 XXX XXX XX XX."""
+        
+        reply_keyboard = types.ReplyKeyboardMarkup(
+            keyboard=[[types.KeyboardButton(text="📱 Поделиться номером", request_contact=True)]],
+            resize_keyboard=True,
+            one_time_keyboard=True
+        )
+        
+        inline_keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+            [types.InlineKeyboardButton(text="⬅️ Назад к мероприятиям", callback_data="event_registration")]
+        ])
+        
+        msg = await message.answer(text, reply_markup=reply_keyboard, parse_mode="HTML")
+        if msg and msg.message_id:
+            _add_registration_message(user_id, msg.message_id)
+            
+        back_msg = await message.answer(
+            "⬅️ <i>Или вернитесь к выбору мероприятий</i>",
+            reply_markup=inline_keyboard,
+            parse_mode="HTML"
+        )
+        if back_msg and back_msg.message_id:
+            _add_registration_message(user_id, back_msg.message_id)
+        return
+    
+    # Сохраняем телефон и контекст
+    current_data = await state.get_data()
+    context = current_data.get('context', 'event_registration')
+    await state.update_data(event_phone=phone, context=context)
+    
+    # Запрашиваем имя
+    text = """👤 <b>Введите ваше имя:</b>
+
+Как к вам обращаться при связи по поводу мероприятия?"""
+    
+    reply_keyboard = types.ReplyKeyboardRemove()
+    inline_keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="⬅️ Назад к мероприятиям", callback_data="event_registration")]
+    ])
+    
+    msg = await message.answer(text, reply_markup=inline_keyboard, parse_mode="HTML")
+    if msg and msg.message_id:
+        _add_registration_message(user_id, msg.message_id)
+    
+    await state.set_state(EventRegistrationStates.waiting_for_name)
+
+@router.message(EventRegistrationStates.waiting_for_name)
+async def handle_event_name_input(message: types.Message, state: FSMContext):
+    """Обработка ввода имени для регистрации на мероприятие"""
+    user = message.from_user
+    user_id = user.id
+    
+    _add_registration_message(user_id, message.message_id)
+    
+    name = message.text.strip() if message.text else ""
+    
+    if not name or len(name) < 2:
+        text = """❌ <b>Некорректное имя</b>
+
+Пожалуйста, введите ваше имя (минимум 2 символа)."""
+        
+        inline_keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+            [types.InlineKeyboardButton(text="⬅️ Назад к мероприятиям", callback_data="event_registration")]
+        ])
+        
+        msg = await message.answer(text, reply_markup=inline_keyboard, parse_mode="HTML")
+        if msg and msg.message_id:
+            _add_registration_message(user_id, msg.message_id)
+        return
+    
+    # Получаем данные из состояния
+    data = await state.get_data()
+    phone = data.get('event_phone', '')
+    context = data.get('context', 'event_registration')
+    
+    # Очищаем сообщения регистрации
+    await _cleanup_registration_messages(user_id, message.bot)
+    
+    # Обрабатываем в зависимости от контекста
+    if context == 'private_event_registration':
+        # Для частных мероприятий - срочная заявка
+        await handle_private_event_registration_completion(user_id, message.bot, state)
+    else:
+        # Для обычных мероприятий - стандартная заявка
+        await send_event_application_to_admin(user_id, message.bot, name, phone, user.username)
+        
+        # Показываем подтверждение
+        text = """✅ <b>Заявка отправлена!</b>
+
+Спасибо за интерес к нашим мероприятиям!
+
+С вами скоро свяжутся наши менеджеры для выяснения деталей и подтверждения регистрации.
+
+📞 Если у вас есть срочные вопросы, вы можете связаться с нами напрямую."""
+        
+        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+            [types.InlineKeyboardButton(text="📞 Связаться с нами", callback_data="contact_us")],
+            [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+        ])
+        
+        msg = await message.answer(text, reply_markup=keyboard, parse_mode="HTML")
+    
+    await state.clear()
+
+async def send_event_application_to_admin(user_id: int, bot, name: str = None, phone: str = None, username: str = None):
+    """Отправка заявки на мероприятие администратору"""
+    try:
+        # Получаем данные пользователя если не переданы
+        if not name or not phone:
+            user_data = database.get_user_complete_data(user_id)
+            if user_data:
+                name = name or user_data.get('name', 'Не указано')
+                phone = phone or user_data.get('phone', 'Не указано')
+            else:
+                name = name or 'Не указано'
+                phone = phone or 'Не указано'
+        
+        # Получаем username если не передан
+        if not username:
+            try:
+                user_info = await bot.get_chat(user_id)
+                username = user_info.username
+            except:
+                username = None
+        
+        # Формируем сообщение для админа
+        admin_text = f"""🎉 <b>НОВАЯ ЗАЯВКА НА МЕРОПРИЯТИЕ</b>
+
+👤 <b>Пользователь:</b> {name}
+📱 <b>Телефон:</b> {phone}
+🆔 <b>Telegram:</b> @{username if username else 'не указан'}
+🆔 <b>ID:</b> {user_id}
+
+📝 <b>Тип заявки:</b> Регистрация на мероприятие
+
+⏰ <b>Время подачи:</b> {datetime.now().strftime('%d.%m.%Y %H:%M')}"""
+        
+        # Отправляем всем админам
+        all_users = database.get_all_users()
+        admin_ids = [user[0] for user in all_users if database.is_admin(user[0])]
+        for admin_id in admin_ids:
+            try:
+                await bot.send_message(admin_id, admin_text, parse_mode="HTML")
+            except Exception as e:
+                logger.error(f"Ошибка отправки заявки на мероприятие админу {admin_id}: {e}")
+        
+        logger.info(f"Заявка на мероприятие от пользователя {user_id} отправлена админам")
+        
+    except Exception as e:
+        logger.error(f"Ошибка отправки заявки на мероприятие: {e}")
+
+__all__ = ['router', 'RegistrationStates', 'EventRegistrationStates', 'ask_for_registration_phone', 'ask_for_event_registration_phone', 'handle_post_registration_redirect']

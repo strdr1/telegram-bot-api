@@ -44,6 +44,7 @@ import database
 from menu_cache import menu_cache
 from presto_api import presto_api
 from cart_manager import cart_manager
+import handlers.utils
 
 # Настройка логирования
 logging.basicConfig(
@@ -52,6 +53,37 @@ logging.basicConfig(
     datefmt='%H:%M:%S'
 )
 logger = logging.getLogger(__name__)
+
+async def process_message_queue(bot):
+    """Обработка очереди сообщений от миниаппа"""
+    while True:
+        try:
+            # Получаем неотправленные сообщения от админа
+            unsent_messages = database.get_unsent_admin_messages()
+
+            for message in unsent_messages:
+                chat_id = message['chat_id']
+                message_text = message['message_text']
+                message_id = message['id']
+
+                logger.info(f"Отправка сообщения из очереди: chat {chat_id}, message_id {message_id}")
+
+                # Отправляем сообщение пользователю
+                result = await handlers.utils.safe_send_message(bot, message['user_id'], message_text)
+
+                if result:
+                    # Отмечаем сообщение как отправленное
+                    database.mark_message_sent(message_id)
+                    logger.info(f"Сообщение {message_id} успешно отправлено пользователю {message['user_id']}")
+                else:
+                    logger.error(f"Не удалось отправить сообщение {message_id} пользователю {message['user_id']}")
+
+            # Ждем 5 секунд перед следующей проверкой
+            await asyncio.sleep(5)
+
+        except Exception as e:
+            logger.error(f"Ошибка в process_message_queue: {e}")
+            await asyncio.sleep(10)  # В случае ошибки ждем дольше
 
 async def load_presto_menus():
     """Загрузка всех меню и изображений из Presto API"""
@@ -168,7 +200,11 @@ async def main():
     
     # Регистрируем обработчик ошибок
     dp.errors.register(error_handler)
-    
+
+    # Запускаем фоновую задачу для обработки сообщений из миниаппа
+    message_queue_task = asyncio.create_task(process_message_queue(bot))
+    print("📨 Фоновая задача обработки сообщений миниаппа запущена")
+
     print("\n" + "=" * 50)
     print("✅ Все обработчики зарегистрированы")
     print("📊 Список роутеров:")
