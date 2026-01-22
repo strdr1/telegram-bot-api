@@ -73,6 +73,9 @@ class AdminStates(StatesGroup):
     waiting_admin_id = State()  # Для добавления/удаления админа
     waiting_prompt_edit = State()  # Для редактирования промптов
     waiting_prompt_upload = State()  # Для загрузки промптов из файлов
+    waiting_image_hall_type = State()  # Для выбора типа зала при генерации изображений
+    waiting_image_character = State()  # Для ввода персонажа
+    waiting_image_prompt = State()  # Для ввода промпта
 
 # ===== УПРАВЛЕНИЕ МЕНЮ ФАЙЛАМИ =====
 
@@ -108,10 +111,20 @@ async def admin_menu_files_callback(callback: types.CallbackQuery):
         [types.InlineKeyboardButton(text="⬅️ НАЗАД В АДМИНКУ", callback_data="admin_back")]
     ])
     
-    await update_message(callback.from_user.id, text,
-                        reply_markup=keyboard,
-                        parse_mode="HTML",
-                        bot=callback.bot)
+    try:
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        logger.error(f"Ошибка редактирования сообщения в admin_menu_files_callback: {e}")
+        await callback.bot.send_message(
+            chat_id=callback.from_user.id,
+            text=text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
     
 @router.callback_query(F.data == "manage_table_photos")
 async def manage_table_photos_callback(callback: types.CallbackQuery):
@@ -870,18 +883,6 @@ async def check_admin_password(message: types.Message, state: FSMContext):
                            bot=message.bot)
 
 @router.callback_query(F.data == "admin_back")
-async def admin_back_callback(callback: types.CallbackQuery, state: FSMContext):
-    """Быстрый возврат в админку - сбрасывает состояния промптов"""
-    await callback.answer()
-
-    if not is_admin_fast(callback.from_user.id):
-        return
-
-    # Сбрасываем ВСЕ состояния промптов при выходе из меню
-    await state.clear()
-
-    await show_admin_panel(callback.from_user.id, callback.bot, callback.message.message_id)
-
 @router.callback_query(F.data == "admin_stats")
 async def admin_stats_callback(callback: types.CallbackQuery):
     """Быстрая статистика"""
@@ -904,10 +905,20 @@ async def admin_stats_callback(callback: types.CallbackQuery):
         [types.InlineKeyboardButton(text="⬅️ Назад в админку", callback_data="admin_back")]
     ])
     
-    await update_message(callback.from_user.id, text,
-                        reply_markup=keyboard,
-                        parse_mode="HTML",
-                        bot=callback.bot)
+    try:
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        logger.error(f"Ошибка редактирования сообщения в admin_stats_callback: {e}")
+        await callback.bot.send_message(
+            chat_id=callback.from_user.id,
+            text=text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
 
 @router.callback_query(F.data == "admin_orders")
 async def admin_orders_callback(callback: types.CallbackQuery):
@@ -4149,17 +4160,6 @@ async def admin_menu_command_handler(message: types.Message):
     # Показываем главное админ меню
     await show_admin_panel(message.from_user.id, message.bot)
 
-async def show_admin_panel(user_id: int, bot):
-    """Показать админ-панель"""
-    text = """🛠️ <b>Админ-панель ресторана</b>
-
-Выберите раздел для управления:"""
-
-    await update_message(user_id, text,
-                        reply_markup=keyboards.admin_menu(),
-                        parse_mode="HTML",
-                        bot=bot)
-
 @router.callback_query(F.data.startswith("reply_"))
 async def reply_callback_handler(callback: types.CallbackQuery, state: FSMContext):
     """Обработчик кнопки 'Ответить' в уведомлениях о чате"""
@@ -4475,6 +4475,7 @@ async def admin_system_prompts_callback(callback: types.CallbackQuery, state: FS
         [types.InlineKeyboardButton(text="📤 Загрузить промпт", callback_data="upload_prompt")],
         [types.InlineKeyboardButton(text="📋 Просмотр промптов", callback_data="view_prompts")],
         [types.InlineKeyboardButton(text="🖼️ Управление фото столов", callback_data="manage_table_photos")],
+        [types.InlineKeyboardButton(text="🎨 Генерация изображений", callback_data="admin_image_generation")],
         [types.InlineKeyboardButton(text="🔄 Сброс к умолчанию", callback_data="reset_prompts")],
         [types.InlineKeyboardButton(text="⬅️ Назад в админку", callback_data="admin_back")]
     ])
@@ -4578,7 +4579,7 @@ async def admin_chat_stats_callback(callback: types.CallbackQuery):
         )
 
 @router.callback_query(F.data == "admin_back")
-async def admin_back_callback_fix(callback: types.CallbackQuery, state: FSMContext):
+async def admin_back_callback(callback: types.CallbackQuery, state: FSMContext):
     """Обработчик кнопки 'Назад в админку' - сбрасывает состояния промптов"""
     await callback.answer()
 
@@ -5398,3 +5399,283 @@ async def handle_web_app_data(message: types.Message):
         logger.error(f"Ошибка обработки web_app_data: {e}")
         await safe_send_message(message.bot, message.from_user.id,
                                f"❌ Произошла ошибка при обработке данных: {str(e)}")
+
+# ===== ГЕНЕРАЦИЯ ИЗОБРАЖЕНИЙ =====
+
+@router.callback_query(F.data == "admin_image_generation")
+async def admin_image_generation_callback(callback: types.CallbackQuery, state: FSMContext):
+    """Админ-панель генерации изображений"""
+    await callback.answer()
+
+    if not is_admin_fast(callback.from_user.id):
+        return
+
+    text = """🎨 <b>Генерация изображений персонажей</b>
+
+Здесь вы можете вручную генерировать изображения персонажей в ресторане.
+
+<b>Выберите тип зала:</b>
+
+🏛️ <b>Большой зал</b> - для групповых сцен (компания, команда)
+🏠 <b>Маленький зал</b> - для одиночных персонажей"""
+
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="🏛️ Большой зал (компания)", callback_data="image_hall_big")],
+        [types.InlineKeyboardButton(text="🏠 Маленький зал (одиночный)", callback_data="image_hall_small")],
+        [types.InlineKeyboardButton(text="⬅️ Назад", callback_data="admin_system_prompts")]
+    ])
+
+    await update_message(callback.from_user.id, text,
+                        reply_markup=keyboard,
+                        parse_mode="HTML",
+                        bot=callback.bot)
+
+@router.callback_query(F.data.startswith("image_hall_"))
+async def process_hall_type(callback: types.CallbackQuery, state: FSMContext):
+    """Обработка выбора типа зала"""
+    await callback.answer()
+
+    if not is_admin_fast(callback.from_user.id):
+        return
+
+    hall_type = callback.data.replace("image_hall_", "")
+
+    await state.update_data(hall_type=hall_type)
+
+    hall_description = "большой зал (компания)" if hall_type == "big" else "маленький зал (одиночный)"
+
+    text = f"""🎨 <b>Генерация изображений</b>
+
+<b>Выбран зал:</b> {hall_description}
+
+Теперь введите имя персонажа для генерации изображения:
+<i>Примеры: Дедпул, Iron Man, Маколей Калкин, Черепашки Ниндзя</i>"""
+
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="⬅️ Назад к выбору зала", callback_data="admin_image_generation")]
+    ])
+
+    await update_message(callback.from_user.id, text,
+                        reply_markup=keyboard,
+                        parse_mode="HTML",
+                        bot=callback.bot)
+
+    await state.set_state(AdminStates.waiting_image_character)
+
+@router.message(AdminStates.waiting_image_character)
+async def process_image_character(message: types.Message, state: FSMContext):
+    """Обработка ввода персонажа"""
+    if not is_admin_fast(message.from_user.id):
+        return
+
+    # Добавляем сообщение в список для удаления
+    await add_promocode_message(message.from_user.id, message.message_id)
+
+    character = message.text.strip()
+
+    if not character:
+        await update_message(message.from_user.id,
+                           "❌ <b>Введите имя персонажа!</b>",
+                           parse_mode="HTML",
+                           bot=message.bot)
+        return
+
+    await state.update_data(character=character)
+
+    data = await state.get_data()
+    hall_type = data.get('hall_type', 'small')
+
+    hall_description = "большой зал (компания)" if hall_type == "big" else "маленький зал (одиночный)"
+
+    text = f"""🎨 <b>Генерация изображений</b>
+
+<b>Персонаж:</b> {character}
+<b>Зал:</b> {hall_description}
+
+Теперь введите промпт для генерации изображения:
+<i>Опишите сцену на английском или оставьте поле пустым для автоматического промпта</i>
+
+<i>Примеры:</i>
+• <code>sitting at restaurant table with friends</code>
+• <code>eating pizza with big smile</code>
+• <code>celebrating birthday with cake</code>"""
+
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="🎲 Автоматический промпт", callback_data="generate_auto_prompt")],
+        [types.InlineKeyboardButton(text="⬅️ Назад к персонажу", callback_data="back_to_character")]
+    ])
+
+    await update_message(message.from_user.id, text,
+                        reply_markup=keyboard,
+                        parse_mode="HTML",
+                        bot=message.bot)
+
+    await state.set_state(AdminStates.waiting_image_prompt)
+
+@router.callback_query(F.data == "generate_auto_prompt")
+async def generate_auto_prompt_callback(callback: types.CallbackQuery, state: FSMContext):
+    """Генерация с автоматическим промптом"""
+    await callback.answer()
+
+    if not is_admin_fast(callback.from_user.id):
+        return
+
+    data = await state.get_data()
+    character = data.get('character', '')
+    hall_type = data.get('hall_type', 'small')
+
+    if not character:
+        await callback.answer("❌ Персонаж не указан!", show_alert=True)
+        return
+
+    # Создаем автоматический промпт
+    if hall_type == "big":
+        auto_prompt = f"{character} sitting together with friends at center table in cozy restaurant hall, group dinner, realistic photo, detailed interior, warm lighting, professional photography"
+    else:
+        auto_prompt = f"{character} sitting at center table near window in cozy restaurant hall, realistic photo, detailed interior, warm lighting, professional photography"
+
+    await state.update_data(prompt=auto_prompt)
+
+    # Запускаем генерацию
+    await generate_image_final(callback.from_user.id, callback.bot, state, auto_prompt)
+
+@router.message(AdminStates.waiting_image_prompt)
+async def process_image_prompt(message: types.Message, state: FSMContext):
+    """Обработка ввода промпта"""
+    if not is_admin_fast(message.from_user.id):
+        return
+
+    # Добавляем сообщение в список для удаления
+    await add_promocode_message(message.from_user.id, message.message_id)
+
+    prompt = message.text.strip()
+
+    # Если промпт пустой, используем автоматический
+    if not prompt:
+        data = await state.get_data()
+        character = data.get('character', '')
+        hall_type = data.get('hall_type', 'small')
+
+        if hall_type == "big":
+            prompt = f"{character} sitting together with friends at center table in cozy restaurant hall, group dinner, realistic photo, detailed interior, warm lighting, professional photography"
+        else:
+            prompt = f"{character} sitting at center table near window in cozy restaurant hall, realistic photo, detailed interior, warm lighting, professional photography"
+
+    await state.update_data(prompt=prompt)
+
+    # Запускаем генерацию
+    await generate_image_final(message.from_user.id, message.bot, state, prompt)
+
+async def generate_image_final(user_id: int, bot, state: FSMContext, prompt: str):
+    """Финальная генерация изображения"""
+    data = await state.get_data()
+    character = data.get('character', '')
+    hall_type = data.get('hall_type', 'small')
+
+    hall_description = "большой зал (компания)" if hall_type == "big" else "маленький зал (одиночный)"
+
+    text = f"""🎨 <b>Генерация изображения</b>
+
+<b>Персонаж:</b> {character}
+<b>Зал:</b> {hall_description}
+<b>Промпт:</b> {prompt[:100]}{'...' if len(prompt) > 100 else ''}
+
+⏳ <b>Генерирую изображение...</b>
+<i>Это может занять 10-30 секунд</i>"""
+
+    await update_message(user_id, text,
+                        parse_mode="HTML",
+                        bot=bot)
+
+    try:
+        # Импортируем функцию генерации изображений
+        from ai_assistant import generate_character_image
+
+        # Генерируем изображение
+        image_url = await generate_character_image(character, prompt)
+
+        if image_url:
+            # Сохраняем в базу данных
+            from character_parser import save_character_result
+            await save_character_result(character, user_id, prompt, image_url)
+
+            text = f"""✅ <b>Изображение сгенерировано!</b>
+
+<b>Персонаж:</b> {character}
+<b>Зал:</b> {hall_description}
+
+Изображение сохранено в базе данных и доступно для использования в чате с пользователями."""
+
+            keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+                [types.InlineKeyboardButton(text="🖼️ Посмотреть изображение", url=image_url)],
+                [types.InlineKeyboardButton(text="🎨 Создать еще", callback_data="admin_image_generation")],
+                [types.InlineKeyboardButton(text="⬅️ В админку", callback_data="admin_back")]
+            ])
+
+            await update_message(user_id, text,
+                                reply_markup=keyboard,
+                                parse_mode="HTML",
+                                bot=bot)
+
+            # Логируем действие
+            database.log_action(user_id, "image_generated", f"character:{character}, hall:{hall_type}")
+
+        else:
+            text = """❌ <b>Ошибка генерации изображения!</b>
+
+Не удалось сгенерировать изображение. Попробуйте изменить промпт или попробуйте позже."""
+
+            keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+                [types.InlineKeyboardButton(text="🔄 Попробовать снова", callback_data="admin_image_generation")],
+                [types.InlineKeyboardButton(text="⬅️ В админку", callback_data="admin_back")]
+            ])
+
+            await update_message(user_id, text,
+                                reply_markup=keyboard,
+                                parse_mode="HTML",
+                                bot=bot)
+
+    except Exception as e:
+        logger.error(f"Ошибка генерации изображения: {e}")
+
+        text = f"""❌ <b>Ошибка генерации!</b>
+
+Произошла техническая ошибка: {str(e)[:200]}...
+
+Попробуйте еще раз или обратитесь к разработчику."""
+
+        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+            [types.InlineKeyboardButton(text="🔄 Попробовать снова", callback_data="admin_image_generation")],
+            [types.InlineKeyboardButton(text="⬅️ В админку", callback_data="admin_back")]
+        ])
+
+        await update_message(user_id, text,
+                            reply_markup=keyboard,
+                            parse_mode="HTML",
+                            bot=bot)
+
+    await state.clear()
+
+@router.callback_query(F.data == "back_to_character")
+async def back_to_character_callback(callback: types.CallbackQuery, state: FSMContext):
+    """Возврат к вводу персонажа"""
+    await callback.answer()
+
+    if not is_admin_fast(callback.from_user.id):
+        return
+
+    text = """🎨 <b>Генерация изображений</b>
+
+Введите имя персонажа для генерации изображения:
+<i>Примеры: Дедпул, Iron Man, Маколей Калкин, Черепашки Ниндзя</i>"""
+
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="⬅️ Назад к выбору зала", callback_data="admin_image_generation")]
+    ])
+
+    await update_message(callback.from_user.id, text,
+                        reply_markup=keyboard,
+                        parse_mode="HTML",
+                        bot=callback.bot)
+
+    await state.set_state(AdminStates.waiting_image_character)

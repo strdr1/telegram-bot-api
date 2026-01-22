@@ -2575,6 +2575,39 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
     from ai_assistant import check_and_reset_ai_limit
     await check_and_reset_ai_limit(user.id)
 
+    # Проверяем на запрос вызова человека/оператора ПЕРЕД любыми другими проверками
+    call_operator_keywords = [
+        'позови человека', 'вызови человека', 'человека позови', 'позвать человека',
+        'оператора', 'вызовите оператора', 'менеджера', 'администратора',
+        'человек', 'оператор', 'менеджер', 'админ', 'помощь человека',
+        'человеческую помощь', 'живого человека', 'реального человека',
+        'чтобы человек', 'чтобы оператор', 'чтобы менеджер'
+    ]
+
+    message_lower = message.text.lower().strip()
+    is_call_operator = any(keyword in message_lower for keyword in call_operator_keywords)
+
+    if is_call_operator and len(message.text.split()) <= 10:  # Ограничиваем длинные сообщения
+        logger.info(f"Обнаружен запрос вызова человека: {message.text}")
+
+        text = """Конечно! Я сейчас позову человека, который поможет вам с вашим вопросом. Пожалуйста, подождите немного. 😊"""
+
+        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+            [types.InlineKeyboardButton(text="💬 Написать оператору", callback_data="chat_operator")]
+        ])
+
+        await safe_send_message(message.bot, user.id, text, reply_markup=keyboard, parse_mode="HTML")
+
+        # Сохраняем в чат для миниаппа
+        try:
+            chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
+            database.save_chat_message(chat_id, 'user', message.text)
+            database.save_chat_message(chat_id, 'bot', text)
+        except Exception as e:
+            logger.error(f"Ошибка сохранения в миниапп: {e}")
+
+        return
+
     # Проверяем статус чата - если на паузе, сохраняем сообщение в миниапп и игнорируем
     try:
         chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
