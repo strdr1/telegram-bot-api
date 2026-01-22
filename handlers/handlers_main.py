@@ -2855,8 +2855,15 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
 
         # Проверяем на показ приложений
         if result.get('show_apps'):
-            # Показываем меню приложений (оно уже содержит нужный текст)
-            await show_our_app_menu(user.id, message.bot)
+            # Показываем текст ИИ + кнопки приложения
+            keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+                [types.InlineKeyboardButton(text="🍎 App Store", url=config.APP_IOS)],
+                [types.InlineKeyboardButton(text="🤖 Google Play", url=config.APP_ANDROID)],
+                [types.InlineKeyboardButton(text="🟦 RuStore", url=config.APP_RUSTORE)]
+            ])
+            
+            await safe_send_message(message.bot, user.id, result['text'], 
+                                   reply_markup=keyboard, parse_mode="HTML")
             return
 
         # Проверяем на показ фото зала
