@@ -694,3 +694,10 @@ def event_registration_menu():
         [InlineKeyboardButton(text="📞 СВЯЗАТЬСЯ С НАМИ", callback_data="contact_us")],
         [InlineKeyboardButton(text="⬅️ НАЗАД В ГЛАВНОЕ МЕНЮ", callback_data="back_main")]
     ])
+
+def get_character_keyboard():
+    """Клавиатура для создания персонажа"""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🎭 ВВЕСТИ ИМЯ ПЕРСОНАЖА", callback_data="start_character_creation")],
+        [InlineKeyboardButton(text="❌ ОТМЕНА", callback_data="cancel_character")]
+    ])
