@@ -24,6 +24,7 @@
             display: flex;
             height: 100vh;
             flex-direction: row;
+            overflow: hidden;
         }
 
         /* Левая панель - список чатов (30%) */
@@ -34,6 +35,8 @@
             display: flex;
             flex-direction: column;
             min-width: 280px;
+            height: 100vh;
+            overflow: hidden;
         }
 
         /* Правая панель - чат (70%) */
@@ -42,12 +45,17 @@
             display: flex;
             flex-direction: column;
             background: var(--tg-theme-bg-color, #ffffff);
+            height: 100vh;
+            overflow: hidden;
         }
 
         /* Заголовок с статистикой */
         .header {
             padding: 15px;
             background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, white);
+            flex-shrink: 0;
+        }
             color: var(--tg-theme-button-text-color, white);
             text-align: center;
         }
@@ -165,6 +173,8 @@
             flex: 1;
             display: flex;
             flex-direction: column;
+            height: 100%;
+            overflow: hidden;
         }
 
         .chat-header-main {
@@ -174,6 +184,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-shrink: 0;
         }
 
         .chat-title {
@@ -269,6 +280,7 @@
             display: flex;
             gap: 10px;
             align-items: center;
+            flex-shrink: 0;
         }
 
         .message-input input {
