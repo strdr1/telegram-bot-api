@@ -108,6 +108,11 @@ async def admin_menu_files_callback(callback: types.CallbackQuery):
         [types.InlineKeyboardButton(text="⬅️ НАЗАД В АДМИНКУ", callback_data="admin_back")]
     ])
     
+    await update_message(callback.from_user.id, text,
+                        reply_markup=keyboard,
+                        parse_mode="HTML",
+                        bot=callback.bot)
+    
 @router.callback_query(F.data == "manage_table_photos")
 async def manage_table_photos_callback(callback: types.CallbackQuery):
     """Управление фото столов для генерации изображений персонажей"""
