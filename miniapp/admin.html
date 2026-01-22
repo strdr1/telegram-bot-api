@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель Mashkov</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            flex-direction: row;
+        }
+
+        /* Левая панель - список чатов (30%) */
+        .sidebar {
+            width: 30%;
+            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+            border-right: 1px solid var(--tg-theme-hint-color, #e0e0e0);
+            display: flex;
+            flex-direction: column;
+            min-width: 280px;
+        }
+
+        /* Правая панель - чат (70%) */
+        .main-content {
+            width: 70%;
+            display: flex;
+            flex-direction: column;
+            background: var(--tg-theme-bg-color, #ffffff);
+        }
+
+        /* Заголовок с статистикой */
+        .header {
+            padding: 15px;
+            background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, white);
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            gap: 10px;
+        }
+
+        .stat {
+            text-align: center;
+            flex: 1;
+        }
+
+        .stat-number {
+            font-size: 20px;
+            font-weight: bold;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            opacity: 0.9;
+            margin-top: 2px;
+        }
+
+        /* Список чатов */
+        .chat-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            -webkit-overflow-scrolling: touch; /* Плавный скролл на iOS */
+        }
+
+        .chat-item {
+            background: var(--tg-theme-bg-color, #ffffff);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .chat-item:hover {
+            background: var(--tg-theme-hint-color, #f0f0f0);
+        }
+
+        .chat-item.active {
+            border-color: var(--tg-theme-button-color, #0088cc);
+            background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, white);
+        }
+
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+        }
+
+        .chat-user {
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .chat-status {
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-paused {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .chat-item.active .status-active,
+        .chat-item.active .status-paused {
+            background: rgba(255,255,255,0.2);
+            color: var(--tg-theme-button-text-color, white);
+        }
+
+        .chat-preview {
+            font-size: 12px;
+            opacity: 0.8;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-bottom: 4px;
+        }
+
+        .chat-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+            opacity: 0.7;
+        }
+
+        /* Область чата */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header-main {
+            padding: 15px 20px;
+            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+            border-bottom: 1px solid var(--tg-theme-hint-color, #e0e0e0);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .chat-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, white);
+        }
+
+        .btn-secondary {
+            background: var(--tg-theme-hint-color, #6c757d);
+            color: white;
+        }
+
+        .btn:hover {
+            opacity: 0.8;
+        }
+
+        /* Сообщения */
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px 20px;
+            background: var(--tg-theme-bg-color, #ffffff);
+            -webkit-overflow-scrolling: touch; /* Плавный скролл на iOS */
+        }
+
+        .message {
+            margin-bottom: 15px;
+            max-width: 80%;
+        }
+
+        .message.user {
+            margin-left: auto;
+        }
+
+        .message.bot {
+            margin-right: auto;
+        }
+
+        .message-bubble {
+            padding: 10px 14px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .message.user .message-bubble {
+            background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, white);
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.bot .message-bubble {
+            background: var(--tg-theme-secondary-bg-color, #f1f1f1);
+            color: var(--tg-theme-text-color, #000000);
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            opacity: 0.6;
+            margin-top: 4px;
+            text-align: right;
+        }
+
+        .message.bot .message-time {
+            text-align: left;
+        }
+
+        /* Ввод сообщения */
+        .message-input {
+            padding: 15px 20px;
+            background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+            border-top: 1px solid var(--tg-theme-hint-color, #e0e0e0);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .message-input input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid var(--tg-theme-hint-color, #ddd);
+            border-radius: 20px;
+            font-size: 14px;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+        }
+
+        .message-input input:focus {
+            outline: none;
+            border-color: var(--tg-theme-button-color, #0088cc);
+        }
+
+        .send-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            border: none;
+            background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, white);
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .file-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            border: none;
+            background: var(--tg-theme-hint-color, #6c757d);
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Пустое состояние */
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 40px;
+            color: var(--tg-theme-hint-color, #999);
+        }
+
+        .empty-state h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+
+        .empty-state p {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        /* Загрузка */
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: var(--tg-theme-hint-color, #999);
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--tg-theme-hint-color, #ddd);
+            border-radius: 50%;
+            border-top-color: var(--tg-theme-button-color, #0088cc);
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Мобильная адаптация */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                height: 100vh;
+                overflow: hidden;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: 40%;
+                min-width: unset;
+                border-right: none;
+                border-bottom: 1px solid var(--tg-theme-hint-color, #e0e0e0);
+                display: flex;
+                flex-direction: column;
+            }
+
+            .main-content {
+                width: 100%;
+                height: 60%;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .chat-list {
+                flex: 1;
+                overflow-y: auto;
+                padding: 8px;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .messages {
+                flex: 1;
+                overflow-y: auto;
+                padding: 10px 15px;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .message-input {
+                padding: 10px 15px;
+                flex-shrink: 0; /* Не сжимается */
+                position: sticky;
+                bottom: 0;
+                background: var(--tg-theme-secondary-bg-color, #f8f9fa);
+            }
+
+            .header h1 {
+                font-size: 16px;
+            }
+
+            .stats {
+                gap: 5px;
+            }
+
+            .stat-number {
+                font-size: 16px;
+            }
+
+            .stat-label {
+                font-size: 10px;
+            }
+
+            .chat-item {
+                padding: 10px;
+                margin-bottom: 6px;
+            }
+
+            .chat-header-main {
+                padding: 10px 15px;
+                flex-shrink: 0;
+            }
+
+            .chat-title {
+                font-size: 14px;
+            }
+
+            .btn {
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .sidebar {
+                height: 35%;
+            }
+
+            .main-content {
+                height: 65%;
+            }
+
+            .header {
+                padding: 10px;
+            }
+
+            .header h1 {
+                font-size: 14px;
+                margin-bottom: 8px;
+            }
+
+            .stat-number {
+                font-size: 14px;
+            }
+
+            .stat-label {
+                font-size: 9px;
+            }
+
+            .chat-header-main {
+                padding: 10px 15px;
+            }
+
+            .chat-title {
+                font-size: 14px;
+            }
+
+            .btn {
+                padding: 4px 8px;
+                font-size: 11px;
+            }
+
+            .message-input {
+                padding: 8px 12px;
+            }
+
+            .message-input input {
+                padding: 8px 12px;
+                font-size: 14px;
+            }
+
+            .send-btn, .file-btn {
+                width: 36px;
+                height: 36px;
+                font-size: 14px;
+            }
+        }
+
+        /* Скрытие элементов */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Левая панель - список чатов -->
+        <div class="sidebar">
+            <div class="header">
+                <h1>🎭 Админ-панель Mashkov</h1>
+                <div class="stats">
+                    <div class="stat">
+                        <span class="stat-number" id="total-chats">0</span>
+                        <div class="stat-label">Всего чатов</div>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number" id="active-chats">0</span>
+                        <div class="stat-label">Активных</div>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-number" id="paused-chats">0</span>
+                        <div class="stat-label">На паузе</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="chat-list" id="chat-list">
+                <div class="loading">Загрузка чатов...</div>
+            </div>
+        </div>
+
+        <!-- Правая панель - чат -->
+        <div class="main-content">
+            <div class="chat-area" id="chat-area">
+                <div class="empty-state">
+                    <h3>💬 Выберите чат</h3>
+                    <p>Выберите чат из списка слева для просмотра сообщений</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Скрытый input для загрузки файлов -->
+    <input type="file" id="file-input" class="hidden" accept="*/*">
+
+    <script>
+        // Глобальные переменные
+        const API_BASE = 'https://a950841.fvds.ru';
+        let chats = [];
+        let currentChatId = null;
+        let currentMessages = [];
+        
+        // Initialize Telegram WebApp
+        const tg = window.Telegram?.WebApp;
+        
+        if (tg) {
+            tg.ready();
+            tg.expand();
+            
+            // Set theme colors
+            document.documentElement.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#ffffff');
+            document.documentElement.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color || '#000000');
+            document.documentElement.style.setProperty('--tg-theme-hint-color', tg.themeParams.hint_color || '#999999');
+            document.documentElement.style.setProperty('--tg-theme-button-color', tg.themeParams.button_color || '#0088cc');
+            document.documentElement.style.setProperty('--tg-theme-button-text-color', tg.themeParams.button_text_color || '#ffffff');
+            document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', tg.themeParams.secondary_bg_color || '#f1f1f1');
+        }
+
+        // Load chats
+        async function loadChats() {
+            try {
+                console.log('Loading chats from:', `${API_BASE}/chats`);
+                console.log('User agent:', navigator.userAgent);
+                console.log('Is Telegram WebApp:', !!window.Telegram?.WebApp);
+                
+                const response = await fetch(`${API_BASE}/chats`);
+                
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Response error text:', errorText);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                chats = await response.json();
+                console.log('Loaded chats:', chats);
+                displayChats();
+                displayStats();
+                
+            } catch (error) {
+                console.error('Error loading chats:', error);
+                document.getElementById('chat-list').innerHTML = 
+                    `<div class="loading">⚠️ Ошибка загрузки: ${error.message}<br><button onclick="loadChats()" style="margin-top: 10px; padding: 8px 16px; background: var(--tg-theme-button-color, #0088cc); color: var(--tg-theme-button-text-color, white); border: none; border-radius: 6px; cursor: pointer;">🔄 Повторить</button></div>`;
+                
+                displayStats({ total_chats: 0, active_chats: 0, paused_chats: 0 });
+            }
+        }
+
+        // Display chats
+        function displayChats() {
+            const chatList = document.getElementById('chat-list');
+            
+            if (!chats || chats.length === 0) {
+                chatList.innerHTML = '<div class="loading">Нет активных чатов</div>';
+                return;
+            }
+
+            chatList.innerHTML = chats.map(chat => `
+                <div class="chat-item" onclick="selectChat(${chat.id})" data-chat-id="${chat.id}">
+                    <div class="chat-header">
+                        <div class="chat-user">👤 ${chat.user_name || `ID: ${chat.user_id}`}</div>
+                        <div class="chat-status ${chat.chat_status === 'active' ? 'status-active' : 'status-paused'}">
+                            ${chat.chat_status === 'active' ? 'Активен' : 'На паузе'}
+                        </div>
+                    </div>
+                    <div class="chat-preview">${chat.last_message || 'Нет сообщений'}</div>
+                    <div class="chat-meta">
+                        <span>💬 ${chat.message_count || 0}</span>
+                        <span>🕐 ${formatTime(chat.last_message_time)}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Display stats
+        function displayStats(stats = null) {
+            if (!stats) {
+                stats = {
+                    total_chats: chats.length,
+                    active_chats: chats.filter(c => c.chat_status === 'active').length,
+                    paused_chats: chats.filter(c => c.chat_status === 'paused').length
+                };
+            }
+            
+            document.getElementById('total-chats').textContent = stats.total_chats;
+            document.getElementById('active-chats').textContent = stats.active_chats;
+            document.getElementById('paused-chats').textContent = stats.paused_chats;
+        }
+
+        // Select chat
+        async function selectChat(chatId) {
+            // Remove active class from all chats
+            document.querySelectorAll('.chat-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Add active class to selected chat
+            document.querySelector(`[data-chat-id="${chatId}"]`).classList.add('active');
+            
+            currentChatId = chatId;
+            const chat = chats.find(c => c.id === chatId);
+            
+            // Show chat area
+            await loadMessages(chatId);
+            displayChatArea(chat);
+        }
+
+        // Load messages
+        async function loadMessages(chatId) {
+            try {
+                const response = await fetch(`${API_BASE}/chats/${chatId}`);
+                if (!response.ok) throw new Error('Failed to load messages');
+                
+                currentMessages = await response.json();
+                displayMessages();
+                
+            } catch (error) {
+                console.error('Error loading messages:', error);
+                currentMessages = [];
+                displayMessages();
+            }
+        }
+
+        // Display chat area
+        function displayChatArea(chat) {
+            const chatArea = document.getElementById('chat-area');
+            
+            chatArea.innerHTML = `
+                <div class="chat-header-main">
+                    <div class="chat-title">👤 ${chat.user_name || `ID: ${chat.user_id}`}</div>
+                    <div class="chat-actions">
+                        <button class="btn btn-primary" onclick="replyToChat()">💬 Ответить</button>
+                        <button class="btn btn-secondary" onclick="stopChat()">🛑 Завершить</button>
+                    </div>
+                </div>
+                <div class="messages" id="messages"></div>
+                <div class="message-input">
+                    <button class="file-btn" onclick="document.getElementById('file-input').click()">📎</button>
+                    <input type="text" id="message-text" placeholder="Введите сообщение..." onkeypress="handleKeyPress(event)">
+                    <button class="send-btn" onclick="sendMessage()">➤</button>
+                </div>
+            `;
+            
+            displayMessages();
+        }
+
+        // Display messages
+        function displayMessages() {
+            const messagesContainer = document.getElementById('messages');
+            if (!messagesContainer) return;
+            
+            if (!currentMessages || currentMessages.length === 0) {
+                messagesContainer.innerHTML = '<div class="loading">Нет сообщений</div>';
+                return;
+            }
+
+            messagesContainer.innerHTML = currentMessages.map(msg => `
+                <div class="message ${msg.is_from_user ? 'user' : 'bot'}">
+                    <div class="message-bubble">${msg.message_text}</div>
+                    <div class="message-time">${formatTime(msg.created_at)}</div>
+                </div>
+            `).join('');
+            
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Send message
+        async function sendMessage() {
+            const input = document.getElementById('message-text');
+            const message = input.value.trim();
+            
+            if (!message || !currentChatId) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/chats/${currentChatId}/reply`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+                
+                if (!response.ok) throw new Error('Failed to send message');
+                
+                input.value = '';
+                await loadMessages(currentChatId);
+                await loadChats(); // Refresh chat list
+                
+                if (tg) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                }
+                
+            } catch (error) {
+                console.error('Error sending message:', error);
+                if (tg) {
+                    tg.HapticFeedback.notificationOccurred('error');
+                }
+            }
+        }
+
+        // Handle key press
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Reply to chat
+        function replyToChat() {
+            document.getElementById('message-text').focus();
+        }
+
+        // Stop chat
+        async function stopChat() {
+            if (!currentChatId) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/chats/${currentChatId}/stop`, {
+                    method: 'POST'
+                });
+                
+                if (!response.ok) throw new Error('Failed to stop chat');
+                
+                await loadChats();
+                
+                if (tg) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                }
+                
+            } catch (error) {
+                console.error('Error stopping chat:', error);
+                if (tg) {
+                    tg.HapticFeedback.notificationOccurred('error');
+                }
+            }
+        }
+
+        // Format time
+        function formatTime(timeString) {
+            if (!timeString) return '';
+            
+            try {
+                const date = new Date(timeString);
+                const now = new Date();
+                const diff = now - date;
+                
+                if (diff < 60000) return 'только что';
+                if (diff < 3600000) return `${Math.floor(diff / 60000)} мин назад`;
+                if (diff < 86400000) return `${Math.floor(diff / 3600000)} ч назад`;
+                
+                return date.toLocaleDateString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                return timeString;
+            }
+        }
+
+        // File upload
+        document.getElementById('file-input').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file || !currentChatId) return;
+            
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('chat_id', currentChatId);
+                
+                const response = await fetch(`${API_BASE}/files/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) throw new Error('Failed to upload file');
+                
+                await loadMessages(currentChatId);
+                await loadChats();
+                
+                if (tg) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                }
+                
+            } catch (error) {
+                console.error('Error uploading file:', error);
+                if (tg) {
+                    tg.HapticFeedback.notificationOccurred('error');
+                }
+            }
+            
+            // Reset file input
+            e.target.value = '';
+        });
+
+        // Initialize
+        loadChats();
+        
+        // Auto-refresh every 30 seconds
+        setInterval(loadChats, 30000);
+        
+        console.log('Admin panel loaded');
+        console.log('Telegram WebApp:', !!tg);
+    </script>
+</body>
+</html>
