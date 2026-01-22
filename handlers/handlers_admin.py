@@ -49,6 +49,7 @@ from .utils import clear_operator_chat, safe_delete_message
 
 # Импортируем состояния из других модулей
 from .handlers_booking import BookingStates
+from handlers_character import generate_character_image
 
 logger = logging.getLogger(__name__)
 
