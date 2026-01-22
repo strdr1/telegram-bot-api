@@ -884,28 +884,60 @@ async def check_admin_password(message: types.Message, state: FSMContext):
                            bot=message.bot)
 
 @router.callback_query(F.data == "admin_back")
+async def admin_back_callback(callback: types.CallbackQuery, state: FSMContext):
+    """Обработчик кнопки 'Назад в админку' - всегда редактирует сообщение"""
+    await callback.answer()
+
+    if not is_admin_fast(callback.from_user.id):
+        return
+
+    # Сбрасываем ВСЕ состояния промптов при выходе из меню
+    await state.clear()
+
+    text = """🛠️ <b>Админ-панель ресторана</b>
+
+Выберите раздел для управления:"""
+
+    keyboard = keyboards.admin_menu()
+
+    try:
+        await callback.message.edit_text(
+            text=text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+    except Exception as e:
+        logger.error(f"Ошибка редактирования в admin_back_callback: {e}")
+        # Отправляем новое сообщение только если редактирование невозможно
+        await callback.bot.send_message(
+            chat_id=callback.from_user.id,
+            text=text,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+
 @router.callback_query(F.data == "admin_stats")
 async def admin_stats_callback(callback: types.CallbackQuery):
-    """Быстрая статистика"""
+    """Быстрая статистика - всегда редактирует сообщение"""
     await callback.answer()
-    
+
     if not is_admin_fast(callback.from_user.id):
         await callback.answer("❌ Нет доступа!", show_alert=True)
         return
-    
+
     stats = database.get_stats()
-    
+
     text = f"""📊 <b>Статистика</b>
 
 👥 Всего пользователей: {stats['total_users']}
 🔥 Активных сегодня: {stats['active_today']}
 📅 Броней сегодня: {stats['bookings_today']}
 🍽️ Заказов сегодня: {stats['orders_today']}"""
-    
+
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
         [types.InlineKeyboardButton(text="⬅️ Назад в админку", callback_data="admin_back")]
     ])
-    
+
     try:
         await callback.message.edit_text(
             text=text,
@@ -914,12 +946,8 @@ async def admin_stats_callback(callback: types.CallbackQuery):
         )
     except Exception as e:
         logger.error(f"Ошибка редактирования сообщения в admin_stats_callback: {e}")
-        await callback.bot.send_message(
-            chat_id=callback.from_user.id,
-            text=text,
-            reply_markup=keyboard,
-            parse_mode="HTML"
-        )
+        # Не отправляем новое сообщение - просто игнорируем ошибку
+        pass
 
 @router.callback_query(F.data == "admin_orders")
 async def admin_orders_callback(callback: types.CallbackQuery):
