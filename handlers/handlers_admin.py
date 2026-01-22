@@ -5589,7 +5589,7 @@ async def generate_image_final(user_id: int, bot, state: FSMContext, prompt: str
 
     try:
         # Импортируем функцию генерации изображений
-        from ai_assistant import generate_character_image
+        from handlers_character import generate_character_image
 
         # Генерируем изображение
         image_url = await generate_character_image(character, prompt)
