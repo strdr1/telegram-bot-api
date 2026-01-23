@@ -2516,6 +2516,8 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
     if text.startswith('/'):
         return
 
+    # Код пересылки админ-чата перенесен в начало функции
+
     # Проверяем короткие ответы для показа категорий
     short_answers = ['хочу', 'да', 'покажи', 'давай', 'конечно', 'показать', 'покажите', 'хочется', 'можно']
     if text in short_answers:
@@ -2606,7 +2608,52 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
     except Exception as e:
         logger.error(f"Ошибка проверки статуса чата для {user.id}: {e}")
 
-    # Приветствия
+    # Если пользователь в режиме чата с оператором — пересылаем сообщение админам
+    try:
+        if is_operator_chat(user.id):
+
+            from .utils import get_assigned_operator
+            assigned = get_assigned_operator(user.id)
+            if assigned:
+                admins = [assigned]
+            else:
+                admins = database.get_all_admins()
+            for admin_id in admins:
+                try:
+                    # Пересылаем любое содержимое — текст, фото, голос, документ и т.д.
+                    await message.bot.forward_message(chat_id=admin_id, from_chat_id=user.id, message_id=message.message_id)
+
+                    # Создаем клавиатуру с кнопками управления чатом
+                    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+                        [types.InlineKeyboardButton(text="💬 Ответить", callback_data=f"reply_{user.id}")],
+                        [types.InlineKeyboardButton(text="❌ Завершить чат", callback_data=f"stop_chat_{user.id}")]
+                    ])
+
+                    await safe_send_message(message.bot, admin_id,
+                                           f"💬 Новое сообщение от {user.full_name or user.id}\n\n"
+                                           f"Команды: /reply_{user.id} текст_ответа\n"
+                                           f"Или используйте кнопки ниже:",
+                                           reply_markup=keyboard)
+                except Exception as e:
+                    logger.debug(f"Не удалось переслать сообщение админу {admin_id}: {e}")
+
+            # Подтверждаем пользователю, что сообщение отправлено
+            try:
+                await safe_send_message(message.bot, user.id,
+                                       "✅ Ваше сообщение отправлено администратору. Ожидайте ответа...")
+            except Exception:
+                pass
+
+            # Удаляем сообщение пользователя чтобы не хранить в чате
+            try:
+                await safe_delete_message(message.bot, user.id, message.message_id)
+            except Exception:
+                pass
+            return
+    except Exception as e:
+        logger.debug(f"Ошибка в обработчике операторского чата: {e}")
+
+    # Приветствия (только если не в режиме админ-чата)
     greetings = ['привет', 'добрый день', 'добрый вечер', 'здравствуйте', 'добро пожаловать', 'hi', 'hello']
     if any(greeting in text for greeting in greetings):
         greeting_text = f"""👋 Привет! Добро пожаловать в {database.get_setting('restaurant_name', config.RESTAURANT_NAME)}!
