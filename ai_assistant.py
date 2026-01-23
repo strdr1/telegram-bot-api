@@ -21,6 +21,25 @@ logger = logging.getLogger(__name__)
 # История сообщений пользователей
 user_history: Dict[int, List[Dict]] = {}
 
+def find_similar_dishes(menu_data: Dict, query: str) -> List[Dict]:
+    results = []
+    search_name = query.lower().strip()
+    for menu_id, menu in menu_data.items():
+        for category_id, category in menu.get('categories', {}).items():
+            for item in category.get('items', []):
+                item_name = item['name'].lower().strip()
+                score = 0
+                if item_name == search_name:
+                    score = 100
+                elif item_name.startswith(search_name):
+                    score = 90
+                elif search_name in item_name:
+                    score = len(search_name) / len(item_name) * 50
+                if score > 0 and item.get('image_url'):
+                    results.append((item, score))
+    results.sort(key=lambda x: x[1], reverse=True)
+    return [item for item, score in results]
+
 def load_token() -> str:
     """Загрузка токена AI (используем вшитый токен)"""
     return refresh_token()
@@ -526,6 +545,53 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
 
         # Если сообщение начинается с обращения к Маку
         is_mac_greeting = any(message_lower.startswith(greeting) for greeting in mac_greetings) or message_lower in mac_greetings
+
+        if any(word in message_lower for word in ['завтрак', 'завтраки', 'breakfast']):
+            return {
+                'type': 'text',
+                'text': '🍳 У нас есть отличные завтраки!',
+                'show_category_brief': 'завтраки'
+            }
+
+        second_phrases = ['а вторую', 'вторую', 'и вторую', 'а второе', 'второй']
+        if any(phrase == message_lower or phrase in message_lower for phrase in second_phrases) and len(message_lower.split()) <= 4:
+            base_query = None
+            if user_id in user_history:
+                for msg in reversed(user_history[user_id]):
+                    if msg.get('role') == 'user':
+                        prev_text = msg.get('content', '').strip()
+                        if not prev_text:
+                            continue
+                        prev_lower = prev_text.lower().strip()
+                        if any(p == prev_lower or p in prev_lower for p in second_phrases):
+                            continue
+                        base_query = prev_text
+                        break
+            if base_query:
+                menu_data = load_menu_cache()
+                candidates = find_similar_dishes(menu_data, base_query)
+                if len(candidates) >= 2:
+                    dish = candidates[1]
+                    caption = f"🍽️ <b>{dish['name']}</b>\n\n"
+                    caption += f"💰 Цена: {dish['price']}₽\n"
+                    if dish.get('calories'):
+                        caption += f"🔥 Калории: {dish['calories']} ккал\n"
+                    if dish.get('proteins') or dish.get('fats') or dish.get('carbs'):
+                        caption += f"\n🧃 БЖУ:\n"
+                        if dish.get('proteins'):
+                            caption += f"• Белки: {dish['proteins']}г\n"
+                        if dish.get('fats'):
+                            caption += f"• Жиры: {dish['fats']}г\n"
+                        if dish.get('carbs'):
+                            caption += f"• Углеводы: {dish['carbs']}г\n"
+                    if dish.get('description'):
+                        caption += f"\n{dish['description']}"
+                    return {
+                        'type': 'photo_with_text',
+                        'photo_url': dish['image_url'],
+                        'text': caption,
+                        'show_delivery_button': True
+                    }
 
         # СПЕЦИАЛЬНАЯ ОБРАБОТКА ЗАПРОСОВ О КОНКРЕТНЫХ БЛЮДАХ (ДО AI)
         # Если сообщение похоже на запрос конкретного блюда - сразу показываем фото

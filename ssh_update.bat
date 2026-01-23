@@ -19,7 +19,15 @@ echo.
 echo ========================================
 echo ШАГ 3: Обновление кода...
 echo ========================================
-ssh -o StrictHostKeyChecking=no root@155.212.164.61 "echo '=== ОБНОВЛЯЕМ КОД ===' && cd /opt/telegram-bot && git pull origin master && echo '=== ПРОВЕРКА КОДА ===' && git log --oneline -1"
+ssh -o StrictHostKeyChecking=no root@155.212.164.61 "echo '=== ОБНОВЛЯЕМ КОД ===' && \
+  mkdir -p /opt/telegram-bot-backup && \
+  cp /opt/telegram-bot/restaurant.db /opt/telegram-bot-backup/restaurant.db 2>/dev/null || true && \
+  cd /opt/telegram-bot && \
+  git reset --hard HEAD && \
+  git clean -fd && \
+  git pull origin master && \
+  cp /opt/telegram-bot-backup/restaurant.db /opt/telegram-bot/restaurant.db 2>/dev/null || true && \
+  echo '=== ПРОВЕРКА КОДА ===' && git log --oneline -1"
 
 echo.
 echo ========================================
