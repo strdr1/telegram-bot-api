@@ -1216,8 +1216,36 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
 
         ai_text = choice['message'].get('content', '')
         if not ai_text:
-            logger.warning("Polza AI вернул пустой content")
-            return get_fallback_response(message, user_id)
+            # Try to extract markers from reasoning field if content is empty
+            reasoning = choice['message'].get('reasoning', '')
+            logger.info(f"Content empty, trying to extract from reasoning (length: {len(reasoning)})")
+            if reasoning:
+                # Extract PARSE_CATEGORY markers from reasoning - more flexible pattern
+                parse_match = re.search(r'PARSE_CATEGORY:([^\s\n,]+)', reasoning, re.IGNORECASE)
+                if parse_match:
+                    category_name = parse_match.group(1).strip()
+                    logger.info(f"Извлек PARSE_CATEGORY из reasoning: '{category_name}'")
+                    ai_text = f"PARSE_CATEGORY:{category_name}"
+
+                # Extract DISH_PHOTO markers from reasoning - more flexible pattern
+                dish_match = re.search(r'DISH_PHOTO:([^\n]+)', reasoning, re.IGNORECASE)
+                if dish_match:
+                    dish_name = dish_match.group(1).strip()
+                    # Clean up the dish name
+                    dish_name = re.sub(r'[^\w\sа-яё]', '', dish_name, flags=re.UNICODE).strip()
+                    logger.info(f"Извлек DISH_PHOTO из reasoning: '{dish_name}'")
+                    ai_text = f"DISH_PHOTO:{dish_name}"
+
+                # Extract CALL_HUMAN markers from reasoning
+                if 'CALL_HUMAN' in reasoning:
+                    logger.info("Извлек CALL_HUMAN из reasoning")
+                    ai_text = "CALL_HUMAN"
+
+                logger.info(f"Final extracted text: '{ai_text}'")
+
+            if not ai_text:
+                logger.warning("Polza AI вернул пустой content и не удалось извлечь маркеры из reasoning")
+                return get_fallback_response(message, user_id)
 
         logger.info(f"Polza AI response: {ai_text}")
 
