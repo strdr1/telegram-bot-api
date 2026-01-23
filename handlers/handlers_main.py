@@ -200,8 +200,13 @@ class SupplierStates(StatesGroup):
     waiting_file = State()
 
 @router.callback_query(F.data == "suppliers_contact")
-async def suppliers_contact_callback(callback: types.CallbackQuery, state: FSMContext):
+async def suppliers_contact_callback(callback: types.CallbackQuery):
     """Форма для поставщиков"""
+    # 🔴 БЛОКИРУЮЩАЯ ПРОВЕРКА: Если пользователь в режиме админ-чата, игнорируем ВСЕ действия
+    if is_operator_chat(callback.from_user.id):
+        logger.info(f"🚫 ПОЛЬЗОВАТЕЛЬ {callback.from_user.id} В РЕЖИМЕ АДМИН-ЧАТА - ИГНОРИРУЕМ CALLBACK")
+        return
+
     await callback.answer()
     
     text = """🏭 <b>Для поставщиков</b>
@@ -847,6 +852,11 @@ def set_age_verified(user_id: int, verified: bool):
 @router.callback_query(F.data == "menu_food")
 async def menu_food_callback(callback: types.CallbackQuery):
     """Меню ресторана с проверкой возраста"""
+    # 🔴 БЛОКИРУЮЩАЯ ПРОВЕРКА: Если пользователь в режиме админ-чата, игнорируем ВСЕ действия
+    if is_operator_chat(callback.from_user.id):
+        logger.info(f"🚫 ПОЛЬЗОВАТЕЛЬ {callback.from_user.id} В РЕЖИМЕ АДМИН-ЧАТА - ИГНОРИРУЕМ CALLBACK")
+        return
+
     await callback.answer()
 
     user_id = callback.from_user.id
@@ -2500,8 +2510,13 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
     """Общий обработчик текстовых сообщений — ТОЛЬКО если нет активного состояния"""
     user = message.from_user
     text = message.text.strip().lower()
-    
+
     logger.info(f"🔍 НАЧАЛО ОБРАБОТКИ СООБЩЕНИЯ: '{message.text}' от пользователя {user.id}")
+
+    # 🔴 БЛОКИРУЮЩАЯ ПРОВЕРКА: Если пользователь в режиме админ-чата, игнорируем ВСЕ сообщения
+    if is_operator_chat(user.id):
+        logger.info(f"🚫 ПОЛЬЗОВАТЕЛЬ {user.id} В РЕЖИМЕ АДМИН-ЧАТА - ИГНОРИРУЕМ СООБЩЕНИЕ")
+        return
 
     if text.startswith('/'):
         return
@@ -3044,6 +3059,11 @@ async def error_handler(event, bot):
 @router.callback_query(F.data == "back_main")
 async def back_main_callback(callback: types.CallbackQuery):
     """Быстрый возврат в главное меню - РЕДАКТИРУЕМ сообщение"""
+    # 🔴 БЛОКИРУЮЩАЯ ПРОВЕРКА: Если пользователь в режиме админ-чата, игнорируем ВСЕ действия
+    if is_operator_chat(callback.from_user.id):
+        logger.info(f"🚫 ПОЛЬЗОВАТЕЛЬ {callback.from_user.id} В РЕЖИМЕ АДМИН-ЧАТА - ИГНОРИРУЕМ CALLBACK")
+        return
+
     await callback.answer()
     
     user_id = callback.from_user.id

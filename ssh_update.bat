@@ -1,2 +1,44 @@
 @echo off
-echo Mashkov.Rest | ssh -o StrictHostKeyChecking=no root@155.212.164.61 "cd /opt/telegram-bot && pwd && whoami && sudo -u botuser git pull origin master && sudo supervisorctl restart telegram-bot-group"
+chcp 65001 >nul
+echo ========================================
+echo    Telegram Bot Update Script
+echo ========================================
+echo.
+
+echo ШАГ 1: Подключение к серверу...
+echo ========================================
+echo Mashkov.Rest | ssh -o StrictHostKeyChecking=no root@155.212.164.61 "echo '=== СЕРВЕР ДОСТУПЕН ===' && cd /opt/telegram-bot && pwd"
+
+echo.
+echo ========================================
+echo ШАГ 2: Остановка сервисов...
+echo ========================================
+echo Mashkov.Rest | ssh -o StrictHostKeyChecking=no root@155.212.164.61 "echo '=== ОСТАНАВЛИВАЕМ СЕРВИСЫ ===' && sudo supervisorctl stop telegram-bot-group && sleep 3 && ps aux | grep python | grep -v grep | wc -l && echo 'сервисов остановлено'"
+
+echo.
+echo ========================================
+echo ШАГ 3: Обновление кода...
+echo ========================================
+echo Mashkov.Rest | ssh -o StrictHostKeyChecking=no root@155.212.164.61 "echo '=== ОБНОВЛЯЕМ КОД ===' && cd /opt/telegram-bot && sudo -u botuser git pull origin master --force && echo '=== ПРОВЕРКА КОДА ===' && git log --oneline -1"
+
+echo.
+echo ========================================
+echo ШАГ 4: Запуск сервисов...
+echo ========================================
+echo Mashkov.Rest | ssh -o StrictHostKeyChecking=no root@155.212.164.61 "echo '=== ЗАПУСКАЕМ СЕРВИСЫ ===' && sudo supervisorctl start telegram-bot-group && sleep 5 && sudo supervisorctl status"
+
+echo.
+echo ========================================
+echo ШАГ 5: Проверка работы...
+echo ========================================
+echo Mashkov.Rest | ssh -o StrictHostKeyChecking=no root@155.212.164.61 "echo '=== ПРОВЕРКА РАБОТЫ ===' && ps aux | grep python | grep -v grep | grep -E '(bot\.py|schedule_updates\.py|miniapp_server\.py)' | wc -l && echo 'процессов запущено' && echo '=== ПОСЛЕДНИЕ СООБЩЕНИЯ В ЛОГЕ ===' && tail -3 /var/log/telegram-bot/bot.log"
+
+echo.
+echo ========================================
+echo    ✅ ОБНОВЛЕНИЕ ЗАВЕРШЕНО!
+echo ========================================
+echo.
+echo Если возникли ошибки - проверьте логи на сервере:
+echo ssh root@155.212.164.61 "tail -20 /var/log/telegram-bot/bot.log"
+echo.
+pause

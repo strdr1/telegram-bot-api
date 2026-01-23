@@ -1352,7 +1352,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         if category_parsed:
                 # Специальная обработка для супов
                 if 'суп' in category_name or category_name in ['суп', 'супы', 'супов']:
-                    # Ищем категорию "СУПЫ" точно по названию или ID
+                    # Ищем ВСЕ категории, которые могут содержать супы
                     found_items = []
                     found_category_names = []
 
@@ -1361,31 +1361,43 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                             cat_name = category.get('name', '').lower().strip()
                             cat_display = category.get('display_name', '').lower().strip()
 
-                            # Ищем ТОЛЬКО категории супов по точному совпадению
+                            # Более широкие условия поиска супов
                             is_soup_category = (
-                                cat_name == 'супы' or 
-                                cat_display == '🍲 супы' or
-                                cat_id in ['4819', '4722'] or  # Известные ID категорий супов
-                                (cat_name == 'суп' and 'чай' not in cat_display and 'напитки' not in cat_display)
+                                'суп' in cat_name or
+                                'суп' in cat_display or
+                                cat_name in ['супы', 'супы и салаты', 'первые блюда', 'горячие супы'] or
+                                cat_display in ['🍲 супы', '🍲 первые блюда'] or
+                                cat_id in ['4819', '4722', '4818', '4721']  # Расширенные ID категорий супов
                             )
-                            
+
                             if is_soup_category:
                                 items = category.get('items', [])
                                 if items:
-                                    # Дополнительная фильтрация: исключаем чай и напитки по названию блюда
+                                    # Дополнительная фильтрация: включаем только супы
                                     soup_items = []
                                     for item in items:
                                         item_name_lower = item.get('name', '').lower()
-                                        # Исключаем чай, глинтвейн и другие напитки
-                                        if not any(drink_word in item_name_lower for drink_word in [
-                                            'чайник', 'чай', 'глинтвейн', 'напиток', 'коктейль', 'сок', 'вода'
+                                        # Включаем блюда, которые явно являются супами
+                                        if any(soup_word in item_name_lower for soup_word in [
+                                            'суп', 'борщ', 'солянка', 'уха', 'щи', 'харчо', 'лагман', 'лапша',
+                                            'бульон', 'окрошка', 'гаспачо', 'минестроне', 'том ям', 'рассольник'
                                         ]):
                                             soup_items.append(item)
-                                    
+
                                     found_items.extend(soup_items)
                                     cat_display_name = category.get('display_name') or category.get('name', cat_name)
                                     if cat_display_name not in found_category_names:
                                         found_category_names.append(cat_display_name)
+
+                    # Если не нашли специальных супов, ищем любые супы в меню
+                    if not found_items:
+                        for menu_id, menu in menu_data.items():
+                            for cat_id, category in menu.get('categories', {}).items():
+                                items = category.get('items', [])
+                                for item in items:
+                                    item_name_lower = item.get('name', '').lower()
+                                    if 'суп' in item_name_lower:
+                                        found_items.append(item)
 
                     # Формируем специальный ответ для супов
                     if found_items:
