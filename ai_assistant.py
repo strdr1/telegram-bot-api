@@ -1925,6 +1925,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         show_wc_photos = 'SHOW_WC_PHOTOS' in ai_text
         show_restaurant_menu = 'SHOW_RESTAURANT_MENU' in ai_text
         call_human = 'CALL_HUMAN' in ai_text
+        logger.info(f"CALL_HUMAN flag set: {call_human}")
         show_category = None
 
         if 'SHOW_CATEGORY:' in ai_text:
@@ -1955,9 +1956,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         ai_text = re.sub(r'SHOW_CATEGORY:.+', '', ai_text).strip()
         ai_text = re.sub(r'PARSE_BOOKING:.+', '', ai_text).strip()
         ai_text = re.sub(r'DISH_PHOTO:.+?(\s|$)', '', ai_text).strip()
-        logger.info(f"Before CALL_HUMAN removal: '{ai_text[-50:]}'")
         ai_text = re.sub(r'CALL_HUMAN.*', '', ai_text, flags=re.DOTALL).strip()
-        logger.info(f"After CALL_HUMAN removal: '{ai_text[-50:]}'")
 
         # ДОПОЛНИТЕЛЬНАЯ ЛОГИКА: показываем кнопку доставки только для конкретных случаев
         # - Когда AI явно указал SHOW_DELIVERY_BUTTON
@@ -1988,6 +1987,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         if 'mac_greeting_prefix' in locals() and mac_greeting_prefix:
             final_text = mac_greeting_prefix + ai_text
 
+        logger.info(f"Returning call_human: {call_human}")
         return {
             'type': 'text',
             'text': final_text,
@@ -2004,6 +2004,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             'show_restaurant_menu': show_restaurant_menu,
             'show_category': show_category,
             'parse_booking': parse_booking,
+            'call_human': call_human,
             'confirm_age_verification': confirm_age_verification
         }
         
