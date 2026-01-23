@@ -3006,8 +3006,10 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
             logger.info(f"Обрабатываем result['type'] == 'text' для пользователя {user_id}")
 
             # Проверяем на маркер вызова человека - должен работать НЕ в режиме админ-чата
+            logger.info(f"Проверка CALL_HUMAN: call_human={result.get('call_human', False)}, is_operator_chat={is_operator_chat(user.id)}")
             if result.get('call_human', False) and not is_operator_chat(user.id):
                 logger.info(f"Маркер CALL_HUMAN обнаружен для пользователя {user.id}")
+                logger.info("Создаю кнопки для CALL_HUMAN")
                 # Включаем режим чата для пользователя (час по умолчанию)
                 set_operator_chat(user.id, True, ttl=3600)
 
