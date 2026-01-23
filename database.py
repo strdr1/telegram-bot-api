@@ -441,6 +441,13 @@ def init_database():
             # Поле уже существует
             pass
 
+        # Добавляем поле file_path если его нет (для файлов)
+        try:
+            cursor.execute('ALTER TABLE chat_messages ADD COLUMN file_path TEXT')
+        except sqlite3.OperationalError:
+            # Поле уже существует
+            pass
+
         # Настройки бота
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS settings (
@@ -2148,7 +2155,7 @@ def get_or_create_chat(user_id: int, user_name: str = None) -> int:
         logger.error(f"Ошибка создания/получения чата для {user_id}: {e}")
         return 0
 
-def save_chat_message(chat_id: int, sender: str, message_text: str) -> bool:
+def save_chat_message(chat_id: int, sender: str, message_text: str, file_path: str = None) -> bool:
     """Сохранение сообщения в чат"""
     try:
         with get_cursor() as cursor:
@@ -2157,9 +2164,9 @@ def save_chat_message(chat_id: int, sender: str, message_text: str) -> bool:
             sent_status = 0 if sender == 'admin' else 1
 
             cursor.execute('''
-            INSERT INTO chat_messages (chat_id, sender, message_text, sent)
-            VALUES (?, ?, ?, ?)
-            ''', (chat_id, sender, message_text, sent_status))
+            INSERT INTO chat_messages (chat_id, sender, message_text, file_path, sent)
+            VALUES (?, ?, ?, ?, ?)
+            ''', (chat_id, sender, message_text, file_path, sent_status))
 
             # Обновляем последнее сообщение и время в чате
             cursor.execute('''
@@ -2177,30 +2184,48 @@ def get_all_chats_for_admin() -> List[Dict[str, Any]]:
     """Получение всех чатов для админ-панели"""
     try:
         with get_cursor() as cursor:
+            # Простой запрос без JOIN
             cursor.execute('''
-            SELECT c.id, c.user_id, c.user_name, c.chat_status,
-                   c.last_message, c.last_message_time, c.created_at,
-                   COUNT(cm.id) as message_count
-            FROM chats c
-            LEFT JOIN chat_messages cm ON c.id = cm.chat_id
-            GROUP BY c.id
-            ORDER BY c.updated_at DESC
+            SELECT id, user_id, user_name, chat_status,
+                   last_message, last_message_time, created_at
+            FROM chats
+            ORDER BY id DESC
             ''')
 
-            results = cursor.fetchall() or []
-            return [
-                {
-                    'id': row[0],
-                    'user_id': row[1],
-                    'user_name': row[2] or f'User {row[1]}',
-                    'chat_status': row[3],
-                    'last_message': row[4] or '',
-                    'last_message_time': row[5],
-                    'created_at': row[6],
-                    'message_count': row[7]
-                }
-                for row in results
-            ]
+            chats = cursor.fetchall() or []
+            result = []
+            
+            for chat in chats:
+                chat_id = chat[0]
+                
+                # Получаем количество сообщений
+                cursor.execute('SELECT COUNT(*) FROM chat_messages WHERE chat_id = ?', (chat_id,))
+                message_count_row = cursor.fetchone()
+                message_count = message_count_row[0] if message_count_row else 0
+                
+                # Получаем реальное имя пользователя
+                real_name = None
+                try:
+                    cursor.execute('SELECT full_name FROM users WHERE user_id = ?', (chat[1],))
+                    user_row = cursor.fetchone()
+                    real_name = user_row[0] if user_row else None
+                except:
+                    pass
+                
+                result.append({
+                    'id': chat[0],
+                    'user_id': chat[1],
+                    'user_name': real_name or chat[2] or f'User {chat[1]}',
+                    'chat_status': chat[3] or 'active',
+                    'last_message': chat[4] or '',
+                    'last_message_time': chat[5],
+                    'created_at': chat[6],
+                    'message_count': message_count
+                })
+            
+            logger.info(f"Найдено чатов для админки: {len(result)}")
+            return result
+            
     except Exception as e:
         logger.error(f"Ошибка получения чатов: {e}")
         return []
@@ -2364,7 +2389,7 @@ def get_unsent_admin_messages() -> List[Dict[str, Any]]:
     try:
         with get_cursor() as cursor:
             cursor.execute('''
-            SELECT cm.id, cm.chat_id, cm.message_text, cm.message_time,
+            SELECT cm.id, cm.chat_id, cm.message_text, cm.message_time, cm.file_path,
                    c.user_id, c.user_name
             FROM chat_messages cm
             JOIN chats c ON cm.chat_id = c.id
@@ -2380,8 +2405,9 @@ def get_unsent_admin_messages() -> List[Dict[str, Any]]:
                     'chat_id': row[1],
                     'message_text': row[2],
                     'message_time': row[3],
-                    'user_id': row[4],
-                    'user_name': row[5] or f'User {row[4]}'
+                    'file_path': row[4],
+                    'user_id': row[5],
+                    'user_name': row[6] or f'User {row[5]}'
                 }
                 for row in results
             ]

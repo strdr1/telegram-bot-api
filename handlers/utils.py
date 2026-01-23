@@ -100,6 +100,60 @@ async def safe_send_message(bot, chat_id: int, text: str, **kwargs) -> Optional[
             await asyncio.sleep(config.RETRY_DELAY)
     return None
 
+async def safe_send_photo(bot, chat_id: int, photo, **kwargs) -> Optional[types.Message]:
+    """Безопасная отправка фото с повторными попытками"""
+    for attempt in range(config.MAX_RETRIES):
+        try:
+            async with asyncio.timeout(config.MESSAGE_TIMEOUT * 2):  # Больше времени для файлов
+                return await bot.send_photo(chat_id=chat_id, photo=photo, **kwargs)
+        except asyncio.TimeoutError:
+            if attempt == config.MAX_RETRIES - 1:
+                logger.error(f"Таймаут при отправке фото пользователю {chat_id}")
+                return None
+            await asyncio.sleep(config.RETRY_DELAY)
+        except TelegramRetryAfter as e:
+            await asyncio.sleep(e.retry_after)
+            continue
+        except (TelegramNetworkError, aiohttp.ClientError, aiohttp.ClientOSError, OSError) as e:
+            if attempt == config.MAX_RETRIES - 1:
+                logger.error(f"Сетевая ошибка при отправке фото пользователю {chat_id}: {e}")
+                return None
+            logger.warning(f"Попытка {attempt + 1}/{config.MAX_RETRIES} отправки фото пользователю {chat_id}: {e}")
+            await asyncio.sleep(config.RETRY_DELAY * (attempt + 1))
+        except Exception as e:
+            if attempt == config.MAX_RETRIES - 1:
+                logger.error(f"Ошибка отправки фото пользователю {chat_id}: {e}")
+                return None
+            await asyncio.sleep(config.RETRY_DELAY)
+    return None
+
+async def safe_send_document(bot, chat_id: int, document, **kwargs) -> Optional[types.Message]:
+    """Безопасная отправка документа с повторными попытками"""
+    for attempt in range(config.MAX_RETRIES):
+        try:
+            async with asyncio.timeout(config.MESSAGE_TIMEOUT * 3):  # Еще больше времени для документов
+                return await bot.send_document(chat_id=chat_id, document=document, **kwargs)
+        except asyncio.TimeoutError:
+            if attempt == config.MAX_RETRIES - 1:
+                logger.error(f"Таймаут при отправке документа пользователю {chat_id}")
+                return None
+            await asyncio.sleep(config.RETRY_DELAY)
+        except TelegramRetryAfter as e:
+            await asyncio.sleep(e.retry_after)
+            continue
+        except (TelegramNetworkError, aiohttp.ClientError, aiohttp.ClientOSError, OSError) as e:
+            if attempt == config.MAX_RETRIES - 1:
+                logger.error(f"Сетевая ошибка при отправке документа пользователю {chat_id}: {e}")
+                return None
+            logger.warning(f"Попытка {attempt + 1}/{config.MAX_RETRIES} отправки документа пользователю {chat_id}: {e}")
+            await asyncio.sleep(config.RETRY_DELAY * (attempt + 1))
+        except Exception as e:
+            if attempt == config.MAX_RETRIES - 1:
+                logger.error(f"Ошибка отправки документа пользователю {chat_id}: {e}")
+                return None
+            await asyncio.sleep(config.RETRY_DELAY)
+    return None
+
 async def safe_edit_message(bot, chat_id: int, message_id: int, text: str, **kwargs) -> bool:
     """Безопасное редактирование сообщения"""
     for attempt in range(config.MAX_RETRIES):

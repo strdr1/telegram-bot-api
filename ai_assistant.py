@@ -197,7 +197,7 @@ async def gen_image(character_name: str, user_id: int = 0, admin_prompt: str = "
                     # Запрашиваем у AI определение типа персонажа
                     character_analysis_url = "https://api.polza.ai/api/v1/chat/completions"
                     character_analysis_data = {
-                        "model": "mistralai/mistral-small-3.2-24b-instruct",
+                        "model": "openai/gpt-5-nano",
                         "messages": [
                             {
                                 "role": "system",

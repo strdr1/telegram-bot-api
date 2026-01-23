@@ -71,11 +71,40 @@ async def process_message_queue(bot):
                 chat_id = message['chat_id']
                 message_text = message['message_text']
                 message_id = message['id']
+                file_path = message.get('file_path')  # Путь к файлу, если есть
 
-                logger.info(f"Отправка сообщения из очереди: chat {chat_id}, message_id {message_id}")
+                logger.info(f"Отправка сообщения из очереди: chat {chat_id}, message_id {message_id}, file: {file_path}")
 
-                # Отправляем сообщение пользователю
-                result = await handlers.utils.safe_send_message(bot, message['user_id'], message_text)
+                result = False
+                
+                # Если есть файл, отправляем его
+                if file_path and os.path.exists(file_path):
+                    try:
+                        # Определяем тип файла
+                        file_ext = os.path.splitext(file_path)[1].lower()
+                        
+                        from aiogram.types import FSInputFile
+                        
+                        if file_ext in ['.jpg', '.jpeg', '.png', '.gif', '.webp']:
+                            # Отправляем как фото
+                            photo = FSInputFile(file_path)
+                            result = await handlers.utils.safe_send_photo(bot, message['user_id'], photo, caption=message_text)
+                        elif file_ext in ['.pdf', '.doc', '.docx', '.txt', '.xlsx', '.xls']:
+                            # Отправляем как документ
+                            document = FSInputFile(file_path)
+                            result = await handlers.utils.safe_send_document(bot, message['user_id'], document, caption=message_text)
+                        else:
+                            # Отправляем как документ по умолчанию
+                            document = FSInputFile(file_path)
+                            result = await handlers.utils.safe_send_document(bot, message['user_id'], document, caption=message_text)
+                                
+                    except Exception as e:
+                        logger.error(f"Ошибка отправки файла {file_path}: {e}")
+                        # Если не удалось отправить файл, отправляем только текст
+                        result = await handlers.utils.safe_send_message(bot, message['user_id'], message_text)
+                else:
+                    # Отправляем только текст
+                    result = await handlers.utils.safe_send_message(bot, message['user_id'], message_text)
 
                 if result:
                     # Отмечаем сообщение как отправленное
