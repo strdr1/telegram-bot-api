@@ -2518,27 +2518,47 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
 
     # Код пересылки админ-чата перенесен в начало функции
 
-    # Проверяем короткие ответы для показа категорий
-    short_answers = ['хочу', 'да', 'покажи', 'давай', 'конечно', 'показать', 'покажите', 'хочется', 'можно']
+    # Проверяем короткие ответы для показа категорий И ДЕЙСТВИЙ
+    short_answers = ['хочу', 'да', 'покажи', 'давай', 'конечно', 'показать', 'покажите', 'хочется', 'можно', 'ага', 'ок', 'хорошо', 'ладно', 'согласен', 'согласна']
     if text in short_answers:
         # Получаем последние сообщения пользователя для определения контекста
         try:
             chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
-            recent_messages = database.get_recent_chat_messages(chat_id, limit=10)  # Увеличиваем лимит
-            
+            recent_messages = database.get_recent_chat_messages(chat_id, limit=20)  # Увеличиваем до 20 сообщений
+
+            # СПЕЦИАЛЬНАЯ ОБРАБОТКА ДЛЯ БРОНИРОВАНИЯ - проверяем сначала
+            booking_context_found = False
+            for message_data in recent_messages:
+                if message_data.get('sender') == 'bot':
+                    bot_text = message_data.get('message', '').lower()
+                    # Ищем ключевые слова связанные с бронированием
+                    booking_keywords = ['забронировать', 'бронирование', 'столик', 'бронь', 'резерв', 'заказать стол', 'выбрать время', 'выбрать стол']
+                    if any(keyword in bot_text for keyword in booking_keywords):
+                        logger.info(f"🎯 Найден контекст бронирования в сообщении бота: '{bot_text[:100]}...'")
+                        booking_context_found = True
+                        break
+
+            if booking_context_found:
+                logger.info(f"🎯 Короткий ответ '{text}' в контексте бронирования - показываем меню бронирования")
+                await show_booking_options(user.id, message.bot)
+                # Сохраняем в чат
+                database.save_chat_message(chat_id, 'user', message.text)
+                database.save_chat_message(chat_id, 'bot', 'Показал меню бронирования')
+                return
+
             # Ищем упоминания категорий в последних сообщениях
             category_keywords = {
                 'пицца': ['пицц', 'pizza', 'пиццы', 'пиццей', 'пиццу'],
                 'суп': ['суп', 'soup', 'супы', 'супов', 'супчик', 'борщ', 'солянка'],
                 'десерт': ['десерт', 'сладк', 'торт', 'пирожн', 'десерты', 'десертов', 'мороженое', 'тирамису'],
-                'напитки': ['напитк', 'пить', 'drink', 'сок', 'вода', 'лимонад'],
+                'напитки': ['напитк', 'пить', 'drink', 'сок', 'вода', 'лимонад', 'напитки'],
                 'пиво': ['пиво', 'beer', 'пива', 'пивом', 'пивко'],
                 'вино': ['вино', 'wine', 'вина', 'винишко', 'белое', 'красное', 'розовое', 'игристое'],
                 'салат': ['салат', 'salad', 'салаты', 'салатов', 'салатик'],
                 'горячее': ['горяч', 'мясо', 'рыба', 'стейк', 'котлет', 'жарен'],
                 'коктейль': ['коктейль', 'коктейли', 'коктейлей', 'мохито', 'дайкири']
             }
-            
+
             detected_category = None
             # Проверяем последние сообщения бота (более широкий поиск)
             for message_data in recent_messages:
@@ -2551,7 +2571,7 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                             break
                     if detected_category:
                         break
-            
+
             # Если не нашли в сообщениях бота, проверяем сообщения пользователя
             if not detected_category:
                 for message_data in recent_messages:
@@ -2564,21 +2584,21 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                                 break
                         if detected_category:
                             break
-            
+
             if detected_category:
                 logger.info(f"🎯 Обнаружен короткий ответ '{text}' с контекстом категории '{detected_category}' для пользователя {user.id}")
-                
+
                 # Показываем краткий список категории для коротких ответов
                 from category_handler import handle_show_category_brief
                 await handle_show_category_brief(detected_category, user.id, message.bot)
-                
+
                 # Сохраняем в чат
                 database.save_chat_message(chat_id, 'user', message.text)
                 database.save_chat_message(chat_id, 'bot', f'Показал категорию: {detected_category}')
                 return
             else:
-                logger.info(f"🤔 Короткий ответ '{text}' без контекста - передаем AI для обработки")
-                
+                logger.info(f"🤔 Короткий ответ '{text}' без специфического контекста - передаем AI для обработки")
+
         except Exception as e:
             logger.error(f"Ошибка обработки короткого ответа: {e}")
             # Продолжаем обработку через AI
@@ -2984,6 +3004,51 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
 
         if result['type'] == 'text':
             logger.info(f"Обрабатываем result['type'] == 'text' для пользователя {user_id}")
+
+            # Проверяем на маркер вызова человека - должен работать НЕ в режиме админ-чата
+            if result.get('call_human', False) and not is_operator_chat(user.id):
+                logger.info(f"Маркер CALL_HUMAN обнаружен для пользователя {user.id}")
+                # Включаем режим чата для пользователя (час по умолчанию)
+                set_operator_chat(user.id, True, ttl=3600)
+
+                # Уведомляем админов индивидуально и сохраняем ID уведомлений
+                async def notify_admins():
+                    try:
+                        admins = database.get_all_admins()
+                        notifications = {}
+                        notify_text = f"🔔 <b>Новый запрос:</b> Пользователь {message.from_user.full_name or user.id} (ID: {user.id}).\nОтвет: /reply_{user.id}  |  Завершить: /stop_chat_{user.id}"
+                        for admin_id in admins:
+                            try:
+                                sent = await safe_send_message(message.bot, admin_id, notify_text, parse_mode='HTML')
+                                if sent:
+                                    notifications[admin_id] = sent.message_id
+                            except Exception as e:
+                                logger.debug(f"Не удалось отправить уведомление админу {admin_id}: {e}")
+                        if notifications:
+                            set_operator_notifications(user.id, notifications)
+                    except Exception as e:
+                        logger.debug(f"Ошибка уведомления админов: {e}")
+
+                asyncio.create_task(notify_admins())
+
+                # Отправляем ответ пользователю и переходим в режим чата
+                await safe_send_message(message.bot, user.id, result['text'])
+
+                # Подтверждаем пользователю, что оператор оповещён
+                try:
+                    await safe_send_message(message.bot, user.id, "✅ Оператор оповещён — напишите ваш вопрос, мы свяжемся с вами как можно скорее.")
+                except Exception:
+                    pass
+
+                # Сохраняем в чат
+                try:
+                    chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
+                    database.save_chat_message(chat_id, 'bot', result['text'])
+                except Exception as e:
+                    logger.error(f"Ошибка сохранения в миниапп: {e}")
+
+                return
+
             # Проверяем нужны ли кнопки с приложениями
             if result.get('show_booking_options', False):
                 # Показываем меню бронирования напрямую
@@ -3009,10 +3074,10 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                 # Показываем категорию блюд
                 category_name = result.get('show_category')
                 logger.info(f"Показываем категорию: {category_name}")
-                
+
                 # Сначала отправляем текст с вопросом
                 await safe_send_message(message.bot, user.id, result['text'], parse_mode="HTML")
-                
+
                 # Затем показываем категорию
                 from category_handler import handle_show_category
                 await handle_show_category(category_name, user.id, message.bot)

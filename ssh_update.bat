@@ -7,31 +7,31 @@ echo.
 
 echo ШАГ 1: Подключение к серверу...
 echo ========================================
-echo Mashkov.Rest | ssh -o StrictHostKeyChecking=no root@155.212.164.61 "echo '=== СЕРВЕР ДОСТУПЕН ===' && cd /opt/telegram-bot && pwd"
+ssh -o StrictHostKeyChecking=no root@155.212.164.61 "echo '=== СЕРВЕР ДОСТУПЕН ===' && cd /opt/telegram-bot && pwd"
 
 echo.
 echo ========================================
 echo ШАГ 2: Остановка сервисов...
 echo ========================================
-echo Mashkov.Rest | ssh -o StrictHostKeyChecking=no root@155.212.164.61 "echo '=== ОСТАНАВЛИВАЕМ СЕРВИСЫ ===' && sudo supervisorctl stop telegram-bot-group && sleep 3 && ps aux | grep python | grep -v grep | wc -l && echo 'сервисов остановлено'"
+ssh -o StrictHostKeyChecking=no root@155.212.164.61 "echo '=== ОСТАНАВЛИВАЕМ СЕРВИСЫ ===' && sudo supervisorctl stop telegram-bot-group:* && sleep 3"
 
 echo.
 echo ========================================
 echo ШАГ 3: Обновление кода...
 echo ========================================
-echo Mashkov.Rest | ssh -o StrictHostKeyChecking=no root@155.212.164.61 "echo '=== ОБНОВЛЯЕМ КОД ===' && cd /opt/telegram-bot && sudo -u botuser git pull origin master --force && echo '=== ПРОВЕРКА КОДА ===' && git log --oneline -1"
+ssh -o StrictHostKeyChecking=no root@155.212.164.61 "echo '=== ОБНОВЛЯЕМ КОД ===' && cd /opt/telegram-bot && git pull origin master && echo '=== ПРОВЕРКА КОДА ===' && git log --oneline -1"
 
 echo.
 echo ========================================
 echo ШАГ 4: Запуск сервисов...
 echo ========================================
-echo Mashkov.Rest | ssh -o StrictHostKeyChecking=no root@155.212.164.61 "echo '=== ЗАПУСКАЕМ СЕРВИСЫ ===' && sudo supervisorctl start telegram-bot-group && sleep 5 && sudo supervisorctl status"
+ssh -o StrictHostKeyChecking=no root@155.212.164.61 "echo '=== ЗАПУСКАЕМ СЕРВИСЫ ===' && sudo supervisorctl start telegram-bot-group:* && sleep 5 && sudo supervisorctl status"
 
 echo.
 echo ========================================
 echo ШАГ 5: Проверка работы...
 echo ========================================
-echo Mashkov.Rest | ssh -o StrictHostKeyChecking=no root@155.212.164.61 "echo '=== ПРОВЕРКА РАБОТЫ ===' && ps aux | grep python | grep -v grep | grep -E '(bot\.py|schedule_updates\.py|miniapp_server\.py)' | wc -l && echo 'процессов запущено' && echo '=== ПОСЛЕДНИЕ СООБЩЕНИЯ В ЛОГЕ ===' && tail -3 /var/log/telegram-bot/bot.log"
+ssh -o StrictHostKeyChecking=no root@155.212.164.61 "echo '=== ПРОВЕРКА РАБОТЫ ===' && ps aux | grep python | grep -v grep | grep -E '(bot\.py|schedule_updates\.py|miniapp_server\.py)' | wc -l && echo 'процессов запущено' && echo '=== ПОСЛЕДНИЕ СООБЩЕНИЯ В ЛОГЕ ===' && tail -3 /var/log/telegram-bot/bot.log"
 
 echo.
 echo ========================================
