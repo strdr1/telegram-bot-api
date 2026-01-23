@@ -1219,6 +1219,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             # Try to extract markers from reasoning field if content is empty
             reasoning = choice['message'].get('reasoning', '')
             logger.info(f"Content empty, trying to extract from reasoning (length: {len(reasoning)})")
+            logger.info(f"Reasoning preview: {reasoning[:200]}...")
             if reasoning:
                 # Extract PARSE_CATEGORY markers from reasoning - more flexible pattern
                 parse_match = re.search(r'PARSE_CATEGORY:([^\s\n,]+)', reasoning, re.IGNORECASE)
