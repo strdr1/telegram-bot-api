@@ -35,7 +35,7 @@ def find_similar_dishes(menu_data: Dict, query: str) -> List[Dict]:
                     score = 90
                 elif search_name in item_name:
                     score = len(search_name) / len(item_name) * 50
-                if score > 0 and item.get('image_url'):
+                if score > 0:
                     results.append((item, score))
     results.sort(key=lambda x: x[1], reverse=True)
     return [item for item, score in results]
@@ -553,8 +553,8 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                 'show_category_brief': 'завтраки'
             }
 
-        second_phrases = ['а вторую', 'вторую', 'и вторую', 'а второе', 'второй']
-        if any(phrase == message_lower or phrase in message_lower for phrase in second_phrases) and len(message_lower.split()) <= 4:
+        second_phrases = ['а вторую', 'вторую', 'и вторую', 'а второе', 'второй', 'а второе', 'второе']
+        if any(phrase in message_lower for phrase in second_phrases) and len(message_lower.split()) <= 5:
             base_query = None
             if user_id in user_history:
                 for msg in reversed(user_history[user_id]):
@@ -565,13 +565,16 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                         prev_lower = prev_text.lower().strip()
                         if any(p == prev_lower or p in prev_lower for p in second_phrases):
                             continue
-                        base_query = prev_text
+                        # Очищаем служебные слова из предыдущего запроса
+                        base_query = re.sub(r'^(покажи|покажите|хочу|расскажи|покажи фото|а покажи)\s+', '', prev_lower).strip()
+                        base_query = re.sub(r'[!?.,:;]+$', '', base_query)
                         break
             if base_query:
                 menu_data = load_menu_cache()
                 candidates = find_similar_dishes(menu_data, base_query)
-                if len(candidates) >= 2:
-                    dish = candidates[1]
+                if len(candidates) >= 2 or len(candidates) == 1:
+                    idx = 1 if len(candidates) >= 2 else 0
+                    dish = candidates[idx]
                     caption = f"🍽️ <b>{dish['name']}</b>\n\n"
                     caption += f"💰 Цена: {dish['price']}₽\n"
                     if dish.get('calories'):
@@ -586,12 +589,19 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                             caption += f"• Углеводы: {dish['carbs']}г\n"
                     if dish.get('description'):
                         caption += f"\n{dish['description']}"
-                    return {
-                        'type': 'photo_with_text',
-                        'photo_url': dish['image_url'],
-                        'text': caption,
-                        'show_delivery_button': True
-                    }
+                    if dish.get('image_url'):
+                        return {
+                            'type': 'photo_with_text',
+                            'photo_url': dish['image_url'],
+                            'text': caption,
+                            'show_delivery_button': True
+                        }
+                    else:
+                        return {
+                            'type': 'text',
+                            'text': caption,
+                            'show_delivery_button': True
+                        }
 
         # СПЕЦИАЛЬНАЯ ОБРАБОТКА ЗАПРОСОВ О КОНКРЕТНЫХ БЛЮДАХ (ДО AI)
         # Если сообщение похоже на запрос конкретного блюда - сразу показываем фото
@@ -675,6 +685,12 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                     caption += f"\n{found_dish['description']}"
 
                 logger.info(f"Прямой показ блюда: {found_dish['name']} (score: {best_score})")
+                # Сохраняем сообщение пользователя в историю для корректной обработки последующих коротких ответов
+                if user_id not in user_history:
+                    user_history[user_id] = []
+                user_history[user_id].append({"role": "user", "content": message})
+                if len(user_history[user_id]) > 20:
+                    user_history[user_id] = user_history[user_id][-20:]
                 return {
                     'type': 'photo_with_text',
                     'photo_url': found_dish['image_url'],
@@ -2231,6 +2247,12 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             final_text = mac_greeting_prefix + ai_text
 
         logger.info(f"Returning call_human: {call_human}")
+        try:
+            if show_category and 'завтрак' in str(show_category).lower():
+                confirm_age_verification = False
+                show_restaurant_menu = False
+        except Exception:
+            pass
         return {
             'type': 'text',
             'text': final_text,
