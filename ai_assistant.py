@@ -2125,7 +2125,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         ai_text = re.sub(r'SHOW_RESTAURANT_MENU\s*', '', ai_text).strip()
         ai_text = re.sub(r'SHOW_CATEGORY:.+', '', ai_text).strip()
         ai_text = re.sub(r'PARSE_BOOKING:.+', '', ai_text).strip()
-        ai_text = re.sub(r'DISH_PHOTO:.+?(\s|$)', '', ai_text).strip()
+        ai_text = re.sub(r'DISH_PHOTO:.*', '', ai_text).strip()
         ai_text = re.sub(r'CALL_HUMAN.*', '', ai_text, flags=re.DOTALL).strip()
 
         # ДОПОЛНИТЕЛЬНАЯ ЛОГИКА: показываем кнопку доставки только для конкретных случаев
