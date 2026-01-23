@@ -1326,6 +1326,36 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             if match:
                 category_name = match.group(1).strip().split('\n')[0].strip()
                 category_name = category_name.lower().strip()
+                # Преобразуем английские названия обратно в русские
+                category_translations = {
+                    'salads': 'салаты',
+                    'soups': 'супы',
+                    'pizzas': 'пицца',
+                    'beers': 'пиво',
+                    'wines': 'вино',
+                    'cocktails': 'коктейли',
+                    'desserts': 'десерты',
+                    'coffees': 'кофе',
+                    'teas': 'чай',
+                    'juices': 'соки',
+                    'waters': 'вода',
+                    'drinks': 'напитки',
+                    'appetizers': 'закуски',
+                    'hot dishes': 'горячие блюда',
+                    'main dishes': 'основные блюда',
+                    'breakfasts': 'завтраки',
+                    'burgers': 'бургеры',
+                    'pastas': 'паста',
+                    'seafoods': 'морепродукты',
+                    'vegetarian': 'вегетарианское',
+                    'grilled': 'жареное',
+                    'fried': 'жареное'
+                }
+                if category_name in category_translations:
+                    category_name = category_translations[category_name]
+                    logger.info(f"Перевели категорию '{match.group(1).strip()}' в '{category_name}'")
+                else:
+                    logger.info(f"Оставили категорию без перевода: '{category_name}'")
                 logger.info(f"Парсим категорию: '{category_name}'")
                 category_parsed = True
         elif 'Парсе категорию:' in ai_text or 'парсе категорию:' in ai_text:
