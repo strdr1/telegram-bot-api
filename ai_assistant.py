@@ -527,6 +527,87 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         # Если сообщение начинается с обращения к Маку
         is_mac_greeting = any(message_lower.startswith(greeting) for greeting in mac_greetings) or message_lower in mac_greetings
 
+        # СПЕЦИАЛЬНАЯ ОБРАБОТКА ЗАПРОСОВ О КОНКРЕТНЫХ БЛЮДАХ (ДО AI)
+        # Если сообщение похоже на запрос конкретного блюда - сразу показываем фото
+        dish_keywords = ['что в составе', 'покажи фото', 'расскажи про', 'сколько калорий', 'калории в', 'фото', 'состав']
+        is_dish_request = any(keyword in message_lower for keyword in dish_keywords)
+
+        # Или если сообщение содержит название блюда из меню
+        menu_data = load_menu_cache()
+        potential_dish_name = None
+
+        if not is_dish_request and len(message.split()) <= 5:  # Короткие сообщения
+            # Проверяем, содержит ли сообщение название блюда
+            for menu_id, menu in menu_data.items():
+                for category_id, category in menu.get('categories', {}).items():
+                    for item in category.get('items', []):
+                        item_name_lower = item['name'].lower().strip()
+                        # Проверяем точное совпадение или если сообщение является частью названия блюда
+                        if (item_name_lower == message_lower or
+                            message_lower in item_name_lower or
+                            any(word in item_name_lower for word in message_lower.split() if len(word) > 3)):
+                            potential_dish_name = item['name']
+                            logger.info(f"Обнаружен запрос блюда: '{message}' -> '{potential_dish_name}'")
+                            break
+                    if potential_dish_name:
+                        break
+                if potential_dish_name:
+                    break
+
+        # Если нашли потенциальное блюдо - сразу показываем фото
+        if potential_dish_name or is_dish_request:
+            dish_to_show = potential_dish_name or message.strip()
+            logger.info(f"Прямая обработка запроса блюда: '{dish_to_show}'")
+
+            # Ищем блюдо в меню
+            found_dish = None
+            best_score = 0
+
+            for menu_id, menu in menu_data.items():
+                for category_id, category in menu.get('categories', {}).items():
+                    for item in category.get('items', []):
+                        item_name = item['name'].lower().strip()
+                        search_name = dish_to_show.lower().strip()
+
+                        score = 0
+                        if item_name == search_name:
+                            score = 100
+                        elif item_name.startswith(search_name):
+                            score = 90
+                        elif search_name in item_name:
+                            score = len(search_name) / len(item_name) * 50
+
+                        if score > best_score and item.get('image_url'):
+                            best_score = score
+                            found_dish = item
+
+            if found_dish:
+                caption = f"🍽️ <b>{found_dish['name']}</b>\n\n"
+                caption += f"💰 Цена: {found_dish['price']}₽\n"
+                if found_dish.get('calories'):
+                    caption += f"🔥 Калории: {found_dish['calories']} ккал\n"
+                if found_dish.get('proteins') or found_dish.get('fats') or found_dish.get('carbs'):
+                    caption += f"\n🧃 БЖУ:\n"
+                    if found_dish.get('proteins'):
+                        caption += f"• Белки: {found_dish['proteins']}г\n"
+                    if found_dish.get('fats'):
+                        caption += f"• Жиры: {found_dish['fats']}г\n"
+                    if found_dish.get('carbs'):
+                        caption += f"• Углеводы: {found_dish['carbs']}г\n"
+                if found_dish.get('description'):
+                    caption += f"\n{found_dish['description']}"
+
+                logger.info(f"Прямой показ блюда: {found_dish['name']} (score: {best_score})")
+                return {
+                    'type': 'photo_with_text',
+                    'photo_url': found_dish['image_url'],
+                    'text': caption,
+                    'show_delivery_button': True
+                }
+
+            # Если блюдо не найдено - продолжаем с AI
+            logger.info(f"Блюдо '{dish_to_show}' не найдено в меню, передаем AI")
+
         # Специальная обработка вопросов про калории в категориях (до обращения к AI)
         if any(word in message_lower for word in ['калори', 'ккал', 'калорийность']):
             specific_dishes = ['борщ', 'маргарита', '4 сыра', 'пепперони', 'инфаркт', 'том ям', 'цезарь']
