@@ -1369,7 +1369,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                 if 'суп' in category_name or category_name in ['суп', 'супы', 'супов']:
                     # Ищем ВСЕ категории, которые могут содержать супы
                     found_items = []
-                    found_category_names = []]
+                    found_category_names = []
 
                     for menu_id, menu in menu_data.items():
                         for cat_id, category in menu.get('categories', {}).items():
