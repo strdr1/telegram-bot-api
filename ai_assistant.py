@@ -2228,6 +2228,66 @@ def get_fallback_response(message: str, user_id: int) -> Dict:
     short_answers = ['хочу', 'да', 'покажи', 'давай', 'конечно', 'показать', 'покажите']
     context_questions = ['какие есть', 'что есть', 'а какие', 'какие у вас', 'а какие есть']
     
+    # Сначала проверяем явные запросы категорий (ПЕРЕД проверкой контекстных вопросов)
+    # Это важно, чтобы "А какие завтраки?" не уходило в проверку истории
+    
+    if any(word in message_lower for word in ['завтрак', 'breakfast']):
+        logger.info(f"🔍 Fallback: Обнаружен запрос завтраков")
+        return {
+            'type': 'text',
+            'text': '🍳 У нас есть отличные завтраки!',
+            'show_category_brief': 'завтраки'
+        }
+
+    if any(word in message_lower for word in ['пицц', 'пиза', 'pizza']):
+        logger.info(f"🔍 Fallback: Обнаружен запрос пиццы")
+        return {
+            'type': 'text',
+            'text': '🍕 У нас есть отличные пиццы!',
+            'show_category_brief': 'пицца'
+        }
+
+    if any(word in message_lower for word in ['суп', 'супа', 'супов', 'soup', 'борщ', 'солянка']):
+        logger.info(f"🔍 Fallback: Обнаружен запрос супов")
+        return {
+            'type': 'text',
+            'text': '🍲 У нас есть отличные супы!',
+            'show_category_brief': 'суп'
+        }
+        
+    if any(word in message_lower for word in ['салат', 'salad']):
+        logger.info(f"🔍 Fallback: Обнаружен запрос салатов")
+        return {
+            'type': 'text',
+            'text': '🥗 У нас есть отличные салаты!',
+            'show_category_brief': 'салаты'
+        }
+        
+    if any(word in message_lower for word in ['десерт', 'desert', 'cake', 'торт']):
+        logger.info(f"🔍 Fallback: Обнаружен запрос десертов")
+        return {
+            'type': 'text',
+            'text': '🍰 У нас есть отличные десерты!',
+            'show_category_brief': 'десерт'
+        }
+        
+    if any(word in message_lower for word in ['напит', 'drink', 'коктейл', 'вино', 'пиво', 'wine', 'beer']):
+        logger.info(f"🔍 Fallback: Обнаружен запрос напитков")
+        # Определяем подкатегорию
+        cat = 'напитки'
+        if 'пиво' in message_lower or 'beer' in message_lower:
+            cat = 'пиво'
+        elif 'вино' in message_lower or 'wine' in message_lower:
+            cat = 'вино'
+        elif 'коктейл' in message_lower:
+            cat = 'коктейль'
+            
+        return {
+            'type': 'text',
+            'text': '🍹 У нас большой выбор напитков!',
+            'show_category_brief': cat
+        }
+
     if message_lower in short_answers:
         return {
             'type': 'text',
