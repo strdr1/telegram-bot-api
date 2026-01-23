@@ -3031,8 +3031,15 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
 
                 asyncio.create_task(notify_admins())
 
-                # Отправляем ответ пользователю и переходим в режим чата
-                await safe_send_message(message.bot, user.id, result['text'])
+                # Создаем кнопку для чата с оператором
+                keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+                    [types.InlineKeyboardButton(text="💬 Написать оператору", callback_data="chat_operator")],
+                    [types.InlineKeyboardButton(text="📞 Позвонить", callback_data="call_us")],
+                    [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+                ])
+
+                # Отправляем ответ пользователю с кнопкой
+                await safe_send_message(message.bot, user.id, result['text'], reply_markup=keyboard)
 
                 # Подтверждаем пользователю, что оператор оповещён
                 try:
