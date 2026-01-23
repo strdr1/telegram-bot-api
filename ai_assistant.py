@@ -1955,7 +1955,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         ai_text = re.sub(r'SHOW_CATEGORY:.+', '', ai_text).strip()
         ai_text = re.sub(r'PARSE_BOOKING:.+', '', ai_text).strip()
         ai_text = re.sub(r'DISH_PHOTO:.+?(\s|$)', '', ai_text).strip()
-        ai_text = re.sub(r'CALL_HUMAN\s*', '', ai_text).strip()
+        ai_text = re.sub(r'CALL_HUMAN.*', '', ai_text).strip()
 
         # ДОПОЛНИТЕЛЬНАЯ ЛОГИКА: показываем кнопку доставки только для конкретных случаев
         # - Когда AI явно указал SHOW_DELIVERY_BUTTON
