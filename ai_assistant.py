@@ -562,6 +562,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             # Ищем блюдо в меню
             found_dish = None
             best_score = 0
+            search_results = []
 
             for menu_id, menu in menu_data.items():
                 for category_id, category in menu.get('categories', {}).items():
@@ -577,9 +578,19 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                         elif search_name in item_name:
                             score = len(search_name) / len(item_name) * 50
 
+                        search_results.append({
+                            'name': item['name'],
+                            'score': score,
+                            'has_image': bool(item.get('image_url'))
+                        })
+
                         if score > best_score and item.get('image_url'):
                             best_score = score
                             found_dish = item
+
+            logger.info(f"Результаты поиска для '{dish_to_show}': найдено {len(search_results)} блюд, лучший score: {best_score}")
+            if found_dish:
+                logger.info(f"Выбрано блюдо: {found_dish['name']} (score: {best_score})")
 
             if found_dish:
                 caption = f"🍽️ <b>{found_dish['name']}</b>\n\n"
