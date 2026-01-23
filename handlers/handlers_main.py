@@ -200,7 +200,7 @@ class SupplierStates(StatesGroup):
     waiting_file = State()
 
 @router.callback_query(F.data == "suppliers_contact")
-async def suppliers_contact_callback(callback: types.CallbackQuery):
+async def suppliers_contact_callback(callback: types.CallbackQuery, state: FSMContext):
     """Форма для поставщиков"""
     # 🔴 БЛОКИРУЮЩАЯ ПРОВЕРКА: Если пользователь в режиме админ-чата, игнорируем ВСЕ действия
     if is_operator_chat(callback.from_user.id):
@@ -2512,11 +2512,6 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
     text = message.text.strip().lower()
 
     logger.info(f"🔍 НАЧАЛО ОБРАБОТКИ СООБЩЕНИЯ: '{message.text}' от пользователя {user.id}")
-
-    # 🔴 БЛОКИРУЮЩАЯ ПРОВЕРКА: Если пользователь в режиме админ-чата, игнорируем ВСЕ сообщения
-    if is_operator_chat(user.id):
-        logger.info(f"🚫 ПОЛЬЗОВАТЕЛЬ {user.id} В РЕЖИМЕ АДМИН-ЧАТА - ИГНОРИРУЕМ СООБЩЕНИЕ")
-        return
 
     if text.startswith('/'):
         return
