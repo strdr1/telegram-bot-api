@@ -41,26 +41,7 @@ async def auto_update_menu():
             # Логируем в базу данных
             database.log_action(0, "auto_menu_update", f"success: {len(menus)} menus, {total_items} items")
 
-            # Отправляем уведомление администраторам
-            try:
-                admins = database.get_all_admins()
-                for admin_id in admins:
-                    try:
-                        from aiogram import Bot
-                        from config import BOT_TOKEN
-                        import config
-
-                        if BOT_TOKEN:
-                            bot = Bot(token=BOT_TOKEN)
-                            await bot.send_message(
-                                chat_id=admin_id,
-                                text=f"🔄 <b>Автоматическое обновление меню</b>\n\n{success_message}",
-                                parse_mode="HTML"
-                            )
-                    except Exception as e:
-                        print(f"Не удалось отправить уведомление админу {admin_id}: {e}")
-            except Exception as e:
-                print(f"Ошибка отправки уведомлений: {e}")
+            
 
         else:
             error_message = "❌ Ошибка автоматического обновления меню - не удалось загрузить меню из Presto API"
@@ -69,25 +50,7 @@ async def auto_update_menu():
             # Логируем ошибку
             database.log_action(0, "auto_menu_update", "error: failed to load menus")
 
-            # Отправляем уведомление об ошибке администраторам
-            try:
-                admins = database.get_all_admins()
-                for admin_id in admins:
-                    try:
-                        from aiogram import Bot
-                        from config import BOT_TOKEN
-
-                        if BOT_TOKEN:
-                            bot = Bot(token=BOT_TOKEN)
-                            await bot.send_message(
-                                chat_id=admin_id,
-                                text=f"⚠️ <b>Ошибка автоматического обновления меню</b>\n\n{error_message}",
-                                parse_mode="HTML"
-                            )
-                    except Exception as e:
-                        print(f"Не удалось отправить уведомление админу {admin_id}: {e}")
-            except Exception as e:
-                print(f"Ошибка отправки уведомлений об ошибке: {e}")
+            
 
     except Exception as e:
         error_message = f"❌ Критическая ошибка автоматического обновления меню: {str(e)}"

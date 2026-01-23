@@ -19,7 +19,41 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
         category_name = category_name.replace('_', ' ').strip()
         logger.info(f"Показываю краткий список категории: '{category_name}'")
 
-        # Ищем категорию в меню
+        lower_name = category_name.lower()
+
+        if 'завтрак' in lower_name:
+            menu = menu_cache.all_menus_cache.get("90") or menu_cache.all_menus_cache.get(90)
+            if menu:
+                items = []
+                for category in menu.get('categories', {}).values():
+                    items.extend(category.get('items', []))
+
+                if not items:
+                    await safe_send_message(bot, user_id, "В меню завтраков пока нет блюд.", parse_mode="HTML")
+                    return
+
+                menu_title = menu.get('name') or category_name
+                emoji = '🍳'
+
+                text = f"{emoji} <b>{menu_title}</b>\n\n"
+
+                unique_items = {}
+                for item in items:
+                    item_id = item.get('id')
+                    if item_id not in unique_items:
+                        unique_items[item_id] = item
+
+                for item in unique_items.values():
+                    text += f"• {item['name']} — {item['price']}₽\n"
+
+                text += f"\n💡 <i>Спросите про конкретное блюдо, чтобы увидеть фото и подробное описание!</i>"
+
+                await safe_send_message(bot, user_id, text, parse_mode="HTML")
+
+                # Историю ИИ не ведём для технических списков
+
+                return
+
         found = False
         for menu_id, menu in menu_cache.all_menus_cache.items():
             for cat_id, category in menu.get('categories', {}).items():
@@ -183,9 +217,61 @@ async def handle_show_category(category_name: str, user_id: int, bot):
         category_name = category_name.replace('_', ' ').strip()
         logger.info(f"Ищу категорию: '{category_name}'")
 
+        lower_name = category_name.lower()
 
+        if 'завтрак' in lower_name:
+            menu = menu_cache.all_menus_cache.get("90") or menu_cache.all_menus_cache.get(90)
+            if menu:
+                items = []
+                for category in menu.get('categories', {}).values():
+                    items.extend(category.get('items', []))
 
-        # Ищем категорию в меню (улучшенный поиск)
+                if not items:
+                    await safe_send_message(bot, user_id, "В меню завтраков пока нет блюд.", parse_mode="HTML")
+                    return
+
+                menu_title = menu.get('name') or category_name
+                await safe_send_message(bot, user_id, f"🍳 <b>{menu_title}</b>\n\nВот что у нас есть:", parse_mode="HTML")
+
+                for item in items:
+                    try:
+                        photo_url = item.get('image_url')
+                        if photo_url:
+                            caption = f"🍽️ <b>{item['name']}</b>\n\n"
+                            caption += f"💰 Цена: {item['price']}₽\n"
+                            if item.get('calories'):
+                                caption += f"🔥 Калории: {item['calories']} ккал\n"
+                            if item.get('proteins') or item.get('fats') or item.get('carbs'):
+                                caption += f"\n🧃 БЖУ:\n"
+                                if item.get('proteins'):
+                                    caption += f"• Белки: {item['proteins']}г\n"
+                                if item.get('fats'):
+                                    caption += f"• Жиры: {item['fats']}г\n"
+                                if item.get('carbs'):
+                                    caption += f"• Углеводы: {item['carbs']}г\n"
+                            if item.get('description'):
+                                caption += f"\n{item['description']}"
+
+                            await bot.send_photo(
+                                chat_id=user_id,
+                                photo=photo_url,
+                                caption=caption,
+                                parse_mode="HTML"
+                            )
+                        else:
+                            text = f"🍽️ <b>{item['name']}</b>\n💰 Цена: {item['price']}₽"
+                            if item.get('description'):
+                                text += f"\n{item['description']}"
+                            await safe_send_message(bot, user_id, text, parse_mode="HTML")
+
+                    except Exception as e:
+                        logger.error(f"Ошибка отправки блюда {item.get('name', 'unknown')}: {e}")
+                        continue
+
+                # Историю ИИ не ведём для технических списков
+
+                return
+
         found = False
         for menu_id, menu in menu_cache.all_menus_cache.items():
             for cat_id, category in menu.get('categories', {}).items():
@@ -245,6 +331,9 @@ async def handle_show_category(category_name: str, user_id: int, bot):
 
                     found = True
                     logger.info(f"Показал категорию: {category_title} с {len(items)} блюдами")
+
+                    # Историю ИИ не ведём для технических списков
+
                     break
 
             if found:

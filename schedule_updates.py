@@ -4,11 +4,11 @@
 Планировщик автообновлений бота
 """
 
-import schedule
 import time
 import subprocess
 import logging
-from datetime import datetime
+from datetime import datetime, date
+import pytz
 
 # Настройка логирования
 logging.basicConfig(
@@ -28,7 +28,7 @@ def run_update():
     
     try:
         result = subprocess.run(
-            ["python", "auto_update.py"],
+            ["python", "auto_menu_update.py"],
             capture_output=True,
             text=True,
             timeout=300  # 5 минут таймаут
@@ -48,22 +48,20 @@ def main():
     """Основная функция планировщика"""
     logger.info("Запуск планировщика автообновлений...")
     
-    # Настраиваем расписание
-    # Проверяем обновления каждые 30 минут
-    schedule.every(30).minutes.do(run_update)
-    
-    # Также можно настроить проверку в определенное время
-    # schedule.every().day.at("03:00").do(run_update)  # Каждый день в 3:00
-    # schedule.every().hour.do(run_update)  # Каждый час
-    
-    logger.info("Расписание настроено:")
-    logger.info("   - Проверка обновлений каждые 30 минут")
-    
-    # Запускаем планировщик
+    moscow_tz = pytz.timezone('Europe/Moscow')
+    last_run: date = None
+
+    logger.info("Расписание настроено: ежедневно в 08:00 по Москве")
+
     while True:
         try:
-            schedule.run_pending()
-            time.sleep(60)  # Проверяем каждую минуту
+            now_msk = datetime.now(moscow_tz)
+            if now_msk.hour == 8 and now_msk.minute == 0:
+                if last_run != now_msk.date():
+                    run_update()
+                    last_run = now_msk.date()
+                    time.sleep(65)  # чтобы не сработало дважды в ту же минуту
+            time.sleep(30)
         except KeyboardInterrupt:
             logger.info("Планировщик остановлен пользователем")
             break

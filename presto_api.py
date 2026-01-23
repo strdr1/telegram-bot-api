@@ -1,4 +1,4 @@
-﻿import json
+import json
 import logging
 import asyncio
 import aiohttp
@@ -1174,6 +1174,15 @@ class PrestoAPI:
             logger.warning("⚠️ Не удалось получить список прайс-листов, используем известные меню")
             # Fallback на известные меню
             price_lists = [{'id': menu_id, 'name': menu_name} for menu_id, menu_name in self.menus.items()]
+        else:
+            # Создаем set из ID найденных прайс-листов
+            found_ids = {int(pl['id']) for pl in price_lists}
+            
+            # Добавляем недостающие известные меню (особенно Завтраки ID 90)
+            for menu_id, menu_name in self.menus.items():
+                if menu_id not in found_ids:
+                    logger.info(f"➕ Добавляем известное меню {menu_id} '{menu_name}' в список загрузки")
+                    price_lists.append({'id': menu_id, 'name': menu_name})
 
         # Загружаем меню для каждого прайс-листа
         for price_list in price_lists:
