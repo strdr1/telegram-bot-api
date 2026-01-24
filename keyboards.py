@@ -1,4 +1,4 @@
-﻿"""
+"""
 keyboards.py
 Все клавиатуры бота
 """
@@ -46,6 +46,9 @@ def food_menu():
         ],
         [
             InlineKeyboardButton(text="📋 PDF МЕНЮ С БАРНОЙ КАРТОЙ", callback_data="menu_pdf"),
+        ],
+        [
+            InlineKeyboardButton(text="🚚 ЗАКАЗАТЬ ДОСТАВКУ", callback_data="menu_delivery"),
         ],
         [
             InlineKeyboardButton(text="🎉 БАНКЕТНОЕ МЕНЮ", callback_data="menu_banquet"),
