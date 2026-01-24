@@ -3,6 +3,7 @@ category_handler.py - Обработчик показа категорий бл�
 """
 
 import logging
+import re
 from menu_cache import menu_cache
 from handlers.utils import safe_send_message
 from aiogram.types import BufferedInputFile
@@ -32,7 +33,8 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
                     await safe_send_message(bot, user_id, "В меню завтраков пока нет блюд.", parse_mode="HTML")
                     return
 
-                menu_title = menu.get('name') or category_name
+                menu_title_raw = menu.get('name') or category_name
+                menu_title = re.sub(r'\s*\(.*?\)\s*', '', menu_title_raw).strip()
                 emoji = '🍳'
 
                 text = f"{emoji} <b>{menu_title}</b>\n\n"
@@ -44,7 +46,10 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
                         unique_items[item_id] = item
 
                 for item in unique_items.values():
-                    text += f"• {item['name']} — {item['price']}₽\n"
+                    text += f"• {item['name']} — {item['price']}₽"
+                    if item.get('weight'):
+                        text += f" (⚖️ {item['weight']}г)"
+                    text += "\n"
 
                 text += f"\n💡 <i>Спросите про конкретное блюдо, чтобы увидеть фото и подробное описание!</i>"
 
@@ -163,9 +168,12 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
                 
                 # Добавляем блюда в список
                 for item in unique_items.values():
-                    text += f"• {item['name']} — {item['price']}₽\n"
+                    text += f"• {item['name']} — {item['price']}₽"
+                    if item.get('weight'):
+                        text += f" (⚖️ {item['weight']}г)"
+                    text += "\n"
                 
-                text += f"\n💡 <i>Спросите про конкретное блюдо, чтобы увидеть фото и подробное описание!</i>"
+                text += f"\n💡 <i>Спросите про конкретное блюдо, чтобы увидеть фото, БЖУ, вес и подробное описание!</i>"
                 
                 await safe_send_message(bot, user_id, text, parse_mode="HTML")
                 
@@ -230,7 +238,8 @@ async def handle_show_category(category_name: str, user_id: int, bot):
                     await safe_send_message(bot, user_id, "В меню завтраков пока нет блюд.", parse_mode="HTML")
                     return
 
-                menu_title = menu.get('name') or category_name
+                menu_title_raw = menu.get('name') or category_name
+                menu_title = re.sub(r'\s*\(.*?\)\s*', '', menu_title_raw).strip()
                 await safe_send_message(bot, user_id, f"🍳 <b>{menu_title}</b>\n\nВот что у нас есть:", parse_mode="HTML")
 
                 for item in items:
@@ -241,14 +250,16 @@ async def handle_show_category(category_name: str, user_id: int, bot):
                             caption += f"💰 Цена: {item['price']}₽\n"
                             if item.get('calories'):
                                 caption += f"🔥 Калории: {item['calories']} ккал\n"
-                            if item.get('proteins') or item.get('fats') or item.get('carbs'):
+                            if item.get('protein') or item.get('fat') or item.get('carbohydrate'):
                                 caption += f"\n🧃 БЖУ:\n"
-                                if item.get('proteins'):
-                                    caption += f"• Белки: {item['proteins']}г\n"
-                                if item.get('fats'):
-                                    caption += f"• Жиры: {item['fats']}г\n"
-                                if item.get('carbs'):
-                                    caption += f"• Углеводы: {item['carbs']}г\n"
+                                if item.get('protein'):
+                                    caption += f"• Белки: {item['protein']}г\n"
+                                if item.get('fat'):
+                                    caption += f"• Жиры: {item['fat']}г\n"
+                                if item.get('carbohydrate'):
+                                    caption += f"• Углеводы: {item['carbohydrate']}г\n"
+                            if item.get('weight'):
+                                caption += f"⚖️ Вес: {item['weight']}г\n"
                             if item.get('description'):
                                 caption += f"\n{item['description']}"
 
@@ -260,6 +271,8 @@ async def handle_show_category(category_name: str, user_id: int, bot):
                             )
                         else:
                             text = f"🍽️ <b>{item['name']}</b>\n💰 Цена: {item['price']}₽"
+                            if item.get('weight'):
+                                text += f"\n⚖️ Вес: {item['weight']}г"
                             if item.get('description'):
                                 text += f"\n{item['description']}"
                             await safe_send_message(bot, user_id, text, parse_mode="HTML")
