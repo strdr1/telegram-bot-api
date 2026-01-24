@@ -362,6 +362,11 @@ class MenuCache:
                         dish_copy['menu_name'] = self.all_menus_cache[m_id].get('name', '')
                         results.append(dish_copy)
         
+        # Сортируем результаты: сначала меню доставки (90, 92, 141), затем остальные
+        # menu_cache.json в приоритете!
+        delivery_ids = {90, 92, 141}
+        results.sort(key=lambda x: 0 if int(x.get('menu_id', 0)) in delivery_ids else 1)
+        
         return results
     
     def clear_cache(self) -> bool:
@@ -383,31 +388,30 @@ class MenuCache:
             logger.error(f"❌ Ошибка очистки кэша: {e}")
             return False
 
-# В класс MenuCache в menu_cache.py добавьте этот метод:
+    def get_category_by_id(self, menu_id: int, category_id: int) -> Optional[Dict]:
+        """Получает категорию по ID"""
+        if menu_id not in self.all_menus_cache:
+            return None
+        
+        menu_data = self.all_menus_cache[menu_id]
+        categories = menu_data.get('categories', {})
+        
+        if category_id not in categories:
+            return None
+        
+        cat_data = categories[category_id]
+        
+        # Проверяем есть ли display_name
+        name = cat_data.get('name', '')
+        display_name = cat_data.get('display_name', name)
+        
+        return {
+            'id': category_id,
+            'name': name,
+            'display_name': display_name,
+            'item_count': len(cat_data.get('items', [])),
+            'image_url': cat_data.get('image_url')
+        }
 
-def get_category_by_id(self, menu_id: int, category_id: int) -> Optional[Dict]:
-    """Получает категорию по ID"""
-    if menu_id not in self.all_menus_cache:
-        return None
-    
-    menu_data = self.all_menus_cache[menu_id]
-    categories = menu_data.get('categories', {})
-    
-    if category_id not in categories:
-        return None
-    
-    cat_data = categories[category_id]
-    
-    # Проверяем есть ли display_name
-    name = cat_data.get('name', '')
-    display_name = cat_data.get('display_name', name)
-    
-    return {
-        'id': category_id,
-        'name': name,
-        'display_name': display_name,
-        'item_count': len(cat_data.get('items', [])),
-        'image_url': cat_data.get('image_url')
-    }
 # Глобальный экземпляр кэша меню
 menu_cache = MenuCache()

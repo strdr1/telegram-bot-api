@@ -70,7 +70,18 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
                 return
 
         found = False
-        for menu_id, menu in menu_cache.all_menus_cache.items():
+        
+        # Определяем порядок поиска: сначала меню доставки (menu_cache.json), потом остальные
+        # menu_cache.json в приоритете, если там нет, то в all_menu_cache идет!
+        delivery_ids = {90, 92, 141}
+        
+        # Сортируем меню: сначала приоритетные (доставка), потом остальные
+        sorted_menu_items = sorted(
+            menu_cache.all_menus_cache.items(),
+            key=lambda item: 0 if int(item[0]) in delivery_ids else 1
+        )
+
+        for menu_id, menu in sorted_menu_items:
             for cat_id, category in menu.get('categories', {}).items():
                 cat_name = category.get('name', '').lower().strip()
                 cat_display_name = category.get('display_name', cat_name).lower().strip()
@@ -138,7 +149,14 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
             if search_term.endswith('и'):
                 search_term = search_term[:-1]
             
-            for menu_id, menu in menu_cache.all_menus_cache.items():
+            # Также используем приоритетный порядок поиска
+            delivery_ids = {90, 92, 141}
+            sorted_menu_items = sorted(
+                menu_cache.all_menus_cache.items(),
+                key=lambda item: 0 if int(item[0]) in delivery_ids else 1
+            )
+            
+            for menu_id, menu in sorted_menu_items:
                 for cat_id, category in menu.get('categories', {}).items():
                     for item in category.get('items', []):
                         if search_term in item.get('name', '').lower():
@@ -235,7 +253,18 @@ async def handle_show_category(category_name: str, user_id: int, bot):
         logger.info(f"Показываю категорию (подробно): '{category_name}'")
 
         found = False
-        for menu_id, menu in menu_cache.all_menus_cache.items():
+        
+        # Определяем порядок поиска: сначала меню доставки (menu_cache.json), потом остальные
+        # menu_cache.json в приоритете!
+        delivery_ids = {90, 92, 141}
+        
+        # Сортируем меню: сначала приоритетные (доставка), потом остальные
+        sorted_menu_items = sorted(
+            menu_cache.all_menus_cache.items(),
+            key=lambda item: 0 if int(item[0]) in delivery_ids else 1
+        )
+
+        for menu_id, menu in sorted_menu_items:
             for cat_id, category in menu.get('categories', {}).items():
                 cat_name = category.get('name', '').lower().strip()
                 cat_display_name = category.get('display_name', cat_name).lower().strip()
