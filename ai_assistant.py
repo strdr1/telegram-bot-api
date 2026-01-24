@@ -12,6 +12,7 @@ from typing import Optional, Dict, List, Any
 import logging
 import database
 import cache_manager
+import config
 
 # Импорт requests
 import requests
@@ -608,15 +609,23 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                     dish = candidates[idx]
                     caption = f"🍽️ <b>{dish['name']}</b>\n\n"
                     caption += f"💰 Цена: {dish['price']}₽\n"
+                    if dish.get('weight'):
+                        caption += f"⚖️ Вес: {dish['weight']}\n"
                     if dish.get('calories'):
                         caption += f"🔥 Калории: {dish['calories']} ккал\n"
-                    if dish.get('proteins') or dish.get('fats') or dish.get('carbs'):
+                    if dish.get('protein') or dish.get('fat') or dish.get('carbohydrate') or dish.get('proteins') or dish.get('fats') or dish.get('carbs'):
                         caption += f"\n🧃 БЖУ:\n"
-                        if dish.get('proteins'):
+                        if dish.get('protein') is not None:
+                            caption += f"• Белки: {dish['protein']}г\n"
+                        elif dish.get('proteins'):
                             caption += f"• Белки: {dish['proteins']}г\n"
-                        if dish.get('fats'):
+                        if dish.get('fat') is not None:
+                            caption += f"• Жиры: {dish['fat']}г\n"
+                        elif dish.get('fats'):
                             caption += f"• Жиры: {dish['fats']}г\n"
-                        if dish.get('carbs'):
+                        if dish.get('carbohydrate') is not None:
+                            caption += f"• Углеводы: {dish['carbohydrate']}г\n"
+                        elif dish.get('carbs'):
                             caption += f"• Углеводы: {dish['carbs']}г\n"
                     if dish.get('description'):
                         caption += f"\n{dish['description']}"
@@ -639,37 +648,23 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         dish_keywords = ['что в составе', 'покажи фото', 'расскажи про', 'сколько калорий', 'калории в', 'фото', 'состав']
         is_dish_request = any(keyword in message_lower for keyword in dish_keywords)
 
-        # Или если сообщение содержит название блюда из меню
-        menu_data = load_menu_cache()
-        potential_dish_name = None
+        # Если это явный запрос блюда ИЛИ просто короткое сообщение (потенциально название)
+        if is_dish_request or len(message.split()) <= 5:
+            # Формируем запрос для поиска
+            dish_to_show = message.strip()
+            
+            # Если это явный запрос с ключевыми словами, пробуем их убрать для чистоты
+            if is_dish_request:
+                clean_query = message_lower
+                for kw in dish_keywords:
+                    clean_query = clean_query.replace(kw, '')
+                if clean_query.strip():
+                    dish_to_show = clean_query.strip()
 
-        if not is_dish_request and len(message.split()) <= 5:
-            tokens = [t for t in re.split(r'[\\s\\-]+', message_lower) if len(t) > 2]
-            generic = {'пицца','суп','салат','десерт','напитки','напиток','вино','пиво','бургер','паста'}
-            specific_tokens = [t for t in tokens if t not in generic]
-            for menu_id, menu in menu_data.items():
-                for category_id, category in menu.get('categories', {}).items():
-                    for item in category.get('items', []):
-                        item_name_lower = item['name'].lower().strip()
-                        if item_name_lower == message_lower or message_lower in item_name_lower:
-                            potential_dish_name = item['name']
-                            logger.info(f"Обнаружен точный запрос блюда: '{message}' -> '{potential_dish_name}'")
-                            break
-                        if specific_tokens and any(tok in item_name_lower for tok in specific_tokens):
-                            potential_dish_name = item['name']
-                            logger.info(f"Обнаружен запрос по специфическому токену: '{message}' -> '{potential_dish_name}'")
-                            break
-                    if potential_dish_name:
-                        break
-                if potential_dish_name:
-                    break
-
-        # Если нашли потенциальное блюдо - сразу показываем фото
-        if potential_dish_name or is_dish_request:
-            dish_to_show = potential_dish_name or message.strip()
             logger.info(f"Прямая обработка запроса блюда: '{dish_to_show}'")
 
             # Ищем блюдо в меню
+            menu_data = load_menu_cache()
             found_dish = None
             best_score = 0
             search_results = []
@@ -684,52 +679,71 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                         n_tokens = _specific_tokens(item_name)
 
                         score = 0
+                        # 1. Точное совпадение нормализованных строк
                         if item_norm == search_norm:
                             score = 1000
+                        # 2. Вхождение одной строки в другую (нормализованных)
                         elif search_norm and (item_norm.startswith(search_norm) or search_norm in item_norm or item_norm in search_norm):
                             score = 900
+                        # 3. Пересечение смысловых токенов
                         else:
                             inter = set(q_tokens) & set(n_tokens)
                             if inter:
                                 score = 100 + 50 * len(inter)
 
-                        search_results.append({
-                            'name': item['name'],
-                            'score': score,
-                            'has_image': bool(item.get('image_url'))
-                        })
+                        if score > 0:
+                            search_results.append({
+                                'name': item['name'],
+                                'score': score,
+                                'has_image': bool(item.get('image_url'))
+                            })
 
                         if score > best_score:
                             best_score = score
                             found_dish = item
 
             logger.info(f"Результаты поиска для '{dish_to_show}': найдено {len(search_results)} блюд, лучший score: {best_score}")
-            if found_dish:
+            
+            # Показываем блюдо только если есть достаточная уверенность
+            # Для коротких сообщений без ключевых слов требуем более высокого совпадения
+            threshold = 150
+            if not is_dish_request:
+                threshold = 800 # Для простых слов требуем почти точного совпадения или вхождения
+
+            if found_dish and best_score >= threshold:
                 logger.info(f"Выбрано блюдо: {found_dish['name']} (score: {best_score})")
 
-            if found_dish:
                 caption = f"🍽️ <b>{found_dish['name']}</b>\n\n"
                 caption += f"💰 Цена: {found_dish['price']}₽\n"
+                if found_dish.get('weight'):
+                    caption += f"⚖️ Вес: {found_dish['weight']}\n"
                 if found_dish.get('calories'):
                     caption += f"🔥 Калории: {found_dish['calories']} ккал\n"
-                if found_dish.get('proteins') or found_dish.get('fats') or found_dish.get('carbs'):
+                if found_dish.get('protein') or found_dish.get('fat') or found_dish.get('carbohydrate') or found_dish.get('proteins') or found_dish.get('fats') or found_dish.get('carbs'):
                     caption += f"\n🧃 БЖУ:\n"
-                    if found_dish.get('proteins'):
+                    if found_dish.get('protein') is not None:
+                        caption += f"• Белки: {found_dish['protein']}г\n"
+                    elif found_dish.get('proteins'):
                         caption += f"• Белки: {found_dish['proteins']}г\n"
-                    if found_dish.get('fats'):
+                    if found_dish.get('fat') is not None:
+                        caption += f"• Жиры: {found_dish['fat']}г\n"
+                    elif found_dish.get('fats'):
                         caption += f"• Жиры: {found_dish['fats']}г\n"
-                    if found_dish.get('carbs'):
+                    if found_dish.get('carbohydrate') is not None:
+                        caption += f"• Углеводы: {found_dish['carbohydrate']}г\n"
+                    elif found_dish.get('carbs'):
                         caption += f"• Углеводы: {found_dish['carbs']}г\n"
                 if found_dish.get('description'):
                     caption += f"\n{found_dish['description']}"
 
                 logger.info(f"Прямой показ блюда: {found_dish['name']} (score: {best_score})")
-                # Сохраняем сообщение пользователя в историю для корректной обработки последующих коротких ответов
+                # Сохраняем сообщение пользователя в историю
                 if user_id not in user_history:
                     user_history[user_id] = []
                 user_history[user_id].append({"role": "user", "content": message})
                 if len(user_history[user_id]) > 20:
                     user_history[user_id] = user_history[user_id][-20:]
+                    
                 if found_dish.get('image_url'):
                     return {
                         'type': 'photo_with_text',
@@ -743,9 +757,8 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                         'text': caption,
                         'show_delivery_button': True
                     }
-
-            # Если блюдо не найдено - продолжаем с AI
-            logger.info(f"Блюдо '{dish_to_show}' не найдено в меню, передаем AI")
+            else:
+                 logger.info(f"Блюдо не найдено или низкий score ({best_score} < {threshold}), передаем AI")
 
         # Специальная обработка вопросов про калории в категориях (до обращения к AI)
         if any(word in message_lower for word in ['калори', 'ккал', 'калорийность']):
@@ -2111,15 +2124,23 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                 if best_match:
                     caption = f"🍽️ <b>{best_match['name']}</b>\n\n"
                     caption += f"💰 Цена: {best_match['price']}₽\n"
+                    if best_match.get('weight'):
+                        caption += f"⚖️ Вес: {best_match['weight']}\n"
                     if best_match.get('calories'):
                         caption += f"🔥 Калории: {best_match['calories']} ккал\n"
-                    if best_match.get('proteins') or best_match.get('fats') or best_match.get('carbs'):
+                    if best_match.get('protein') or best_match.get('fat') or best_match.get('carbohydrate') or best_match.get('proteins') or best_match.get('fats') or best_match.get('carbs'):
                         caption += f"\n🧃 БЖУ:\n"
-                        if best_match.get('proteins'):
+                        if best_match.get('protein') is not None:
+                            caption += f"• Белки: {best_match['protein']}г\n"
+                        elif best_match.get('proteins'):
                             caption += f"• Белки: {best_match['proteins']}г\n"
-                        if best_match.get('fats'):
+                        if best_match.get('fat') is not None:
+                            caption += f"• Жиры: {best_match['fat']}г\n"
+                        elif best_match.get('fats'):
                             caption += f"• Жиры: {best_match['fats']}г\n"
-                        if best_match.get('carbs'):
+                        if best_match.get('carbohydrate') is not None:
+                            caption += f"• Углеводы: {best_match['carbohydrate']}г\n"
+                        elif best_match.get('carbs'):
                             caption += f"• Углеводы: {best_match['carbs']}г\n"
                     if best_match.get('description'):
                         caption += f"\n{best_match['description']}"
@@ -2636,16 +2657,22 @@ def get_fallback_response(message: str, user_id: int) -> Dict:
         }
 
     if 'контакт' in message_lower or 'телефон' in message_lower or 'адрес' in message_lower:
+        restaurant_phone = database.get_setting('restaurant_phone', config.RESTAURANT_PHONE)
+        restaurant_address = database.get_setting('restaurant_address', config.RESTAURANT_ADDRESS)
+        restaurant_hours = database.get_setting('restaurant_hours', config.RESTAURANT_HOURS)
         return {
             'type': 'text',
-            'text': '📞 Наши контакты - всегда к вашим услугам! 🤝\n\n📍 Адрес: ул. Ландау, д. 4\n📞 Телефон: +7 (903) 748-80-80\n🕐 Часы: ежедневно 08:00-22:00\n\n💬 Или напишите оператору - ответим быстрее ветра!'
+            'text': f'📞 Наши контакты - всегда к вашим услугам! 🤝\n\n📍 Адрес: {restaurant_address}\n📞 Телефон: {restaurant_phone}\n🕐 Часы: {restaurant_hours}\n\n💬 Или напишите оператору - ответим быстрее ветра!',
+            'call_human': True
         }
 
     # Для неизвестных вопросов - перенаправляем к оператору по-русски
+    restaurant_phone = database.get_setting('restaurant_phone', config.RESTAURANT_PHONE)
     return {
         'type': 'text',
-        'text': '🤖 Извините, что-то я сегодня не в форме... Как говорится: "Не ошибается тот, кто ничего не делает!" 😅\n\n💬 Напишите оператору - он точно поможет с любым вопросом!\n\n📞 Или позвоните: +7 (903) 748-80-80',
-        'show_delivery_button': True
+        'text': f'🤖 Извините, что-то я сегодня не в форме... Как говорится: "Не ошибается тот, кто ничего не делает!" 😅\n\n💬 Напишите оператору - он точно поможет с любым вопросом!\n\n📞 Или позвоните: {restaurant_phone}',
+        'show_delivery_button': True,
+        'call_human': True
     }
 
 def get_random_delivery_dish(menu_data: Dict) -> Optional[Dict]:
