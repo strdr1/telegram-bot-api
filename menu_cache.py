@@ -1,4 +1,4 @@
-﻿"""
+"""
 menu_cache.py - ОБНОВЛЕННЫЙ
 Кэширование меню из Presto API
 """
@@ -10,6 +10,7 @@ from typing import Dict, List, Optional
 from datetime import datetime, timedelta
 import asyncio
 import pytz
+import re
 
 import config
 import database
@@ -223,8 +224,12 @@ class MenuCache:
             # Проверяем время для завтраков (ID 90)
             if menu_id == 90:
                 from datetime import time
-                if current_time > time(16, 0):  # После 16:00
-                    continue  # Пропускаем завтраки
+                now_dt = datetime.now(self.moscow_tz)
+                weekday = now_dt.weekday()
+                end_time = time(13, 0) if weekday < 5 else time(16, 0)
+                if current_time > end_time:
+                    continue
+                menu_name = re.sub(r'\s*\(.*?\)\s*', '', menu_name).strip()
 
             available_menus.append({
                 'id': menu_id,

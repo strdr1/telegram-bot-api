@@ -553,7 +553,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                 'show_category_brief': 'завтраки'
             }
 
-        second_phrases = ['а вторую', 'вторую', 'и вторую', 'а второе', 'второй', 'а второе', 'второе']
+        second_phrases = ['а вторую', 'вторую', 'и вторую', 'а второе', 'второй', 'второе', 'а другая', 'другая', 'а другую', 'другую', 'еще одну', 'ещё одну', 'еще', 'ещё']
         if any(phrase in message_lower for phrase in second_phrases) and len(message_lower.split()) <= 5:
             base_query = None
             if user_id in user_history:
@@ -572,6 +572,11 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             if base_query:
                 menu_data = load_menu_cache()
                 candidates = find_similar_dishes(menu_data, base_query)
+                if len(candidates) < 2:
+                    tokens = base_query.split()
+                    if tokens:
+                        base_token = tokens[0]
+                        candidates = find_similar_dishes(menu_data, base_token)
                 if len(candidates) >= 2 or len(candidates) == 1:
                     idx = 1 if len(candidates) >= 2 else 0
                     dish = candidates[idx]
@@ -747,7 +752,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             ]
             if not any(keyword in message_lower for keyword in explicit_keywords):
                 if user_id in user_history:
-                    recent_messages = user_history[user_id][-5:]
+                    recent_messages = user_history[user_id][-10:]
                     for msg in reversed(recent_messages):
                         content = msg.get('content', '').lower()
                         if 'пицц' in content or 'калори' in content and 'пицц' in content:
@@ -1275,7 +1280,25 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
 
         # Конвертируем сообщения в формат Polza AI (OpenAI совместимый)
         polza_messages = []
-        for msg in [{"role": "system", "content": system_prompt}] + user_history[user_id]:
+        faq_context = ""
+        try:
+            faq_list = database.get_faq()
+            if faq_list:
+                parts = []
+                parts.append("FAQ контекст (используй как знания, отвечай точно):")
+                count = 0
+                for faq_id, question, answer in faq_list:
+                    parts.append(f"• Вопрос: {question}\n• Ответ: {answer}")
+                    count += 1
+                    if count >= 30:
+                        break
+                faq_context = "\n\n".join(parts)
+        except Exception as e:
+            logger.warning(f"Ошибка получения FAQ для контекста: {e}")
+        base_messages = [{"role": "system", "content": system_prompt}]
+        if faq_context:
+            base_messages.append({"role": "system", "content": faq_context})
+        for msg in base_messages + user_history[user_id]:
             if msg["role"] == "developer":
                 # Polza AI использует system вместо developer
                 polza_messages.append({
@@ -1395,10 +1418,9 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
 
         ai_text = choice['message'].get('content', '')
         if not ai_text:
-            # Try to extract markers from reasoning field if content is empty
             reasoning = choice['message'].get('reasoning', '')
-            logger.info(f"Content empty, trying to extract from reasoning (length: {len(reasoning)})")
-            logger.info(f"Reasoning preview: {reasoning[:200]}...")
+            logger.info(f"Content empty, trying to extract from reasoning (length: {len(reasoning or '')})")
+            logger.info(f"Reasoning preview: {(reasoning or '')[:200]}...")
             if reasoning:
                 # Extract PARSE_CATEGORY markers from reasoning - more flexible pattern
                 parse_match = re.search(r'PARSE_CATEGORY:([^\s\n,]+)', reasoning, re.IGNORECASE)
@@ -2394,7 +2416,7 @@ def get_fallback_response(message: str, user_id: int) -> Dict:
     if any(phrase in message_lower for phrase in context_questions) and not any(cat in message_lower for cat in ['пицц', 'суп', 'салат', 'десерт', 'напит', 'пив', 'вин']):
         # Проверяем историю пользователя на предмет недавних упоминаний категорий
         if user_id in user_history:
-            recent_messages = user_history[user_id][-5:]  # Последние 5 сообщений
+            recent_messages = user_history[user_id][-10:]  # Последние 10 сообщений
             for msg in reversed(recent_messages):
                 content = msg.get('content', '').lower()
                 # Ищем упоминания категорий в недавней истории
