@@ -2525,6 +2525,17 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
         try:
             chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
             recent_messages = database.get_recent_chat_messages(chat_id, limit=20)  # Увеличиваем до 20 сообщений
+            
+            # Специальная реакция на приглашение "Хотите его увидеть?" — показываем фото зала
+            try:
+                for m in recent_messages:
+                    if m.get('sender') == 'bot':
+                        bot_text = m.get('message', '').lower()
+                        if 'хотите его увидеть' in bot_text or 'хотите посмотреть' in bot_text:
+                            await show_hall_photos(user.id, message.bot)
+                            return
+            except Exception:
+                pass
 
             # СПЕЦИАЛЬНАЯ ОБРАБОТКА ДЛЯ БРОНИРОВАНИЯ - проверяем сначала
             booking_context_found = False
