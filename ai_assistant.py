@@ -637,11 +637,25 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                             'show_delivery_button': True
                         }
                     else:
-                        return {
-                            'type': 'text',
-                            'text': caption,
-                            'show_delivery_button': True
-                        }
+                        local_path = dish.get('image_local_path')
+                        if not local_path and dish.get('image_filename'):
+                            try:
+                                local_path = os.path.join(config.MENU_IMAGES_DIR, dish['image_filename'])
+                            except Exception:
+                                local_path = None
+                        if local_path:
+                            return {
+                                'type': 'photo_with_text',
+                                'photo_path': local_path,
+                                'text': caption,
+                                'show_delivery_button': True
+                            }
+                        else:
+                            return {
+                                'type': 'text',
+                                'text': caption,
+                                'show_delivery_button': True
+                            }
 
         # СПЕЦИАЛЬНАЯ ОБРАБОТКА ЗАПРОСОВ О КОНКРЕТНЫХ БЛЮДАХ (ДО AI)
         # Если сообщение похоже на запрос конкретного блюда - сразу показываем фото
@@ -752,11 +766,25 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                         'show_delivery_button': True
                     }
                 else:
-                    return {
-                        'type': 'text',
-                        'text': caption,
-                        'show_delivery_button': True
-                    }
+                    local_path = found_dish.get('image_local_path')
+                    if not local_path and found_dish.get('image_filename'):
+                        try:
+                            local_path = os.path.join(config.MENU_IMAGES_DIR, found_dish['image_filename'])
+                        except Exception:
+                            local_path = None
+                    if local_path:
+                        return {
+                            'type': 'photo_with_text',
+                            'photo_path': local_path,
+                            'text': caption,
+                            'show_delivery_button': True
+                        }
+                    else:
+                        return {
+                            'type': 'text',
+                            'text': caption,
+                            'show_delivery_button': True
+                        }
             else:
                  logger.info(f"Блюдо не найдено или низкий score ({best_score} < {threshold}), передаем AI")
 
@@ -2116,7 +2144,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                                 score = len(search_name) / len(item_name) * 50  # Процент вхождения
 
                             # Обновляем лучший результат
-                            if score > best_score and item.get('image_url'):
+                            if score > best_score:
                                 best_score = score
                                 best_match = item
 
@@ -2147,12 +2175,33 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
 
                     logger.info(f"Найдено блюдо: {best_match['name']} (score: {best_score})")
                     found = True
-                    return {
-                        'type': 'photo_with_text',
-                        'photo_url': best_match['image_url'],
-                        'text': caption,
-                        'show_delivery_button': True  # Добавляем кнопку доставки для полных карточек блюд
-                    }
+                    if best_match.get('image_url'):
+                        return {
+                            'type': 'photo_with_text',
+                            'photo_url': best_match['image_url'],
+                            'text': caption,
+                            'show_delivery_button': True
+                        }
+                    else:
+                        local_path = best_match.get('image_local_path')
+                        if not local_path and best_match.get('image_filename'):
+                            try:
+                                local_path = os.path.join(config.MENU_IMAGES_DIR, best_match['image_filename'])
+                            except Exception:
+                                local_path = None
+                        if local_path:
+                            return {
+                                'type': 'photo_with_text',
+                                'photo_path': local_path,
+                                'text': caption,
+                                'show_delivery_button': True
+                            }
+                        else:
+                            return {
+                                'type': 'text',
+                                'text': caption,
+                                'show_delivery_button': True
+                            }
                 
                 if not found:
                     logger.warning(f"Блюдо '{dish_name}' не найдено в меню")
@@ -2313,11 +2362,16 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             
             if not is_breakfast_request:
                 # Показываем кнопку только для релевантных запросов
-                delivery_keywords = ['заказ', 'доставк', 'купить', 'меню', 'пицца', 'еда', 'блюда', 'пиво', 'вино', 'коктейль', 'напит']
+                delivery_keywords = ['заказ', 'доставк', 'купить', 'пицца', 'еда', 'блюда', 'пиво', 'вино', 'коктейль', 'напит']
                 booking_keywords = ['забронир', 'столик', 'бронь', 'резерв']
                 show_delivery_button = any(keyword in message_lower for keyword in delivery_keywords)
                 show_booking_options = show_booking_options or any(keyword in message_lower for keyword in booking_keywords)
 
+                # Если пользователь просит "меню" без доставки/заказа — показываем ресторанное меню
+                asks_menu = 'меню' in message_lower
+                mentions_delivery = any(keyword in message_lower for keyword in ['доставк', 'заказ', 'заказать', 'приложени', 'скачать'])
+                if asks_menu and not mentions_delivery:
+                    show_restaurant_menu = True
         # Проверяем на подтверждение возраста
         confirm_age_verification = 'CONFIRM_AGE_VERIFICATION' in ai_text
         ai_text = re.sub(r'CONFIRM_AGE_VERIFICATION', '', ai_text).strip()

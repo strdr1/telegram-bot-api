@@ -3080,14 +3080,29 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                     [types.InlineKeyboardButton(text="🤖 Google Play", url=config.APP_ANDROID)],
                     [types.InlineKeyboardButton(text="🟦 RuStore", url=config.APP_RUSTORE)]
                 ])
-                await message.answer_photo(result['photo_url'], caption=result['text'], reply_markup=keyboard, parse_mode="HTML")
+                if result.get('photo_path'):
+                    from aiogram.types import FSInputFile
+                    photo = FSInputFile(result['photo_path'])
+                    await message.answer_photo(photo, caption=result['text'], reply_markup=keyboard, parse_mode="HTML")
+                else:
+                    await message.answer_photo(result['photo_url'], caption=result['text'], reply_markup=keyboard, parse_mode="HTML")
             elif result.get('show_delivery_button', False):
                 keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
                     [types.InlineKeyboardButton(text="🚚 Заказать доставку", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))]
                 ])
-                await message.answer_photo(result['photo_url'], caption=result['text'], reply_markup=keyboard, parse_mode="HTML")
+                if result.get('photo_path'):
+                    from aiogram.types import FSInputFile
+                    photo = FSInputFile(result['photo_path'])
+                    await message.answer_photo(photo, caption=result['text'], reply_markup=keyboard, parse_mode="HTML")
+                else:
+                    await message.answer_photo(result['photo_url'], caption=result['text'], reply_markup=keyboard, parse_mode="HTML")
             else:
-                await message.answer_photo(result['photo_url'], caption=result['text'], parse_mode="HTML")
+                if result.get('photo_path'):
+                    from aiogram.types import FSInputFile
+                    photo = FSInputFile(result['photo_path'])
+                    await message.answer_photo(photo, caption=result['text'], parse_mode="HTML")
+                else:
+                    await message.answer_photo(result['photo_url'], caption=result['text'], parse_mode="HTML")
 
             # Сохраняем ответ бота
             try:
