@@ -339,11 +339,50 @@ class MenuCache:
         
         search_lower = search_text.lower()
         results = []
-        
-        # Если указано конкретное меню
+        seen_ids = set() # Чтобы не дублировать блюда
+
+        # 1. Сначала ищем в кэше доставки (menu_cache.json) - ПРИОРИТЕТ
+        # Если menu_id указан, ищем только если он в доставке. Если не указан - ищем во всей доставке.
+        delivery_menus_to_search = []
+        if menu_id:
+             # Проверяем как str, так и int
+             if str(menu_id) in self.delivery_menus_cache:
+                 delivery_menus_to_search = [str(menu_id)]
+             elif int(menu_id) in self.delivery_menus_cache: # На случай если ключи int
+                 delivery_menus_to_search = [int(menu_id)]
+        else:
+             delivery_menus_to_search = list(self.delivery_menus_cache.keys())
+
+        for m_id in delivery_menus_to_search:
+            menu_data = self.delivery_menus_cache.get(m_id)
+            if not menu_data: continue
+
+            for cat_id, cat_data in menu_data.get('categories', {}).items():
+                for dish in cat_data.get('items', []):
+                    dish_name = dish.get('name', '').lower()
+                    dish_desc = dish.get('description', '').lower()
+                    
+                    if (search_lower in dish_name or search_lower in dish_desc):
+                        dish_id = dish.get('id')
+                        if dish_id in seen_ids: continue
+                        
+                        dish_copy = dish.copy()
+                        dish_copy['category_id'] = cat_id
+                        dish_copy['category_name'] = cat_data.get('name', '')
+                        dish_copy['menu_id'] = m_id
+                        dish_copy['menu_name'] = menu_data.get('name', '')
+                        results.append(dish_copy)
+                        seen_ids.add(dish_id)
+
+        # 2. Потом ищем в общем кэше (all_menus_cache.json), пропуская уже найденные
         menus_to_search = [menu_id] if menu_id else self.all_menus_cache.keys()
         
         for m_id in menus_to_search:
+            # Пропускаем, если уже искали это меню в доставке (чтобы не дублировать логику)
+            # Но если all_menus_cache содержит более полную версию (маловероятно), то можно и посмотреть.
+            # Однако наша цель - приоритет доставки. Если мы нашли блюдо в доставке, мы его уже добавили.
+            # Если в all_menus_cache есть блюдо с таким же ID, мы его пропустим (seen_ids).
+            
             if m_id not in self.all_menus_cache:
                 continue
             
@@ -352,8 +391,9 @@ class MenuCache:
                     dish_name = dish.get('name', '').lower()
                     dish_desc = dish.get('description', '').lower()
                     
-                    if (search_lower in dish_name or 
-                        search_lower in dish_desc):
+                    if (search_lower in dish_name or search_lower in dish_desc):
+                        dish_id = dish.get('id')
+                        if dish_id in seen_ids: continue # Уже нашли в приоритетном кэше
                         
                         dish_copy = dish.copy()
                         dish_copy['category_id'] = cat_id
@@ -361,11 +401,7 @@ class MenuCache:
                         dish_copy['menu_id'] = m_id
                         dish_copy['menu_name'] = self.all_menus_cache[m_id].get('name', '')
                         results.append(dish_copy)
-        
-        # Сортируем результаты: сначала меню доставки (90, 92, 141), затем остальные
-        # menu_cache.json в приоритете!
-        delivery_ids = {90, 92, 141}
-        results.sort(key=lambda x: 0 if int(x.get('menu_id', 0)) in delivery_ids else 1)
+                        seen_ids.add(dish_id)
         
         return results
     

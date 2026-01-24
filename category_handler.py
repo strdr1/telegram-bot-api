@@ -211,7 +211,23 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
         if not found:
             # Если категория не найдена, ищем похожие
             all_categories = []
-            for menu_id, menu in menu_cache.all_menus_cache.items():
+            # Также используем приоритетный порядок поиска: delivery -> all
+            menus_to_process = []
+            processed_ids = set()
+            
+            # 1. Добавляем меню из кэша доставки
+            if menu_cache.delivery_menus_cache:
+                for m_id, m_data in menu_cache.delivery_menus_cache.items():
+                    menus_to_process.append((m_id, m_data))
+                    processed_ids.add(str(m_id))
+                    
+            # 2. Добавляем остальные меню из общего кэша
+            if menu_cache.all_menus_cache:
+                for m_id, m_data in menu_cache.all_menus_cache.items():
+                    if str(m_id) not in processed_ids:
+                        menus_to_process.append((m_id, m_data))
+
+            for menu_id, menu in menus_to_process:
                 for cat_id, category in menu.get('categories', {}).items():
                     cat_name = category.get('name', '')
                     if cat_name:
@@ -256,15 +272,23 @@ async def handle_show_category(category_name: str, user_id: int, bot):
         
         # Определяем порядок поиска: сначала меню доставки (menu_cache.json), потом остальные
         # menu_cache.json в приоритете!
-        delivery_ids = {90, 92, 141}
         
-        # Сортируем меню: сначала приоритетные (доставка), потом остальные
-        sorted_menu_items = sorted(
-            menu_cache.all_menus_cache.items(),
-            key=lambda item: 0 if int(item[0]) in delivery_ids else 1
-        )
+        menus_to_process = []
+        processed_ids = set()
+        
+        # 1. Добавляем меню из кэша доставки
+        if menu_cache.delivery_menus_cache:
+            for m_id, m_data in menu_cache.delivery_menus_cache.items():
+                menus_to_process.append((m_id, m_data))
+                processed_ids.add(str(m_id))
+                
+        # 2. Добавляем остальные меню из общего кэша
+        if menu_cache.all_menus_cache:
+            for m_id, m_data in menu_cache.all_menus_cache.items():
+                if str(m_id) not in processed_ids:
+                    menus_to_process.append((m_id, m_data))
 
-        for menu_id, menu in sorted_menu_items:
+        for menu_id, menu in menus_to_process:
             for cat_id, category in menu.get('categories', {}).items():
                 cat_name = category.get('name', '').lower().strip()
                 cat_display_name = category.get('display_name', cat_name).lower().strip()
@@ -365,7 +389,23 @@ async def handle_show_category(category_name: str, user_id: int, bot):
             if search_term.endswith('и'):
                 search_term = search_term[:-1]
             
-            for menu_id, menu in menu_cache.all_menus_cache.items():
+            # Также используем приоритетный порядок поиска: delivery -> all
+            menus_to_process = []
+            processed_ids = set()
+            
+            # 1. Добавляем меню из кэша доставки
+            if menu_cache.delivery_menus_cache:
+                for m_id, m_data in menu_cache.delivery_menus_cache.items():
+                    menus_to_process.append((m_id, m_data))
+                    processed_ids.add(str(m_id))
+                    
+            # 2. Добавляем остальные меню из общего кэша
+            if menu_cache.all_menus_cache:
+                for m_id, m_data in menu_cache.all_menus_cache.items():
+                    if str(m_id) not in processed_ids:
+                        menus_to_process.append((m_id, m_data))
+
+            for menu_id, menu in menus_to_process:
                 for cat_id, category in menu.get('categories', {}).items():
                     for item in category.get('items', []):
                         if search_term in item.get('name', '').lower():
