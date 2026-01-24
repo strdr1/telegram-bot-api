@@ -11,10 +11,6 @@ import logging
 import re
 logger = logging.getLogger(__name__)
 
-    except Exception as e:
-        logger.error(f"Критическая ошибка: {e}")
-        return get_quality_fallback_reviews_sync()
-
 def _run_selenium_sync():
     """Синхронная функция для парсинга отзывов с Яндекс Карт"""
     try:
