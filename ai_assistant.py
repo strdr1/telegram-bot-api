@@ -665,7 +665,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                             'has_image': bool(item.get('image_url'))
                         })
 
-                        if score > best_score and item.get('image_url'):
+                        if score > best_score:
                             best_score = score
                             found_dish = item
 
@@ -696,12 +696,19 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                 user_history[user_id].append({"role": "user", "content": message})
                 if len(user_history[user_id]) > 20:
                     user_history[user_id] = user_history[user_id][-20:]
-                return {
-                    'type': 'photo_with_text',
-                    'photo_url': found_dish['image_url'],
-                    'text': caption,
-                    'show_delivery_button': True
-                }
+                if found_dish.get('image_url'):
+                    return {
+                        'type': 'photo_with_text',
+                        'photo_url': found_dish['image_url'],
+                        'text': caption,
+                        'show_delivery_button': True
+                    }
+                else:
+                    return {
+                        'type': 'text',
+                        'text': caption,
+                        'show_delivery_button': True
+                    }
 
             # Если блюдо не найдено - продолжаем с AI
             logger.info(f"Блюдо '{dish_to_show}' не найдено в меню, передаем AI")
