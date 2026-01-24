@@ -394,3 +394,15 @@ def init_database():
 def get_bot_stats():
     """Получение статистики бота"""
     return database.get_stats()
+
+if __name__ == "__main__":
+    # Для тестирования на сервере
+    logging.basicConfig(level=logging.INFO)
+    print("Запуск теста парсера...")
+    try:
+        reviews = parse_yandex_reviews_sync()
+        print(f"Найдено отзывов: {len(reviews)}")
+        for r in reviews:
+            print(f"- {r.get('date', '?')} | {r.get('author', '?')}: {r.get('text', '')[:50]}...")
+    except Exception as e:
+        print(f"Ошибка при тестировании: {e}")
