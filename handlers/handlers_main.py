@@ -2844,7 +2844,7 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
             
             # Клавиатура для банкета
             keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-                [types.InlineKeyboardButton(text="✍️ Написать администратору", url=config.MANAGER_LINK)],
+                [types.InlineKeyboardButton(text="✍️ Написать администратору", callback_data="call_admin")],
                 [types.InlineKeyboardButton(text="📋 Посмотреть банкетное меню (XLS)", callback_data="show_banquet_menu_xls")]
             ])
             
