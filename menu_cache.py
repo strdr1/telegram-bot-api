@@ -120,7 +120,7 @@ class MenuCache:
             filtered_menus = {}
             
             logger.info(f"DEBUG: Filtering delivery menus. Keys: {list(self.all_menus_cache.keys())}")
-            print(f"!!! DEBUG PRINT !!! Filtering delivery menus. Keys: {list(self.all_menus_cache.keys())}")
+            print(f"!!! DEBUG PRINT !!! Filtering delivery menus. Keys: {list(self.all_menus_cache.keys())}", flush=True)
 
             for k, v in self.all_menus_cache.items():
                 try:
@@ -128,12 +128,12 @@ class MenuCache:
                     k_int = int(k)
                     if k_int in delivery_menu_ids:
                         filtered_menus[str(k)] = v
-                        print(f"!!! DEBUG PRINT !!! Found delivery menu: {k} (int: {k_int})")
+                        print(f"!!! DEBUG PRINT !!! Found delivery menu: {k} (int: {k_int})", flush=True)
                 except (ValueError, TypeError):
                     continue
             
             logger.info(f"DEBUG: Filtered keys: {list(filtered_menus.keys())}")
-            print(f"!!! DEBUG PRINT !!! Filtered keys: {list(filtered_menus.keys())}")
+            print(f"!!! DEBUG PRINT !!! Filtered keys: {list(filtered_menus.keys())}", flush=True)
             
             # Обновляем кэш в памяти
             self.delivery_menus_cache = filtered_menus
