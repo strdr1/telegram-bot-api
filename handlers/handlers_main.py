@@ -2860,6 +2860,25 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                 
             return
 
+        # Проверка запроса на показ всех категорий
+        if result.get('show_all_categories'):
+            logger.info(f"Показываем список всех категорий для пользователя {user_id}")
+            # Сначала отправляем текст ответа
+            await safe_send_message(message.bot, user_id, result['text'], parse_mode="HTML")
+            
+            # Затем показываем список категорий
+            from category_handler import handle_show_all_categories
+            await handle_show_all_categories(user_id, message.bot)
+
+            # Сохраняем в чат
+            try:
+                chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
+                database.save_chat_message(chat_id, 'bot', f'Показал список всех категорий')
+            except Exception as e:
+                logger.error(f"Ошибка сохранения в миниапп: {e}")
+
+            return
+
         # Проверяем на показ категории (краткий список)
         if result.get('show_category_brief'):
             category_name = result.get('show_category_brief')

@@ -1,4 +1,4 @@
-﻿from aiogram import Router, F, types
+from aiogram import Router, F, types
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.types import FSInputFile, BufferedInputFile, InputMediaPhoto
@@ -519,9 +519,11 @@ async def menu_delivery_handler(user_id: int, bot, state: FSMContext = None):
 
 <i>Выберите меню:</i>"""
     
-    current_time = datetime.now(MOSCOW_TZ).time()
-    if current_time > time(16, 0):
-        text += "\n⚠️ <i>Завтраки доступны только до 16:00</i>"
+    current_dt = datetime.now(MOSCOW_TZ)
+    weekday = current_dt.weekday()
+    end_time = time(13, 0) if weekday < 5 else time(16, 0)
+    if current_dt.time() > end_time:
+        pass
     
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=[])
     
@@ -741,14 +743,14 @@ async def select_menu_handler(callback: types.CallbackQuery, state: FSMContext):
         if menu_id == 90:
             current_time = datetime.now(MOSCOW_TZ).time()
             start_time = time(8, 0)
-            end_time = time(16, 0)
+            end_time = time(13, 0) if datetime.now(MOSCOW_TZ).weekday() < 5 else time(16, 0)
             
             if current_time < start_time or current_time > end_time:
-                time_message = "⏰ Завтраки доступны с 8:00 до 16:00 по московскому времени"
+                time_message = "⏰ Завтраки доступны по будням до 13:00, по выходным до 16:00"
                 if current_time < start_time:
                     time_message = f"⏰ Завтраки станут доступны в 8:00 по московскому времени"
                 else:
-                    time_message = f"⏰ Завтраки доступны только до 16:00 по московскому времени"
+                    time_message = f"⏰ Завтраки доступны по будням до 13:00, по выходным до 16:00"
                 
                 await callback.answer(f"{time_message}\n\nТекущее время: {current_time.strftime('%H:%M')}", show_alert=True)
                 return
