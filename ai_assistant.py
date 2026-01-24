@@ -617,18 +617,21 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         menu_data = load_menu_cache()
         potential_dish_name = None
 
-        if not is_dish_request and len(message.split()) <= 5:  # Короткие сообщения
-            # Проверяем, содержит ли сообщение название блюда
+        if not is_dish_request and len(message.split()) <= 5:
+            tokens = [t for t in re.split(r'[\\s\\-]+', message_lower) if len(t) > 2]
+            generic = {'пицца','суп','салат','десерт','напитки','напиток','вино','пиво','бургер','паста'}
+            specific_tokens = [t for t in tokens if t not in generic]
             for menu_id, menu in menu_data.items():
                 for category_id, category in menu.get('categories', {}).items():
                     for item in category.get('items', []):
                         item_name_lower = item['name'].lower().strip()
-                        # Проверяем точное совпадение или если сообщение является частью названия блюда
-                        if (item_name_lower == message_lower or
-                            message_lower in item_name_lower or
-                            any(word in item_name_lower for word in message_lower.split() if len(word) > 3)):
+                        if item_name_lower == message_lower or message_lower in item_name_lower:
                             potential_dish_name = item['name']
-                            logger.info(f"Обнаружен запрос блюда: '{message}' -> '{potential_dish_name}'")
+                            logger.info(f"Обнаружен точный запрос блюда: '{message}' -> '{potential_dish_name}'")
+                            break
+                        if specific_tokens and any(tok in item_name_lower for tok in specific_tokens):
+                            potential_dish_name = item['name']
+                            logger.info(f"Обнаружен запрос по специфическому токену: '{message}' -> '{potential_dish_name}'")
                             break
                     if potential_dish_name:
                         break
