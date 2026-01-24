@@ -1,4 +1,4 @@
-﻿"""
+"""
 config.py
 Конфигурация бота с настройками производительности
 """
@@ -32,6 +32,8 @@ APP_IOS = "https://apps.apple.com/ru/app/рестобар-mashkov/id6739469772"
 APP_ANDROID = "https://play.google.com/store/apps/details?id=ru.saby.clients.brand.mashkov"
 APP_RUSTORE = "https://www.rustore.ru/catalog/app/ru.saby.clients.brand.mashkov"
 TELEGRAM_CHANNEL = "https://t.me/Mashkov_rest"
+MANAGER_LINK = os.getenv("MANAGER_LINK", "https://t.me/Mashkov_rest")
+ADMIN_CHAT_ID = os.getenv("ADMIN_CHAT_ID")
 
 # Отзывы
 YANDEX_REVIEWS_URL = "https://yandex.ru/maps/org/mashkov/202266309008/reviews/"

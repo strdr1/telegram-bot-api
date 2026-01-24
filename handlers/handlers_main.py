@@ -417,6 +417,33 @@ async def process_supplier_submission(source, state: FSMContext, file_id=None, f
     await state.clear()
 
 
+@router.callback_query(F.data == "show_banquet_menu_xls")
+async def show_banquet_menu_xls_handler(callback: types.CallbackQuery):
+    """Отправка банкетного меню (XLS)"""
+    await callback.answer("📤 Отправляю меню...")
+    
+    banquet_menu_path = "files/menu/MenuBanket.xlsx"
+    
+    try:
+        if os.path.exists(banquet_menu_path):
+            with open(banquet_menu_path, 'rb') as file:
+                await callback.bot.send_document(
+                    chat_id=callback.from_user.id,
+                    document=BufferedInputFile(
+                        file.read(),
+                        filename="Menu_Banket_Mashkov_Rest.xlsx"
+                    ),
+                    caption="🎉 <b>Банкетное меню</b>\n\nСпециальное предложение для ваших мероприятий!",
+                    parse_mode="HTML"
+                )
+        else:
+            await callback.answer("❌ Файл меню не найден", show_alert=True)
+            logger.error(f"Файл банкетного меню не найден: {banquet_menu_path}")
+            
+    except Exception as e:
+        logger.error(f"Ошибка отправки банкетного меню: {e}")
+        await callback.answer("❌ Ошибка отправки файла", show_alert=True)
+
 
 # ===== START И ОСНОВНЫЕ КОМАНДЫ =====
 
@@ -2809,6 +2836,28 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
         async with typing_indicator(message.bot, user.id):
             from ai_assistant import get_ai_response
             result = await get_ai_response(message.text, user.id)
+
+        # Проверяем на показ банкетных опций
+        if result.get('show_banquet_options'):
+            from aiogram import types
+            from config import ADMIN_CHAT_ID
+            
+            # Клавиатура для банкета
+            keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+                [types.InlineKeyboardButton(text="✍️ Написать администратору", url=config.MANAGER_LINK)],
+                [types.InlineKeyboardButton(text="📋 Посмотреть банкетное меню (XLS)", callback_data="show_banquet_menu_xls")]
+            ])
+            
+            await safe_send_message(message.bot, user.id, result['text'], reply_markup=keyboard, parse_mode="HTML")
+            
+            # Сохраняем в чат
+            try:
+                chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
+                database.save_chat_message(chat_id, 'bot', f"Ответ про банкет: {result['text']}")
+            except Exception as e:
+                logger.error(f"Ошибка сохранения в миниапп: {e}")
+                
+            return
 
         # Проверяем на показ категории (краткий список)
         if result.get('show_category_brief'):
