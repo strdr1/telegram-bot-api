@@ -4,6 +4,7 @@ category_handler.py - Обработчик показа категорий бл�
 
 import logging
 import re
+import random
 from difflib import SequenceMatcher
 from menu_cache import menu_cache
 from handlers.utils import safe_send_message
@@ -279,7 +280,18 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
                     text += f"• {cat_name}\n"
                 text += "\nПопробуйте уточнить запрос."
             else:
-                text = f"Категория '{category_name}' не найдена. Попробуйте другой запрос."
+                text = f"Категория '{category_name}' не найдена."
+                
+                # Предлагаем 5 случайных категорий
+                unique_categories = sorted(list(set(all_categories)))
+                if unique_categories:
+                    count = min(5, len(unique_categories))
+                    random_cats = random.sample(unique_categories, count)
+                    text += f"\n\nВозможно, вас заинтересуют эти разделы:\n"
+                    for cat in random_cats:
+                        text += f"• {cat}\n"
+                
+                text += "\nПопробуйте другой запрос."
 
             await safe_send_message(bot, user_id, text, parse_mode="HTML")
 
@@ -539,7 +551,18 @@ async def handle_show_category(category_name: str, user_id: int, bot):
                     text += f"• {cat_name}\n"
                 text += "\nПопробуйте уточнить запрос."
             else:
-                text = f"Категория '{category_name}' не найдена. Попробуйте другой запрос."
+                text = f"Категория '{category_name}' не найдена."
+                
+                # Предлагаем 5 случайных категорий
+                unique_categories = sorted(list(set(all_categories)))
+                if unique_categories:
+                    count = min(5, len(unique_categories))
+                    random_cats = random.sample(unique_categories, count)
+                    text += f"\n\nВозможно, вас заинтересуют эти разделы:\n"
+                    for cat in random_cats:
+                        text += f"• {cat}\n"
+                
+                text += "\nПопробуйте другой запрос."
 
             await safe_send_message(bot, user_id, text, parse_mode="HTML")
 
