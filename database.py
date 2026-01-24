@@ -1,4 +1,4 @@
-﻿"""
+"""
 database.py - База данных для хранения всех данных с оптимизациями и адресами
 """
 
@@ -79,8 +79,8 @@ def get_connection() -> sqlite3.Connection:
                 isolation_level=None  # Автокоммит
             )
             # Включаем оптимизации SQLite
-            conn.execute('PRAGMA journal_mode=WAL')  # Write-Ahead Logging
-            conn.execute('PRAGMA synchronous=NORMAL')  # Баланс скорости и надежности
+            conn.execute('PRAGMA journal_mode=DELETE')
+            conn.execute('PRAGMA synchronous=NORMAL')
             conn.execute('PRAGMA cache_size=-2000')  # Кэш 2MB
             conn.execute('PRAGMA temp_store=MEMORY')  # Временные таблицы в памяти
             conn.execute('PRAGMA mmap_size=268435456')  # 256MB mmap
