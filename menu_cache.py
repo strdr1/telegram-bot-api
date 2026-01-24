@@ -127,6 +127,9 @@ class MenuCache:
                         filtered_menus[str(k)] = v
                 except (ValueError, TypeError):
                     continue
+            
+            # Обновляем кэш в памяти
+            self.delivery_menus_cache = filtered_menus
 
             cache_data = {
                 'timestamp': self.last_update.isoformat() if self.last_update else datetime.now().isoformat(),
