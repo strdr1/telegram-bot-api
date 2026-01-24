@@ -199,7 +199,9 @@ class MenuCache:
                     self.all_menus_cache = menus
                     self.last_update = datetime.now()
                     # Сохраняем оба кэша
+                    print("!!! DEBUG PRINT !!! BEFORE _save_delivery_cache", flush=True)
                     self._save_delivery_cache()
+                    print("!!! DEBUG PRINT !!! AFTER _save_delivery_cache", flush=True)
                     self._save_all_menus_cache()
 
                     logger.info(f"✅ Загружено {len(menus)} меню:")
