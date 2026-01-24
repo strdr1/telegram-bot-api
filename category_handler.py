@@ -88,11 +88,13 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
                 processed_ids.add(str(m_id))
                 
         # 2. Добавляем остальные меню из общего кэша, ТОЛЬКО если не нашли меню доставки
-        # (По требованию: салаты только из menu_cache.json)
+        # (По требованию: салаты только из menu_cache.json - строго фильтруем по ID доставки!)
         if not menus_to_process and menu_cache.all_menus_cache:
+            delivery_ids_set = {90, 92, 141}
             all_ids = sorted(list(menu_cache.all_menus_cache.keys()), key=lambda x: int(x))
             for m_id in all_ids:
-                if str(m_id) not in processed_ids:
+                # Строгая проверка: берем только меню доставки, даже из общего кэша
+                if str(m_id) not in processed_ids and int(m_id) in delivery_ids_set:
                     m_data = menu_cache.all_menus_cache[m_id]
                     menus_to_process.append((m_id, m_data))
 
@@ -316,8 +318,9 @@ async def handle_show_category(category_name: str, user_id: int, bot):
                 
         # 2. Добавляем остальные меню из общего кэша, ТОЛЬКО если не нашли меню доставки
         if not menus_to_process and menu_cache.all_menus_cache:
+            delivery_ids_set = {90, 92, 141}
             for m_id, m_data in menu_cache.all_menus_cache.items():
-                if str(m_id) not in processed_ids:
+                if str(m_id) not in processed_ids and int(m_id) in delivery_ids_set:
                     menus_to_process.append((m_id, m_data))
 
         for menu_id, menu in menus_to_process:
