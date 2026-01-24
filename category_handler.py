@@ -72,35 +72,21 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
 
         found = False
         
-        # Определяем порядок поиска: сначала меню доставки (menu_cache.json), потом остальные
-        # menu_cache.json в приоритете!
+        # Определяем порядок поиска: сначала меню доставки, потом бар
+        # Меню доставки: 90, 92, 141
+        # Барные меню: 32, 29
         
+        target_priority_ids = [90, 92, 141, 32, 29]
         menus_to_process = []
         processed_ids = set()
         
-        # 1. Добавляем меню из кэша доставки (ПРИОРИТЕТ)
-        if menu_cache.delivery_menus_cache:
-            # Сортируем ключи, чтобы порядок был предсказуемым
-            delivery_ids = sorted(list(menu_cache.delivery_menus_cache.keys()), key=lambda x: int(x))
-            for m_id in delivery_ids:
-                m_data = menu_cache.delivery_menus_cache[m_id]
+        for m_id in target_priority_ids:
+            # Ищем меню по ID (как строка или число)
+            m_data = menu_cache.all_menus_cache.get(str(m_id)) or menu_cache.all_menus_cache.get(m_id)
+            
+            if m_data and str(m_id) not in processed_ids:
                 menus_to_process.append((m_id, m_data))
                 processed_ids.add(str(m_id))
-                
-        # 2. Добавляем ТОЛЬКО меню 32 (Алкоголь) из общего кэша
-        if menu_cache.all_menus_cache:
-            # Ищем ID 32 (строка или число)
-            target_id = 32
-            target_key = None
-            if '32' in menu_cache.all_menus_cache:
-                target_key = '32'
-            elif 32 in menu_cache.all_menus_cache:
-                target_key = 32
-            
-            if target_key and str(target_id) not in processed_ids:
-                m_data = menu_cache.all_menus_cache[target_key]
-                menus_to_process.append((target_id, m_data))
-                processed_ids.add(str(target_id))
 
         for menu_id, menu in menus_to_process:
             for cat_id, category in menu.get('categories', {}).items():
@@ -115,11 +101,11 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
                     
                     # Нормализация для "горячие блюда" <-> "горячее"
                     # Если ищем "горячие блюда", а категория "горячее" -> совпадение
-                    if search_name == 'горячие блюда' and (cat_name == 'горячее' or cat_display_name == 'горячее'):
-                        is_match = True
-                    # Если ищем "горячее", а категория "горячие блюда" -> совпадение
-                    elif search_name == 'горячее' and (cat_name == 'горячие блюда' or cat_display_name == 'горячие блюда'):
-                        is_match = True
+                    if search_name in ['горячее', 'горячие блюда', 'второе', 'вторые блюда', 'основное', 'основные блюда']:
+                        # Ищем совпадение с корнями слов
+                        if any(root in cat_name for root in ['горяч', 'основн', 'втор']) or \
+                           any(root in cat_display_name for root in ['горяч', 'основн', 'втор']):
+                            is_match = True
                     else:
                         # Проверяем точное совпадение или вхождение
                         is_match = (search_name in cat_name or cat_name in search_name or
