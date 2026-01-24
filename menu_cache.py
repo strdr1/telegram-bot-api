@@ -117,7 +117,16 @@ class MenuCache:
         try:
             # Фильтруем только меню доставки
             delivery_menu_ids = {90, 92, 141}
-            filtered_menus = {k: v for k, v in self.all_menus_cache.items() if k in delivery_menu_ids}
+            filtered_menus = {}
+            
+            for k, v in self.all_menus_cache.items():
+                try:
+                    # Приводим ключ к int для проверки
+                    k_int = int(k)
+                    if k_int in delivery_menu_ids:
+                        filtered_menus[str(k)] = v
+                except (ValueError, TypeError):
+                    continue
 
             cache_data = {
                 'timestamp': self.last_update.isoformat() if self.last_update else datetime.now().isoformat(),

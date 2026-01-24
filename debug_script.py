@@ -7,13 +7,8 @@ logging.basicConfig(level=logging.INFO)
 
 async def main():
     print("Loading menus...")
-    # Загружаем кэши (они должны загрузиться автоматически при импорте, но на всякий случай)
-    # menu_cache._load_delivery_cache()
-    # menu_cache._load_all_menus_cache()
-    
-    # Если кэши пустые, пробуем load_all_menus, но с force_update=False чтобы читать с диска
-    if not menu_cache.delivery_menus_cache:
-        await menu_cache.load_all_menus(force_update=False)
+    # Force update to ensure cache is populated and saved correctly
+    await menu_cache.load_all_menus(force_update=True)
 
     print(f"DELIVERY MENUS ({len(menu_cache.delivery_menus_cache)}): {list(menu_cache.delivery_menus_cache.keys())}")
     for mid, mdata in menu_cache.delivery_menus_cache.items():
