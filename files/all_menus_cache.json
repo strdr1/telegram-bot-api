@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-01-24T01:02:41.643749",
+  "timestamp": "2026-01-24T17:31:51.224587",
   "point_id": 3596,
   "all_menus": {
     "158": {
@@ -1414,7 +1414,8 @@
               "hierarchical_id": 5672,
               "hierarchical_parent": 5664,
               "category_id": 5664,
-              "menu_id": 158
+              "menu_id": 158,
+              "image_downloaded": true
             },
             {
               "id": 2391,
@@ -1438,7 +1439,8 @@
               "hierarchical_id": 5673,
               "hierarchical_parent": 5664,
               "category_id": 5664,
-              "menu_id": 158
+              "menu_id": 158,
+              "image_downloaded": true
             }
           ],
           "image_url": null
@@ -5654,7 +5656,8 @@
               "hierarchical_id": 5602,
               "hierarchical_parent": 5584,
               "category_id": 5584,
-              "menu_id": 92
+              "menu_id": 92,
+              "image_downloaded": true
             },
             {
               "id": 2391,
@@ -5678,7 +5681,8 @@
               "hierarchical_id": 5603,
               "hierarchical_parent": 5584,
               "category_id": 5584,
-              "menu_id": 92
+              "menu_id": 92,
+              "image_downloaded": true
             }
           ],
           "image_url": null
@@ -27341,7 +27345,8 @@
               "hierarchical_id": 5445,
               "hierarchical_parent": 4228,
               "category_id": 4228,
-              "menu_id": 86
+              "menu_id": 86,
+              "image_downloaded": true
             },
             {
               "id": 2391,
@@ -27365,7 +27370,8 @@
               "hierarchical_id": 5518,
               "hierarchical_parent": 4228,
               "category_id": 4228,
-              "menu_id": 86
+              "menu_id": 86,
+              "image_downloaded": true
             }
           ],
           "image_url": null

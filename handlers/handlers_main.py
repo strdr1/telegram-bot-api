@@ -1706,17 +1706,20 @@ async def event_command(message: types.Message):
         logger.error(f"Ошибка отправки меню мероприятий по команде /event пользователю {user_id}: {e}")
 
 async def show_private_event_options_menu(user_id: int, bot):
-    """Показать опции для частных мероприятий с двумя кнопками"""
+    """Показать опции для частных мероприятий с выбором типа"""
     text = """🎉 <b>Организация частных мероприятий</b>
 
-Да, конечно! Я могу забронировать дату под ваше мероприятие, могу многое рассказать и дать ответы на большинство вопросов.
+Да, конечно! Я могу забронировать дату под ваше мероприятие.
 
-Но лучше оставьте свой номер телефона и мы вам перезвоним в ближайшее время. 
-
-Также я могу позвать человека и он ответит на ваши вопросы прямо здесь! 📞"""
+Выберите тип мероприятия, чтобы мы могли лучше подготовиться:"""
 
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-        [types.InlineKeyboardButton(text="📱 Оставить телефон", callback_data="private_event_type_selection")],
+        [types.InlineKeyboardButton(text="🎂 День рождения", callback_data="private_event_type:день_рождения")],
+        [types.InlineKeyboardButton(text="💒 Свадьба", callback_data="private_event_type:свадьба")],
+        [types.InlineKeyboardButton(text="🏢 Корпоратив", callback_data="private_event_type:корпоратив")],
+        [types.InlineKeyboardButton(text="🎊 Юбилей", callback_data="private_event_type:юбилей")],
+        [types.InlineKeyboardButton(text="🎈 Детский праздник", callback_data="private_event_type:детский_праздник")],
+        [types.InlineKeyboardButton(text="🎭 Другое мероприятие", callback_data="private_event_type:другое")],
         [types.InlineKeyboardButton(text="👨‍💼 Позвать человека", callback_data="contact_us")],
         [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
     ])
@@ -2843,10 +2846,16 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
 
         # Проверяем на показ банкетных опций
         if result.get('show_banquet_options'):
-            # Клавиатура для банкета
+            # Клавиатура для банкета - показываем все опции сразу
             keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-                [types.InlineKeyboardButton(text="✍️ Написать администратору", callback_data="chat_operator")],
-                [types.InlineKeyboardButton(text="📋 Посмотреть банкетное меню (XLS)", callback_data="show_banquet_menu_xls")]
+                [types.InlineKeyboardButton(text="🎂 День рождения", callback_data="private_event_type:день_рождения")],
+                [types.InlineKeyboardButton(text="💒 Свадьба", callback_data="private_event_type:свадьба")],
+                [types.InlineKeyboardButton(text="🏢 Корпоратив", callback_data="private_event_type:корпоратив")],
+                [types.InlineKeyboardButton(text="🎊 Юбилей", callback_data="private_event_type:юбилей")],
+                [types.InlineKeyboardButton(text="🎈 Детский праздник", callback_data="private_event_type:детский_праздник")],
+                [types.InlineKeyboardButton(text="🎭 Другое мероприятие", callback_data="private_event_type:другое")],
+                [types.InlineKeyboardButton(text="📋 Посмотреть банкетное меню (XLS)", callback_data="show_banquet_menu_xls")],
+                [types.InlineKeyboardButton(text="✍️ Написать администратору", callback_data="chat_operator")]
             ])
             
             await safe_send_message(message.bot, user.id, result['text'], reply_markup=keyboard, parse_mode="HTML")
