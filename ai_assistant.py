@@ -573,7 +573,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         # Если сообщение начинается с обращения к Маку
         is_mac_greeting = any(message_lower.startswith(greeting) for greeting in mac_greetings) or message_lower in mac_greetings
 
-        if any(word in message_lower for word in ['завтрак', 'завтраки', 'breakfast']):
+        if message_lower in ['завтрак', 'завтраки', 'меню завтраков', 'меню завтрак', 'завтраки меню']:
             return {
                 'type': 'text',
                 'text': '🍳 У нас есть отличные завтраки!',
