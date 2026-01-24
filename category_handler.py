@@ -267,7 +267,6 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
                         all_categories.append(cat_name)
 
             # Ищем наиболее похожие категории
-            from difflib import SequenceMatcher
             similar = []
             for cat in all_categories:
                 ratio = SequenceMatcher(None, category_name.lower(), cat.lower()).ratio()
