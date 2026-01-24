@@ -40,6 +40,12 @@ class MenuCache:
         # Загружаем кэши при инициализации
         self._load_delivery_cache()
         self._load_all_menus_cache()
+        
+        # ВАЖНО: Объединяем кэши в памяти, чтобы all_menus_cache содержал 
+        # и меню доставки (90, 92, 141), и барные меню (32, 29)
+        if self.delivery_menus_cache:
+            self.all_menus_cache.update(self.delivery_menus_cache)
+            logger.info(f"✅ Кэши объединены. Всего меню в памяти: {len(self.all_menus_cache)}")
     
     def _load_point_id_from_db(self):
         """Загрузка ID точки продаж из базы данных"""
@@ -148,18 +154,30 @@ class MenuCache:
             return False
 
     def _save_all_menus_cache(self):
-        """Сохранение кэша всех меню в файл"""
+        """Сохранение кэша доп. меню (бар/алкоголь) в файл all_menus_cache.json"""
         try:
+            # Фильтруем: оставляем только 32 и 29
+            allowed_ids = {32, 29}
+            filtered_menus = {}
+            
+            for k, v in self.all_menus_cache.items():
+                try:
+                    k_int = int(k)
+                    if k_int in allowed_ids:
+                        filtered_menus[str(k)] = v
+                except (ValueError, TypeError):
+                    continue
+
             cache_data = {
                 'timestamp': self.last_update.isoformat() if self.last_update else datetime.now().isoformat(),
                 'point_id': presto_api.point_id,
-                'all_menus': self.all_menus_cache
+                'all_menus': filtered_menus
             }
 
             with open(self.all_menus_cache_file, 'w', encoding='utf-8') as f:
                 json.dump(cache_data, f, ensure_ascii=False, indent=2)
 
-            logger.info(f"✅ Все меню сохранены в кэш ({len(self.all_menus_cache)} меню)")
+            logger.info(f"✅ Доп. меню (32, 29) сохранены в кэш ({len(filtered_menus)} меню)")
             return True
 
         except Exception as e:
@@ -189,21 +207,31 @@ class MenuCache:
                 menus = await presto_api.get_all_menus()
 
                 if menus:
-                    self.all_menus_cache = menus
+                    # Оставляем только нужные меню в памяти (доставка + бар)
+                    # Доставка: 90, 92, 141
+                    # Бар: 32, 29
+                    allowed_ids = {90, 92, 141, 32, 29}
+                    filtered_menus = {}
+                    for k, v in menus.items():
+                        try:
+                            if int(k) in allowed_ids:
+                                filtered_menus[str(k)] = v
+                        except: continue
+
+                    self.all_menus_cache = filtered_menus
                     self.last_update = datetime.now()
-                    # Сохраняем оба кэша
-                    print("!!! DEBUG PRINT !!! BEFORE _save_delivery_cache", flush=True)
+                    
+                    # Сохраняем кэши (каждый метод сам возьмет что ему нужно из self.all_menus_cache)
                     self._save_delivery_cache()
-                    print("!!! DEBUG PRINT !!! AFTER _save_delivery_cache", flush=True)
                     self._save_all_menus_cache()
 
-                    logger.info(f"✅ Загружено {len(menus)} меню:")
-                    for menu_id, menu_data in menus.items():
+                    logger.info(f"✅ Загружено {len(filtered_menus)} меню (фильтр):")
+                    for menu_id, menu_data in filtered_menus.items():
                         categories_count = len(menu_data.get('categories', {}))
                         total_items = sum(len(cat['items']) for cat in menu_data.get('categories', {}).values())
                         logger.info(f"   • {menu_data['name']}: {categories_count} категорий, {total_items} товаров")
 
-                    return menus
+                    return filtered_menus
                 else:
                     logger.warning("⚠️ Не удалось загрузить меню из API")
                     # Возвращаем старый кэш если есть
