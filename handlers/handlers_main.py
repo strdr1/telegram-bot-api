@@ -2638,7 +2638,7 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
         return
 
     # Команды доставки
-    delivery_keywords = ['доставка', 'заказать', 'меню', 'еда', 'блюда', 'доставить', 'можно заказать']
+    delivery_keywords = ['доставка', 'заказать', 'еда', 'блюда', 'доставить', 'можно заказать']
     if any(keyword in text for keyword in delivery_keywords):
         text = """🚚 <b>Заказать доставку</b>
 
@@ -2843,9 +2843,6 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
 
         # Проверяем на показ банкетных опций
         if result.get('show_banquet_options'):
-            from aiogram import types
-            from config import ADMIN_CHAT_ID
-            
             # Клавиатура для банкета
             keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
                 [types.InlineKeyboardButton(text="✍️ Написать администратору", callback_data="chat_operator")],
