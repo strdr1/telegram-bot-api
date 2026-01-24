@@ -243,7 +243,7 @@ async def gen_image(character_name: str, user_id: int = 0, admin_prompt: str = "
                     # Запрашиваем у AI определение типа персонажа
                     character_analysis_url = "https://api.polza.ai/api/v1/chat/completions"
                     character_analysis_data = {
-                        "model": "openai/gpt-5-nano",
+                        "model": "google/gemini-2.5-flash-lite",
                         "messages": [
                             {
                                 "role": "system",
@@ -1367,7 +1367,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                 })
 
         data = {
-            "model": "openai/gpt-5-nano",
+            "model": "google/gemini-2.5-flash-lite",
             "messages": polza_messages,
             "stream": False,  # Отключаем streaming для простоты
             "max_tokens": 2000,  # Ограничиваем длину ответа

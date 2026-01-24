@@ -1,4 +1,4 @@
-﻿"""
+"""
 handlers_main.py
 Основные обработчики и остальные функции
 """
@@ -3010,52 +3010,17 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
             if result.get('call_human', False) and not is_operator_chat(user.id):
                 logger.info(f"Маркер CALL_HUMAN обнаружен для пользователя {user.id}")
                 logger.info("Создаю кнопки для CALL_HUMAN")
-                # Включаем режим чата для пользователя (час по умолчанию)
-                set_operator_chat(user.id, True, ttl=3600)
-
-                # Уведомляем админов индивидуально и сохраняем ID уведомлений
-                async def notify_admins():
-                    try:
-                        admins = database.get_all_admins()
-                        notifications = {}
-                        notify_text = f"🔔 <b>Новый запрос:</b> Пользователь {message.from_user.full_name or user.id} (ID: {user.id}).\nОтвет: /reply_{user.id}  |  Завершить: /stop_chat_{user.id}"
-                        for admin_id in admins:
-                            try:
-                                sent = await safe_send_message(message.bot, admin_id, notify_text, parse_mode='HTML')
-                                if sent:
-                                    notifications[admin_id] = sent.message_id
-                            except Exception as e:
-                                logger.debug(f"Не удалось отправить уведомление админу {admin_id}: {e}")
-                        if notifications:
-                            set_operator_notifications(user.id, notifications)
-                    except Exception as e:
-                        logger.debug(f"Ошибка уведомления админов: {e}")
-
-                asyncio.create_task(notify_admins())
-
-                # Создаем кнопку для чата с оператором
                 keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
                     [types.InlineKeyboardButton(text="💬 Написать оператору", callback_data="chat_operator")],
                     [types.InlineKeyboardButton(text="📞 Позвонить", callback_data="call_us")],
                     [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
                 ])
-
-                # Отправляем ответ пользователю с кнопкой
                 await safe_send_message(message.bot, user.id, result['text'], reply_markup=keyboard)
-
-                # Подтверждаем пользователю, что оператор оповещён
-                try:
-                    await safe_send_message(message.bot, user.id, "✅ Оператор оповещён — напишите ваш вопрос, мы свяжемся с вами как можно скорее.")
-                except Exception:
-                    pass
-
-                # Сохраняем в чат
                 try:
                     chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
                     database.save_chat_message(chat_id, 'bot', result['text'])
                 except Exception as e:
                     logger.error(f"Ошибка сохранения в миниапп: {e}")
-
                 return
 
             # Проверяем нужны ли кнопки с приложениями

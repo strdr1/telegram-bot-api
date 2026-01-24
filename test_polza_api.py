@@ -15,7 +15,7 @@ def test_polza_api():
     }
     
     data = {
-        "model": "mistralai/mistral-small-3.2-24b-instruct",
+        "model": "google/gemini-2.5-flash-lite",
         "messages": [
             {"role": "user", "content": "Привет"}
         ],
