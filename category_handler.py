@@ -326,9 +326,15 @@ async def handle_show_category(category_name: str, user_id: int, bot):
                 cat_display_name = category.get('display_name', cat_name).lower().strip()
                 search_name = category_name.lower().strip()
 
-                # Проверяем точное совпадение или вхождение
-                is_match = (search_name in cat_name or cat_name in search_name or
-                            search_name in cat_display_name or cat_display_name in search_name)
+                # Нормализация для "горячие блюда" <-> "горячее"
+                if search_name == 'горячие блюда' and (cat_name == 'горячее' or cat_display_name == 'горячее'):
+                    is_match = True
+                elif search_name == 'горячее' and (cat_name == 'горячие блюда' or cat_display_name == 'горячие блюда'):
+                    is_match = True
+                else:
+                    # Проверяем точное совпадение или вхождение
+                    is_match = (search_name in cat_name or cat_name in search_name or
+                                search_name in cat_display_name or cat_display_name in search_name)
                 
                 # Если нет точного совпадения, пробуем нечеткое
                 if not is_match:
