@@ -21,20 +21,46 @@ logger = logging.getLogger(__name__)
 # История сообщений пользователей
 user_history: Dict[int, List[Dict]] = {}
 
+def _normalize_text(s: str) -> str:
+    s = s.lower().strip()
+    s = re.sub(r'[–—-]+', ' ', s)
+    s = re.sub(r'[\"\'“”„«»]', '', s)
+    s = re.sub(r'\s+', ' ', s)
+    s = s.replace('четыре', '4')
+    s = s.replace('пять', '5')
+    s = s.replace('шесть', '6')
+    s = s.replace('семь', '7')
+    s = s.replace('восемь', '8')
+    s = s.replace('девять', '9')
+    s = s.replace('десять', '10')
+    s = s.strip()
+    return s
+
+def _specific_tokens(s: str) -> List[str]:
+    s = _normalize_text(s)
+    tokens = [t for t in re.split(r'[\s\-]+', s) if t]
+    stop = {'пицца','суп','салат','десерт','напиток','напитки','вино','пиво','бургер','паста','и','в','на','про','что','какой','какая','какие','есть'}
+    return [t for t in tokens if t not in stop and len(t) > 1]
+
 def find_similar_dishes(menu_data: Dict, query: str) -> List[Dict]:
     results = []
-    search_name = query.lower().strip()
+    q_norm = _normalize_text(query)
+    q_tokens = _specific_tokens(query)
     for menu_id, menu in menu_data.items():
         for category_id, category in menu.get('categories', {}).items():
             for item in category.get('items', []):
-                item_name = item['name'].lower().strip()
+                name = item.get('name', '')
+                n_norm = _normalize_text(name)
+                n_tokens = _specific_tokens(name)
                 score = 0
-                if item_name == search_name:
-                    score = 100
-                elif item_name.startswith(search_name):
-                    score = 90
-                elif search_name in item_name:
-                    score = len(search_name) / len(item_name) * 50
+                if n_norm == q_norm:
+                    score = 1000
+                elif q_norm and (n_norm.startswith(q_norm) or q_norm in n_norm or n_norm in q_norm):
+                    score = 900
+                else:
+                    inter = set(q_tokens) & set(n_tokens)
+                    if inter:
+                        score = 100 + 50 * len(inter)
                 if score > 0:
                     results.append((item, score))
     results.sort(key=lambda x: x[1], reverse=True)
@@ -651,16 +677,21 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             for menu_id, menu in menu_data.items():
                 for category_id, category in menu.get('categories', {}).items():
                     for item in category.get('items', []):
-                        item_name = item['name'].lower().strip()
-                        search_name = dish_to_show.lower().strip()
+                        item_name = item.get('name', '')
+                        item_norm = _normalize_text(item_name)
+                        search_norm = _normalize_text(dish_to_show)
+                        q_tokens = _specific_tokens(dish_to_show)
+                        n_tokens = _specific_tokens(item_name)
 
                         score = 0
-                        if item_name == search_name:
-                            score = 100
-                        elif item_name.startswith(search_name):
-                            score = 90
-                        elif search_name in item_name:
-                            score = len(search_name) / len(item_name) * 50
+                        if item_norm == search_norm:
+                            score = 1000
+                        elif search_norm and (item_norm.startswith(search_norm) or search_norm in item_norm or item_norm in search_norm):
+                            score = 900
+                        else:
+                            inter = set(q_tokens) & set(n_tokens)
+                            if inter:
+                                score = 100 + 50 * len(inter)
 
                         search_results.append({
                             'name': item['name'],
