@@ -119,19 +119,14 @@ class MenuCache:
             delivery_menu_ids = {90, 92, 141}
             filtered_menus = {}
             
-            logger.error(f"DEBUG: Filtering delivery menus. Keys: {list(self.all_menus_cache.keys())} Types: {[type(k) for k in self.all_menus_cache.keys()]}")
-
             for k, v in self.all_menus_cache.items():
                 try:
                     # Приводим ключ к int для проверки
                     k_int = int(k)
                     if k_int in delivery_menu_ids:
                         filtered_menus[str(k)] = v
-                        logger.error(f"DEBUG: Found delivery menu: {k} (int: {k_int})")
                 except (ValueError, TypeError):
                     continue
-            
-            logger.error(f"DEBUG: Filtered keys: {list(filtered_menus.keys())}")
             
             # Обновляем кэш в памяти
             self.delivery_menus_cache = filtered_menus
