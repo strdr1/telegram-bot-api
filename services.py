@@ -1,4 +1,4 @@
-﻿"""
+"""
 services.py
 Сервисы: парсинг отзывов с Яндекс Карт (только для админки)
 """
@@ -11,34 +11,6 @@ import logging
 import re
 logger = logging.getLogger(__name__)
 
-def parse_yandex_reviews_sync():
-    """Синхронный парсинг отзывов с Яндекс Карт"""
-    try:
-        logger.info("Запускаем парсинг отзывов с Яндекс Карт...")
-        
-        # Проверяем доступность Selenium
-        try:
-            from selenium import webdriver
-            from selenium.webdriver.chrome.service import Service
-            from selenium.webdriver.chrome.options import Options
-            from selenium.webdriver.common.by import By
-            from webdriver_manager.chrome import ChromeDriverManager
-            import time
-            logger.info("Selenium доступен, начинаем парсинг...")
-        except ImportError as e:
-            logger.warning(f"Selenium не установлен: {e}")
-            return get_quality_fallback_reviews_sync()
-        
-        # Запускаем парсинг
-        reviews = _run_selenium_sync()
-        
-        if len(reviews) < 2:
-            logger.warning(f"Найдено только {len(reviews)} отзывов, используем тестовые")
-            return get_quality_fallback_reviews_sync()
-        
-        logger.info(f"Успешно спарсено {len(reviews)} отзывов")
-        return reviews[:3]  # Возвращаем до 3 отзывов
-        
     except Exception as e:
         logger.error(f"Критическая ошибка: {e}")
         return get_quality_fallback_reviews_sync()
