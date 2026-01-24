@@ -79,11 +79,30 @@ def get_connection() -> sqlite3.Connection:
                 isolation_level=None  # Автокоммит
             )
             # Включаем оптимизации SQLite
-            conn.execute('PRAGMA journal_mode=DELETE')
-            conn.execute('PRAGMA synchronous=NORMAL')
-            conn.execute('PRAGMA cache_size=-2000')  # Кэш 2MB
-            conn.execute('PRAGMA temp_store=MEMORY')  # Временные таблицы в памяти
-            conn.execute('PRAGMA mmap_size=268435456')  # 256MB mmap
+            try:
+                conn.execute('PRAGMA journal_mode=DELETE')
+            except sqlite3.OperationalError as e:
+                logger.warning(f"SQLite PRAGMA journal_mode=DELETE failed: {e}")
+                try:
+                    conn.execute('PRAGMA journal_mode=WAL')
+                except sqlite3.OperationalError as e2:
+                    logger.warning(f"SQLite PRAGMA journal_mode=WAL failed: {e2}")
+            try:
+                conn.execute('PRAGMA synchronous=NORMAL')
+            except sqlite3.OperationalError as e:
+                logger.debug(f"SQLite PRAGMA synchronous failed: {e}")
+            try:
+                conn.execute('PRAGMA cache_size=-2000')  # Кэш 2MB
+            except sqlite3.OperationalError as e:
+                logger.debug(f"SQLite PRAGMA cache_size failed: {e}")
+            try:
+                conn.execute('PRAGMA temp_store=MEMORY')  # Временные таблицы в памяти
+            except sqlite3.OperationalError as e:
+                logger.debug(f"SQLite PRAGMA temp_store failed: {e}")
+            try:
+                conn.execute('PRAGMA mmap_size=268435456')  # 256MB mmap
+            except sqlite3.OperationalError as e:
+                logger.debug(f"SQLite PRAGMA mmap_size failed: {e}")
             conn.row_factory = sqlite3.Row
             _connection_pool[thread_id] = conn
         
