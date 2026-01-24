@@ -87,16 +87,20 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
                 menus_to_process.append((m_id, m_data))
                 processed_ids.add(str(m_id))
                 
-        # 2. Добавляем остальные меню из общего кэша, ТОЛЬКО если не нашли меню доставки
-        # (По требованию: салаты только из menu_cache.json - строго фильтруем по ID доставки!)
-        if not menus_to_process and menu_cache.all_menus_cache:
-            delivery_ids_set = {90, 92, 141}
-            all_ids = sorted(list(menu_cache.all_menus_cache.keys()), key=lambda x: int(x))
-            for m_id in all_ids:
-                # Строгая проверка: берем только меню доставки, даже из общего кэша
-                if str(m_id) not in processed_ids and int(m_id) in delivery_ids_set:
-                    m_data = menu_cache.all_menus_cache[m_id]
-                    menus_to_process.append((m_id, m_data))
+        # 2. Добавляем ТОЛЬКО меню 32 (Алкоголь) из общего кэша
+        if menu_cache.all_menus_cache:
+            # Ищем ID 32 (строка или число)
+            target_id = 32
+            target_key = None
+            if '32' in menu_cache.all_menus_cache:
+                target_key = '32'
+            elif 32 in menu_cache.all_menus_cache:
+                target_key = 32
+            
+            if target_key and str(target_id) not in processed_ids:
+                m_data = menu_cache.all_menus_cache[target_key]
+                menus_to_process.append((target_id, m_data))
+                processed_ids.add(str(target_id))
 
         for menu_id, menu in menus_to_process:
             for cat_id, category in menu.get('categories', {}).items():
