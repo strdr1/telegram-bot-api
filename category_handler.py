@@ -100,29 +100,34 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
 
         for menu_id, menu in menus_to_process:
             for cat_id, category in menu.get('categories', {}).items():
-                cat_name = category.get('name', '').lower().strip()
-                cat_display_name = category.get('display_name', cat_name).lower().strip()
-                search_name = category_name.lower().strip()
-                
-                # Нормализация для "горячие блюда" <-> "горячее"
-                # Если ищем "горячие блюда", а категория "горячее" -> совпадение
-                if search_name == 'горячие блюда' and (cat_name == 'горячее' or cat_display_name == 'горячее'):
-                    is_match = True
-                # Если ищем "горячее", а категория "горячие блюда" -> совпадение
-                elif search_name == 'горячее' and (cat_name == 'горячие блюда' or cat_display_name == 'горячие блюда'):
+                # Проверка по ID (строгое совпадение)
+                if str(cat_id) == str(category_name):
                     is_match = True
                 else:
-                    # Проверяем точное совпадение или вхождение
-                    is_match = (search_name in cat_name or cat_name in search_name or
-                                search_name in cat_display_name or cat_display_name in search_name)
-                
-                # Если нет точного совпадения, пробуем нечеткое
-                if not is_match:
-                    ratio_name = SequenceMatcher(None, search_name, cat_name).ratio()
-                    ratio_display = SequenceMatcher(None, search_name, cat_display_name).ratio()
-                    if ratio_name > 0.8 or ratio_display > 0.8:
+                    # Проверка по имени (если ID не совпал)
+                    cat_name = category.get('name', '').lower().strip()
+                    cat_display_name = category.get('display_name', cat_name).lower().strip()
+                    search_name = str(category_name).lower().strip()
+                    
+                    # Нормализация для "горячие блюда" <-> "горячее"
+                    # Если ищем "горячие блюда", а категория "горячее" -> совпадение
+                    if search_name == 'горячие блюда' and (cat_name == 'горячее' or cat_display_name == 'горячее'):
                         is_match = True
-                        logger.info(f"Нечеткое совпадение категории: '{search_name}' ~ '{cat_name}' (ratio: {max(ratio_name, ratio_display):.2f})")
+                    # Если ищем "горячее", а категория "горячие блюда" -> совпадение
+                    elif search_name == 'горячее' and (cat_name == 'горячие блюда' or cat_display_name == 'горячие блюда'):
+                        is_match = True
+                    else:
+                        # Проверяем точное совпадение или вхождение
+                        is_match = (search_name in cat_name or cat_name in search_name or
+                                    search_name in cat_display_name or cat_display_name in search_name)
+                    
+                    # Если нет точного совпадения, пробуем нечеткое
+                    if not is_match:
+                        ratio_name = SequenceMatcher(None, search_name, cat_name).ratio()
+                        ratio_display = SequenceMatcher(None, search_name, cat_display_name).ratio()
+                        if ratio_name > 0.8 or ratio_display > 0.8:
+                            is_match = True
+                            logger.info(f"Нечеткое совпадение категории: '{search_name}' ~ '{cat_name}' (ratio: {max(ratio_name, ratio_display):.2f})")
 
                 if is_match:
                     # Получаем все блюда категории
