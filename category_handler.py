@@ -4,6 +4,7 @@ category_handler.py - Обработчик показа категорий бл�
 
 import logging
 import re
+from difflib import SequenceMatcher
 from menu_cache import menu_cache
 from handlers.utils import safe_send_message
 from aiogram.types import BufferedInputFile
@@ -72,24 +73,55 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
         found = False
         
         # Определяем порядок поиска: сначала меню доставки (menu_cache.json), потом остальные
-        # menu_cache.json в приоритете, если там нет, то в all_menu_cache идет!
-        delivery_ids = {90, 92, 141}
+        # menu_cache.json в приоритете!
         
-        # Сортируем меню: сначала приоритетные (доставка), потом остальные
-        sorted_menu_items = sorted(
-            menu_cache.all_menus_cache.items(),
-            key=lambda item: 0 if int(item[0]) in delivery_ids else 1
-        )
+        menus_to_process = []
+        processed_ids = set()
+        
+        # 1. Добавляем меню из кэша доставки (ПРИОРИТЕТ)
+        if menu_cache.delivery_menus_cache:
+            # Сортируем ключи, чтобы порядок был предсказуемым
+            delivery_ids = sorted(list(menu_cache.delivery_menus_cache.keys()), key=lambda x: int(x))
+            for m_id in delivery_ids:
+                m_data = menu_cache.delivery_menus_cache[m_id]
+                menus_to_process.append((m_id, m_data))
+                processed_ids.add(str(m_id))
+                
+        # 2. Добавляем остальные меню из общего кэша
+        if menu_cache.all_menus_cache:
+            all_ids = sorted(list(menu_cache.all_menus_cache.keys()), key=lambda x: int(x))
+            for m_id in all_ids:
+                if str(m_id) not in processed_ids:
+                    m_data = menu_cache.all_menus_cache[m_id]
+                    menus_to_process.append((m_id, m_data))
 
-        for menu_id, menu in sorted_menu_items:
+        for menu_id, menu in menus_to_process:
             for cat_id, category in menu.get('categories', {}).items():
                 cat_name = category.get('name', '').lower().strip()
                 cat_display_name = category.get('display_name', cat_name).lower().strip()
                 search_name = category_name.lower().strip()
+                
+                # Нормализация для "горячие блюда" <-> "горячее"
+                # Если ищем "горячие блюда", а категория "горячее" -> совпадение
+                if search_name == 'горячие блюда' and (cat_name == 'горячее' or cat_display_name == 'горячее'):
+                    is_match = True
+                # Если ищем "горячее", а категория "горячие блюда" -> совпадение
+                elif search_name == 'горячее' and (cat_name == 'горячие блюда' or cat_display_name == 'горячие блюда'):
+                    is_match = True
+                else:
+                    # Проверяем точное совпадение или вхождение
+                    is_match = (search_name in cat_name or cat_name in search_name or
+                                search_name in cat_display_name or cat_display_name in search_name)
+                
+                # Если нет точного совпадения, пробуем нечеткое
+                if not is_match:
+                    ratio_name = SequenceMatcher(None, search_name, cat_name).ratio()
+                    ratio_display = SequenceMatcher(None, search_name, cat_display_name).ratio()
+                    if ratio_name > 0.8 or ratio_display > 0.8:
+                        is_match = True
+                        logger.info(f"Нечеткое совпадение категории: '{search_name}' ~ '{cat_name}' (ratio: {max(ratio_name, ratio_display):.2f})")
 
-                # Проверяем точное совпадение или вхождение
-                if (search_name in cat_name or cat_name in search_name or
-                    search_name in cat_display_name or cat_display_name in search_name):
+                if is_match:
                     # Получаем все блюда категории
                     items = category.get('items', [])
                     if not items:
@@ -295,8 +327,18 @@ async def handle_show_category(category_name: str, user_id: int, bot):
                 search_name = category_name.lower().strip()
 
                 # Проверяем точное совпадение или вхождение
-                if (search_name in cat_name or cat_name in search_name or
-                    search_name in cat_display_name or cat_display_name in search_name):
+                is_match = (search_name in cat_name or cat_name in search_name or
+                            search_name in cat_display_name or cat_display_name in search_name)
+                
+                # Если нет точного совпадения, пробуем нечеткое
+                if not is_match:
+                    ratio_name = SequenceMatcher(None, search_name, cat_name).ratio()
+                    ratio_display = SequenceMatcher(None, search_name, cat_display_name).ratio()
+                    if ratio_name > 0.8 or ratio_display > 0.8:
+                        is_match = True
+                        logger.info(f"Нечеткое совпадение категории (подробно): '{search_name}' ~ '{cat_name}' (ratio: {max(ratio_name, ratio_display):.2f})")
+
+                if is_match:
                     # Получаем все блюда категории
                     items = category.get('items', [])
                     if not items:

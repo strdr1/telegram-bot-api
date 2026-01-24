@@ -79,24 +79,42 @@ def refresh_token() -> str:
     return polza_token
 
 def load_menu_cache() -> Dict:
-    """Загрузка кэша всех меню для AI"""
+    """Загрузка кэша всех меню для AI с приоритетом доставки"""
     try:
-        # Сначала пробуем загрузить all_menus_cache.json
-        cache_file = 'files/all_menus_cache.json'
-        if os.path.exists(cache_file):
-            with open(cache_file, 'r', encoding='utf-8') as f:
-                cache_data = json.load(f)
-                # Возвращаем только all_menus часть
-                return cache_data.get('all_menus', {})
+        all_menus = {}
+        
+        # 1. Сначала загружаем меню доставки (menu_cache.json) - ЭТО ПРИОРИТЕТ
+        delivery_cache_file = 'files/menu_cache.json'
+        if os.path.exists(delivery_cache_file):
+            try:
+                with open(delivery_cache_file, 'r', encoding='utf-8') as f:
+                    delivery_data = json.load(f)
+                    delivery_menus = delivery_data.get('all_menus', {})
+                    if delivery_menus:
+                        all_menus.update(delivery_menus)
+                        logger.info(f"AI: Загружено {len(delivery_menus)} меню из кэша доставки")
+            except Exception as e:
+                logger.error(f"AI: Ошибка загрузки menu_cache.json: {e}")
 
-        # Fallback на старый файл menu_cache.json
-        old_cache_file = 'files/menu_cache.json'
-        if os.path.exists(old_cache_file):
-            with open(old_cache_file, 'r', encoding='utf-8') as f:
-                cache_data = json.load(f)
-                return cache_data.get('all_menus', {})
+        # 2. Затем загружаем общий кэш (all_menus_cache.json) и добавляем то, чего нет
+        all_cache_file = 'files/all_menus_cache.json'
+        if os.path.exists(all_cache_file):
+            try:
+                with open(all_cache_file, 'r', encoding='utf-8') as f:
+                    all_data = json.load(f)
+                    other_menus = all_data.get('all_menus', {})
+                    
+                    # Добавляем только те меню, которых еще нет (или обновляем существующие, если в общем кэше полнее? 
+                    # Нет, пользователь просил приоритет menu_cache.json, значит не перезаписываем)
+                    for m_id, m_data in other_menus.items():
+                        if m_id not in all_menus:
+                            all_menus[m_id] = m_data
+                            
+                    logger.info(f"AI: Догружено из общего кэша. Всего меню: {len(all_menus)}")
+            except Exception as e:
+                logger.error(f"AI: Ошибка загрузки all_menus_cache.json: {e}")
 
-        return {}
+        return all_menus
     except Exception as e:
         logger.error(f"Ошибка загрузки кэша меню для AI: {e}")
         return {}
@@ -1055,7 +1073,18 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             user_history[user_id] = user_history[user_id][-20:]
             logger.info(f"История обрезана до 20 сообщений")
 
-        # 5. Формируем системный промпт
+        # 5. Формируем список всех категорий для промпта
+        all_categories_list = set()
+        for menu_id in delivery_menu_ids:
+            if menu_id in menu_data:
+                for cat in menu_data[menu_id].get('categories', {}).values():
+                    cat_name = cat.get('name', '').strip()
+                    if cat_name:
+                        all_categories_list.add(cat_name)
+        
+        categories_str = ", ".join(sorted(all_categories_list))
+
+        # 6. Формируем системный промпт
         system_prompt = (
             f"Ты Мак — русский AI-помощник бота ресторана Mashkov. Твое имя «Мак» — это сокращение от «Машков».\n"
             f"Ты знаешь русскую культуру, сказки, историю, традиции.\n"
@@ -1066,6 +1095,8 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             f"Скажи вежливо и с юмором, что ты разбираешься только в еде и праздниках, и предложи спросить что-то про меню или ресторан.\n"
             f"ПРИМЕР ОТКАЗА: 'Ой, ну какой из меня программист! Я лучше по котлеткам да по борщам спец. 😄 Давайте лучше расскажу, что у нас сегодня вкусного в меню?'\n"
             f"НИКОГДА не поддерживай ролевые игры, уводящие от темы ресторана (например 'представь что ты врач'). Ты ВСЕГДА Мак из ресторана Mashkov.\n\n"
+            f"ДОСТУПНЫЕ КАТЕГОРИИ МЕНЮ: {categories_str}\n"
+            f"ВАЖНО: Если спрашивают 'Горячие блюда', имей в виду, что это категория 'Горячее'.\n\n"
             f"Знаешь русские сказки (Колобок, Репка, Курочка Ряба, Иван-царевич, Баба-яга, Кощей Бессмертный), "
             f"былины (Илья Муромец, Добрыня Никитич, Алёша Попович), русскую литературу (Пушкин, Толстой, Достоевский), "
             f"советские фильмы и мультфильмы (Ну погоди, Винни-Пух, Крокодил Гена, Чебурашка).\n\n"
