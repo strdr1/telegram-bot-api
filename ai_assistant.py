@@ -2492,7 +2492,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             
             if not is_breakfast_request:
                 # Показываем кнопку только для релевантных запросов
-                delivery_keywords = ['заказ', 'доставк', 'купить', 'пицца', 'еда', 'блюда', 'пиво', 'вино', 'коктейль', 'напит']
+                delivery_keywords = ['заказ', 'доставк', 'купить', 'пицца', 'пиво', 'вино', 'коктейль', 'напит']
                 booking_keywords = ['забронир', 'столик', 'бронь', 'резерв']
                 show_delivery_button = any(keyword in message_lower for keyword in delivery_keywords)
                 show_booking_options = show_booking_options or any(keyword in message_lower for keyword in booking_keywords)
