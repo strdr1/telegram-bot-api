@@ -2706,6 +2706,25 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
         return
 
     # Проверяем на прямые команды бронирования ПЕРЕД отправкой в AI
+    # Сначала проверяем на банкеты/мероприятия (ПРЯМОЙ ПЕРЕХВАТ)
+    banquet_keywords = [
+        'банкет', 'свадьба', 'корпоратив', 'день рождения', 'юбилей', 
+        'праздник', 'мероприятие', 'отметить', 'праздновать', 'др'
+    ]
+    if any(keyword in text for keyword in banquet_keywords) and len(text.split()) < 10:
+        logger.info(f"🎉 Прямой перехват запроса о мероприятии: {text}")
+        await show_private_event_options_menu(user.id, message.bot)
+        
+        # Сохраняем в чат
+        try:
+            chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
+            database.save_chat_message(chat_id, 'user', message.text)
+            database.save_chat_message(chat_id, 'bot', 'Показал опции мероприятий (прямой перехват)')
+        except Exception as e:
+            logger.error(f"Ошибка сохранения в миниапп: {e}")
+            
+        return
+
     booking_keywords = [
         'забронировать', 'забранировать', 'бронировать', 'бранировать',
         'столик', 'стол', 'бронь', 'резерв', 'резервировать',
@@ -2839,52 +2858,14 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
     except Exception as e:
         logger.debug(f"Ошибка в обработчике операторского чата: {e}")
 
-    # 🟢 ПРЯМОЕ ПЕРЕХВАТ (БАНКЕТЫ)
-    banquet_keywords = [
-        'банкет', 'день рождени', 'свадьб', 'корпоратив', 
-        'юбилей', 'детский праздник', 'мероприяти', 'праздник'
-    ]
-    if any(k in text_lower for k in banquet_keywords):
-        logger.info(f"🔄 Прямой перехват 'банкет' запроса от пользователя {user.id}")
-        
-        # Клавиатура для банкета
-        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-            [types.InlineKeyboardButton(text="🎂 День рождения", callback_data="private_event_type:день_рождения")],
-            [types.InlineKeyboardButton(text="💒 Свадьба", callback_data="private_event_type:свадьба")],
-            [types.InlineKeyboardButton(text="🏢 Корпоратив", callback_data="private_event_type:корпоратив")],
-            [types.InlineKeyboardButton(text="🎊 Юбилей", callback_data="private_event_type:юбилей")],
-            [types.InlineKeyboardButton(text="🎈 Детский праздник", callback_data="private_event_type:детский_праздник")],
-            [types.InlineKeyboardButton(text="🎭 Другое мероприятие", callback_data="private_event_type:другое")],
-            [types.InlineKeyboardButton(text="📋 Посмотреть банкетное меню (XLS)", callback_data="show_banquet_menu_xls")],
-            [types.InlineKeyboardButton(text="✍️ Написать администратору", callback_data="chat_operator")]
-        ])
-        
-        text = "🎉 <b>Планируете мероприятие?</b>\n\nУ нас есть отличные предложения для банкетов! Выберите тип мероприятия:"
-        await safe_send_message(message.bot, user.id, text, reply_markup=keyboard, parse_mode="HTML")
-        return
-
     # 🟢 ПРЯМОЕ ПЕРЕХВАТ (ПО ЗАПРОСУ)
     hot_dishes_queries = [
         'горячее', 'горячие', 'горячие блюда', 
         'что у вас из горячего', 'покажи горячее',
         'что у вас горячего', 'что есть из горячего',
-        'меню горячее', 'горячее меню', 'горячего',
-        'из горячего', 'по горячему'
+        'меню горячее', 'горячее меню', 'горячего'
     ]
-    
-    # Ключевые слова, указывающие на контекстный запрос (который должен обработать ИИ)
-    contextual_keywords = [
-        ' с ', ' со ', 'для ', 'без ', 'кроме ', 'например', 
-        'посоветуй', 'какое', 'какие', 'самое', 'вкусное', 
-        'хочу', 'люблю', 'можно', 'есть ли'
-    ]
-    
-    # Проверяем на наличие контекста
-    text_lower = message.text.lower().strip()
-    is_contextual = any(k in text_lower for k in contextual_keywords)
-    
-    # Перехватываем только если это простой запрос БЕЗ контекста
-    if any(q in text_lower for q in hot_dishes_queries) and len(text_lower.split()) < 5 and not is_contextual:
+    if any(q in message.text.lower().strip() for q in hot_dishes_queries) and len(message.text.split()) < 5:
         logger.info(f"🔄 Прямой перехват 'горячее' запроса от пользователя {user.id}")
         from category_handler import handle_show_category_brief
         await handle_show_category_brief("🍖 ГОРЯЧИЕ БЛЮДА", user.id, message.bot)
