@@ -3135,6 +3135,18 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                 from category_handler import handle_show_category
                 await handle_show_category(category_name, user.id, message.bot)
                 return
+            elif result.get('search_query'):
+                # Умный поиск блюд
+                search_query = result.get('search_query')
+                logger.info(f"Выполняем поиск блюд: {search_query}")
+
+                # Сначала отправляем текст AI
+                await safe_send_message(message.bot, user.id, result['text'], parse_mode="HTML")
+
+                # Затем выполняем поиск через category_handler (он умеет искать по названию)
+                from category_handler import handle_show_category
+                await handle_show_category(search_query, user.id, message.bot)
+                return
             elif result.get('show_delivery_button', False):
                 keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
                     [types.InlineKeyboardButton(text="🚚 Заказать доставку", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))]
