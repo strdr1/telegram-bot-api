@@ -59,10 +59,11 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
                     return
 
                 menu_title_raw = menu.get('name') or category_name
-                menu_title = re.sub(r'\s*\(.*?\)\s*', '', menu_title_raw).strip()
+                
+                # Замена заголовка для завтраков
+                menu_title = "Завтраки (пн-пт до 13:00, сб-вс до 16:00)"
+                
                 emoji = '🍳'
-                if emoji in menu_title:
-                    menu_title = menu_title.replace(emoji, '').strip()
                 
                 text = f"{emoji} <b>{menu_title}</b>\n\n"
 
