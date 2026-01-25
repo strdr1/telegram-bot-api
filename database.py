@@ -1453,6 +1453,24 @@ def update_newsletter_status(newsletter_id: int, status: str, sent_count: int = 
         logger.error(f"Ошибка обновления рассылки: {e}")
         return False
 
+def delete_user(user_id: int) -> bool:
+    """Полное удаление пользователя и его данных"""
+    try:
+        with get_cursor() as cursor:
+            # Удаляем адреса
+            cursor.execute('DELETE FROM user_addresses WHERE user_id = ?', (user_id,))
+            
+            # Удаляем пользователя
+            cursor.execute('DELETE FROM users WHERE user_id = ?', (user_id,))
+            
+            # Очищаем кэш
+            clear_user_cache(user_id)
+            
+            return True
+    except Exception as e:
+        logger.error(f"Ошибка удалении пользователя {user_id}: {e}")
+        return False
+
 def get_all_users(limit: int = 1000) -> List:
     """Получение всех активных пользователей"""
     try:

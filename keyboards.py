@@ -539,7 +539,15 @@ def personal_cabinet_menu() -> types.InlineKeyboardMarkup:
         [types.InlineKeyboardButton(text="📱 Изменить телефон", callback_data="change_phone")],
         [types.InlineKeyboardButton(text="👤 Изменить имя", callback_data="change_name")],
         [types.InlineKeyboardButton(text="📅 История бронирований", callback_data="booking_history")],
+        [types.InlineKeyboardButton(text="🗑️ Удалить аккаунт", callback_data="delete_account_start")],
         [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+    ])
+
+def delete_account_confirm_menu() -> types.InlineKeyboardMarkup:
+    """Меню подтверждения удаления аккаунта"""
+    return types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="✅ Да, удалить аккаунт", callback_data="delete_account_confirm")],
+        [types.InlineKeyboardButton(text="❌ Нет, вернуться", callback_data="personal_cabinet")]
     ])
 
 def my_addresses_menu(addresses: List[Dict]) -> types.InlineKeyboardMarkup:

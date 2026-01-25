@@ -15,6 +15,7 @@ import logging
 from .utils import update_message
 from .handlers_registration import ask_for_registration_phone, RegistrationStates
 from presto_api import presto_api
+from cart_manager import cart_manager
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -289,5 +290,61 @@ async def booking_history_handler(callback: types.CallbackQuery):
                        reply_markup=keyboard,
                        parse_mode="HTML",
                        bot=callback.bot)
+
+@router.callback_query(F.data == "delete_account_start")
+async def delete_account_start_handler(callback: types.CallbackQuery):
+    """Начало процесса удаления аккаунта"""
+    await callback.answer()
+    
+    text = """⚠️ <b>Удаление аккаунта</b>
+
+Вы действительно хотите удалить свой аккаунт?
+
+❗️ <b>Будут удалены:</b>
+• Ваши личные данные (телефон, имя)
+• История заказов и бронирований
+• Сохраненные адреса
+• Персональные скидки и бонусы
+
+<i>Это действие нельзя отменить.</i>"""
+    
+    keyboard = keyboards.delete_account_confirm_menu()
+    
+    await update_message(callback.from_user.id, text,
+                       reply_markup=keyboard,
+                       parse_mode="HTML",
+                       bot=callback.bot)
+
+@router.callback_query(F.data == "delete_account_confirm")
+async def delete_account_confirm_handler(callback: types.CallbackQuery, state: FSMContext):
+    """Подтверждение удаления аккаунта"""
+    await callback.answer()
+    
+    user_id = callback.from_user.id
+    
+    # Очищаем корзину
+    cart_manager.clear_cart(user_id)
+    
+    # Удаляем пользователя из БД
+    success = database.delete_user(user_id)
+    
+    if success:
+        await state.clear()
+        
+        text = """✅ <b>Аккаунт удален</b>
+
+Ваши данные были успешно удалены из системы.
+
+Если захотите вернуться - просто нажмите /start"""
+        
+        # Отправляем сообщение и убираем клавиатуру
+        await callback.message.edit_text(text, reply_markup=None, parse_mode="HTML")
+        
+        # Логируем
+        logger.info(f"User {user_id} deleted their account via personal cabinet")
+    else:
+        await callback.answer("❌ Ошибка при удалении аккаунта", show_alert=True)
+        # Возвращаем в ЛК
+        await personal_cabinet_handler(callback, state)
 
 print("✅ handlers_personal_cabinet.py загружен!")
