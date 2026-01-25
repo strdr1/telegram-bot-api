@@ -451,9 +451,7 @@ def stop_chat(chat_id):
         # Завершаем режим чата
         try:
             # Импортируем функции из handlers
-            import sys
-            sys.path.append('/opt/telegram-bot/handlers')
-            from handlers_admin import clear_operator_chat
+            from handlers.handlers_admin import clear_operator_chat
             
             clear_operator_chat(user_chat_id)
             
@@ -465,7 +463,7 @@ def stop_chat(chat_id):
             
         except Exception as e:
             logger.error(f"Error stopping chat mode: {e}")
-            return jsonify({'error': 'Failed to stop chat mode'}), 500
+            return jsonify({'error': f'Failed to stop chat mode: {str(e)}'}), 500
 
         return jsonify({'success': True})
 

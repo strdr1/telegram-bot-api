@@ -806,6 +806,18 @@
             if (!currentChatId) return;
             
             try {
+                // Сначала переводим статус в active
+                const statusResponse = await fetch(`${API_BASE}/chats/${currentChatId}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'active' })
+                });
+
+                if (!statusResponse.ok) {
+                    console.error('Failed to update status to active');
+                }
+
+                // Затем вызываем stop endpoint для очистки и уведомления
                 const response = await fetch(`${API_BASE}/chats/${currentChatId}/stop`, {
                     method: 'POST'
                 });
@@ -814,14 +826,23 @@
                 
                 await loadChats();
                 
-                if (tg) {
-                    tg.HapticFeedback.notificationOccurred('success');
+                // Проверяем поддержку HapticFeedback
+                if (tg && tg.HapticFeedback) {
+                    try {
+                        tg.HapticFeedback.notificationOccurred('success');
+                    } catch (e) {
+                        console.log('HapticFeedback not supported');
+                    }
                 }
                 
             } catch (error) {
                 console.error('Error stopping chat:', error);
-                if (tg) {
-                    tg.HapticFeedback.notificationOccurred('error');
+                if (tg && tg.HapticFeedback) {
+                    try {
+                        tg.HapticFeedback.notificationOccurred('error');
+                    } catch (e) {
+                        console.log('HapticFeedback not supported');
+                    }
                 }
             }
         }

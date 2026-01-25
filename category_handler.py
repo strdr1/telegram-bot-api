@@ -536,9 +536,8 @@ async def handle_show_category(category_name: str, user_id: int, bot):
                             virtual_items.append(item)
 
             if virtual_items:
-                # Нашли блюда! Показываем их
+                # Нашли блюда! Показываем их как КРАТКИЙ СПИСОК (без фото)
                 category_title = category_name.capitalize()
-                await safe_send_message(bot, user_id, f"🍽️ <b>{category_title}</b> (найдено по названию)\n\nВот что я нашел:", parse_mode="HTML")
                 
                 # Убираем дубликаты по ID блюда
                 unique_items = {}
@@ -547,49 +546,29 @@ async def handle_show_category(category_name: str, user_id: int, bot):
                     if item_id not in unique_items:
                         unique_items[item_id] = item
                 
-                # Отправляем каждое блюдо с фото
-                for item in unique_items.values():
-                    try:
-                        photo_url = item.get('image_url')
-                        if photo_url:
-                            caption = f"🍽️ <b>{item['name']}</b>\n\n"
-                            caption += f"💰 Цена: {item['price']}₽\n"
-                            if item.get('weight'):
-                                caption += f"⚖️ Вес: {item['weight']}г\n"
-                            if item.get('calories'):
-                                caption += f"🔥 Калории: {item['calories']} ккал\n"
-                            
-                            # БЖУ
-                            if item.get('proteins') or item.get('fats') or item.get('carbs'):
-                                caption += "\n📊 БЖУ:\n"
-                                if item.get('proteins'):
-                                    caption += f"• Белки: {item['proteins']}г\n"
-                                if item.get('fats'):
-                                    caption += f"• Жиры: {item['fats']}г\n"
-                                if item.get('carbs'):
-                                    caption += f"• Углеводы: {item['carbs']}г\n"
-                            if item.get('description'):
-                                caption += f"\n{item['description']}"
+                # Ограничиваем количество результатов (например, 20), чтобы не спамить
+                limit = 20
+                items_list = list(unique_items.values())
+                
+                if len(items_list) > limit:
+                    text = f"🍽️ <b>{category_title}</b> (найдено по названию, показаны первые {limit}):\n\n"
+                    items_list = items_list[:limit]
+                else:
+                    text = f"🍽️ <b>{category_title}</b> (найдено по названию):\n\n"
+                
+                for item in items_list:
+                    text += f"• {item['name']} — {item['price']}₽"
+                    if item.get('weight'):
+                        text += f" (⚖️ {item['weight']}г)"
+                    text += "\n"
+                
+                text += f"\n💡 <i>Спросите про конкретное блюдо, чтобы увидеть фото и подробное описание!</i>"
 
-                            await bot.send_photo(
-                                chat_id=user_id,
-                                photo=photo_url,
-                                caption=caption,
-                                parse_mode="HTML"
-                            )
-                        else:
-                            # Если нет фото - отправляем текстом
-                            text = f"🍽️ <b>{item['name']}</b>\n💰 Цена: {item['price']}₽"
-                            if item.get('description'):
-                                text += f"\n{item['description']}"
-                            await safe_send_message(bot, user_id, text, parse_mode="HTML")
-
-                    except Exception as e:
-                        logger.error(f"Ошибка отправки блюда {item.get('name', 'unknown')}: {e}")
-                        continue
-
+                await safe_send_message(bot, user_id, text, parse_mode="HTML")
+                
                 found = True
-                logger.info(f"Показал виртуальную категорию (подробно): {category_title} с {len(unique_items)} блюдами")
+                logger.info(f"Показал виртуальную категорию (кратко): {category_title} с {len(unique_items)} блюдами")
+                return
 
         if not found:
             # Если категория не найдена, ищем похожие
