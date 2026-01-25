@@ -13,7 +13,7 @@ import asyncio
 from datetime import datetime
 from typing import Optional
 import logging
-from .utils import update_message
+from .utils import update_message, safe_delete_message, clear_user_cache
 from .handlers_registration import ask_for_registration_phone, RegistrationStates
 from presto_api import presto_api
 from cart_manager import cart_manager
@@ -329,7 +329,10 @@ async def delete_account_confirm_handler(callback: types.CallbackQuery, state: F
     # 2. Удаляем данные из БД
     success = database.delete_user(user_id)
     
-    # 3. Очищаем состояние FSM
+    # 3. Очищаем кэш
+    clear_user_cache(user_id)
+    
+    # 4. Очищаем состояние FSM
     await state.clear()
     
     if success:

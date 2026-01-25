@@ -163,6 +163,13 @@ async def handle_contact(message: types.Message, state: FSMContext):
     ])
 
     msg = await safe_send_message(message.bot, user.id, text, reply_markup=keyboard, parse_mode="HTML", disable_web_page_preview=True)
+    
+    if not msg:
+        # Fallback if HTML fails or other error
+        logger.warning(f"Failed to send agreement message to {user.id}, trying fallback")
+        fallback_text = "📜 Пользовательское соглашение\n\nДля продолжения необходимо принять условия.\n\n✅ Я согласен на обработку персональных данных"
+        msg = await safe_send_message(message.bot, user.id, fallback_text, reply_markup=keyboard)
+
     if msg and msg.message_id:
         _add_registration_message(user.id, msg.message_id)
     
@@ -220,6 +227,13 @@ async def handle_manual_phone(message: types.Message, state: FSMContext):
     ])
     
     msg = await safe_send_message(message.bot, user.id, text, reply_markup=keyboard, parse_mode="HTML", disable_web_page_preview=True)
+    
+    if not msg:
+        # Fallback
+        logger.warning(f"Failed to send agreement message to {user.id}, trying fallback")
+        fallback_text = "📜 Пользовательское соглашение\n\nДля продолжения необходимо принять условия.\n\n✅ Я согласен на обработку персональных данных"
+        msg = await safe_send_message(message.bot, user.id, fallback_text, reply_markup=keyboard)
+
     if msg and msg.message_id:
         _add_registration_message(user.id, msg.message_id)
     await state.set_state(RegistrationStates.waiting_for_agreement)
@@ -646,7 +660,14 @@ async def handle_event_phone_input(message: types.Message, state: FSMContext):
         [types.InlineKeyboardButton(text="⬅️ Назад", callback_data="event_registration")]
     ])
 
-    msg = await message.answer(text, reply_markup=keyboard, parse_mode="HTML")
+    msg = await safe_send_message(message.bot, user_id, text, reply_markup=keyboard, parse_mode="HTML", disable_web_page_preview=True)
+    
+    if not msg:
+        # Fallback
+        logger.warning(f"Failed to send agreement message to {user_id}, trying fallback")
+        fallback_text = "📜 Пользовательское соглашение\n\nДля продолжения необходимо принять условия.\n\n✅ Я согласен на обработку персональных данных"
+        msg = await safe_send_message(message.bot, user_id, fallback_text, reply_markup=keyboard)
+
     if msg and msg.message_id:
         _add_registration_message(user_id, msg.message_id)
     
