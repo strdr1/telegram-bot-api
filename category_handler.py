@@ -18,6 +18,14 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
     """
     try:
         # Очищаем от эмодзи и лишних символов
+        original_name = category_name  # Сохраняем оригинал для логирования
+        
+        # 🟢 ПРЯМОЕ СОПОСТАВЛЕНИЕ (ПО ЗАПРОСУ)
+        # Если ищут "горячее", сразу подменяем на точное название категории из menu_cache.json
+        if category_name.lower().strip() in ['горячее', 'горячие', 'горячие блюда', 'что у вас из горячего', 'покажи горячее']:
+            category_name = "🍖 ГОРЯЧИЕ БЛЮДА"
+            logger.info(f"🔄 Переопределение категории: '{original_name}' -> '{category_name}'")
+        
         category_name = category_name.replace('🍕', '').replace('🥗', '').replace('🍳', '').replace('🧀', '').replace('🍖', '').replace('🥩', '').replace('🍗', '').replace('🥙', '').replace('🌮', '').replace('🌯', '').replace('🥪', '').replace('🍔', '').replace('🍟', '').replace('🍝', '').replace('🍜', '').replace('🍛', '').replace('🍱', '').replace('🍣', '').replace('🍤', '').replace('🍙', '').replace('🍚', '').replace('🍘', '').replace('🍥', '').replace('🥟', '').replace('🥠', '').replace('🥡', '').replace('🦀', '').replace('🦞', '').replace('🦐', '').replace('🦑', '').replace('🍦', '').replace('🍧', '').replace('🍨', '').replace('🍩', '').replace('🍪', '').replace('🎂', '').replace('🍰', '').replace('🧁', '').replace('🥧', '').replace('🍫', '').replace('🍬', '').replace('🍭', '').replace('🍮', '').replace('🍯', '').replace('🍼', '').replace('🥛', '').replace('☕', '').replace('🍵', '').replace('🍶', '').replace('🍾', '').replace('🍷', '').replace('🍸', '').replace('🍹', '').replace('🍺', '').replace('🍻', '').replace('🥂', '').replace('🥃', '').strip()
         category_name = category_name.replace('_', ' ').strip()
         logger.info(f"Показываю краткий список категории: '{category_name}'")
@@ -305,6 +313,13 @@ async def handle_show_category(category_name: str, user_id: int, bot):
     """
     try:
         # Очищаем от эмодзи и лишних символов
+        original_name = category_name
+        
+        # 🟢 ПРЯМОЕ СОПОСТАВЛЕНИЕ (ПО ЗАПРОСУ)
+        if category_name.lower().strip() in ['горячее', 'горячие', 'горячие блюда', 'что у вас из горячего', 'покажи горячее']:
+            category_name = "🍖 ГОРЯЧИЕ БЛЮДА"
+            logger.info(f"🔄 Переопределение категории (подробно): '{original_name}' -> '{category_name}'")
+
         category_name = category_name.replace('🍕', '').replace('🥗', '').replace('🍳', '').replace('🧀', '').replace('🍖', '').replace('🥩', '').replace('🍗', '').replace('🥙', '').replace('🌮', '').replace('🌯', '').replace('🥪', '').replace('🍔', '').replace('🍟', '').replace('🍝', '').replace('🍜', '').replace('🍛', '').replace('🍱', '').replace('🍣', '').replace('🍤', '').replace('🍙', '').replace('🍚', '').replace('🍘', '').replace('🍥', '').replace('🥟', '').replace('🥠', '').replace('🥡', '').replace('🦀', '').replace('🦞', '').replace('🦐', '').replace('🦑', '').replace('🍦', '').replace('🍧', '').replace('🍨', '').replace('🍩', '').replace('🍪', '').replace('🎂', '').replace('🍰', '').replace('🧁', '').replace('🥧', '').replace('🍫', '').replace('🍬', '').replace('🍭', '').replace('🍮', '').replace('🍯', '').replace('🍼', '').replace('🥛', '').replace('☕', '').replace('🍵', '').replace('🍶', '').replace('🍾', '').replace('🍷', '').replace('🍸', '').replace('🍹', '').replace('🍺', '').replace('🍻', '').replace('🥂', '').replace('🥃', '').strip()
         category_name = category_name.replace('_', ' ').strip()
         logger.info(f"Показываю категорию (подробно): '{category_name}'")

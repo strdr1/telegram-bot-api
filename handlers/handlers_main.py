@@ -2839,6 +2839,13 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
     except Exception as e:
         logger.debug(f"Ошибка в обработчике операторского чата: {e}")
 
+    # 🟢 ПРЯМОЕ ПЕРЕХВАТ (ПО ЗАПРОСУ)
+    if message.text.lower().strip() in ['горячее', 'горячие', 'горячие блюда', 'что у вас из горячего', 'покажи горячее']:
+        logger.info(f"🔄 Прямой перехват 'горячее' запроса от пользователя {user.id}")
+        from category_handler import handle_show_category_brief
+        await handle_show_category_brief("🍖 ГОРЯЧИЕ БЛЮДА", user.id, message.bot)
+        return
+
     # Если ничего не найдено - используем AI
     try:
         async with typing_indicator(message.bot, user.id):
