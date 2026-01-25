@@ -543,11 +543,12 @@ async def handle_show_category(category_name: str, user_id: int, bot):
         if not found:
             # Если категория не найдена, ищем похожие
             all_categories = []
-            for menu_id, menu in menu_cache.all_menus_cache.items():
-                for cat_id, category in menu.get('categories', {}).items():
-                    cat_name = category.get('name', '')
-                    if cat_name:
-                        all_categories.append(cat_name)
+            if menu_cache.all_menus_cache:
+                for menu_id, menu in menu_cache.all_menus_cache.items():
+                    for cat_id, category in menu.get('categories', {}).items():
+                        cat_name = category.get('name', '')
+                        if cat_name:
+                            all_categories.append(cat_name)
 
             # Ищем наиболее похожие категории
             from difflib import SequenceMatcher

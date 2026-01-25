@@ -106,7 +106,7 @@ class MenuCache:
 
                     # Проверяем не устарел ли кэш
                     if (datetime.now() - cache_time).total_seconds() < self.cache_ttl:
-                        self.all_menus_cache = cache_data.get('all_menus', {})
+                        self.all_menus_cache = cache_data.get('all_menus') or {}
                         logger.info(f"✅ Все меню загружены из кэша ({len(self.all_menus_cache)} меню)")
                         return True
                     else:
