@@ -2294,11 +2294,14 @@ def get_chat_messages(chat_id: int, limit: int = 50) -> List[Dict[str, Any]]:
                 SELECT id, sender, message_text, message_time, sent
                 FROM chat_messages
                 WHERE chat_id = ?
-                ORDER BY message_time ASC
+                ORDER BY message_time DESC
                 LIMIT ?
                 ''', (chat_id, limit))
 
                 results = cursor.fetchall() or []
+                # Reverse to show chronological order
+                results.reverse()
+                
                 return [
                     {
                         'id': row[0],
@@ -2315,11 +2318,14 @@ def get_chat_messages(chat_id: int, limit: int = 50) -> List[Dict[str, Any]]:
                 SELECT id, sender, message_text, message_time
                 FROM chat_messages
                 WHERE chat_id = ?
-                ORDER BY message_time ASC
+                ORDER BY message_time DESC
                 LIMIT ?
                 ''', (chat_id, limit))
 
                 results = cursor.fetchall() or []
+                # Reverse to show chronological order
+                results.reverse()
+
                 return [
                     {
                         'id': row[0],
