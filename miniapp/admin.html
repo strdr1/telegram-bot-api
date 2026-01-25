@@ -670,18 +670,29 @@
         }
 
         // Load messages
-        async function loadMessages(chatId) {
+        async function loadMessages(chatId, isBackground = false) {
             try {
                 const response = await fetch(`${API_BASE}/chats/${chatId}`);
                 if (!response.ok) throw new Error('Failed to load messages');
                 
-                currentMessages = await response.json();
-                displayMessages();
+                const newMessages = await response.json();
+                
+                // If background update, check if changed to avoid unnecessary redraws
+                if (isBackground && currentMessages.length > 0) {
+                    if (JSON.stringify(newMessages) === JSON.stringify(currentMessages)) {
+                        return;
+                    }
+                }
+                
+                currentMessages = newMessages;
+                displayMessages(isBackground);
                 
             } catch (error) {
                 console.error('Error loading messages:', error);
-                currentMessages = [];
-                displayMessages();
+                if (!isBackground) {
+                    currentMessages = [];
+                    displayMessages();
+                }
             }
         }
 
@@ -696,9 +707,10 @@
                         <div style="display: flex; gap: 5px; align-items: center; margin-right: 10px;">
                             <select id="command-select" class="btn btn-secondary" style="background: white; color: black; border: 1px solid #ccc; max-width: 150px;">
                                 <option value="">Команда...</option>
-                                <option value="/booking">📅 Бронь</option>
+                                <option value="/menu">🏠 Меню ресторана</option>
                                 <option value="/delivery">🚚 Доставка</option>
-                                <option value="/menu">🏠 Меню</option>
+                                <option value="/booking">📅 Бронь</option>
+                                <option value="/bot_menu">🤖 Меню бота</option>
                             </select>
                             <button class="btn btn-primary" onclick="executeCommand()">🚀</button>
                         </div>
@@ -718,10 +730,13 @@
         }
 
         // Display messages
-        function displayMessages() {
+        function displayMessages(preserveScroll = false) {
             const messagesContainer = document.getElementById('messages');
             if (!messagesContainer) return;
             
+            // Check if user was at bottom before update
+            const wasAtBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop <= messagesContainer.clientHeight + 100;
+
             if (!currentMessages || currentMessages.length === 0) {
                 messagesContainer.innerHTML = '<div class="loading">Нет сообщений</div>';
                 return;
@@ -734,8 +749,10 @@
                 </div>
             `).join('');
             
-            // Scroll to bottom
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            // Scroll to bottom if it was at bottom or if it's not a background update
+            if (!preserveScroll || wasAtBottom) {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
         }
 
         // Send message
@@ -956,6 +973,13 @@
         
         // Auto-refresh every 30 seconds
         setInterval(loadChats, 30000);
+
+        // Auto-refresh messages every 3 seconds if a chat is selected
+        setInterval(() => {
+            if (currentChatId) {
+                loadMessages(currentChatId, true);
+            }
+        }, 3000);
         
         console.log('Admin panel loaded');
         console.log('Telegram WebApp:', !!tg);

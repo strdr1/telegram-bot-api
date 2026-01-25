@@ -98,8 +98,12 @@ async def process_message_queue(bot):
                             )
                             await handlers_delivery.menu_delivery_handler(message['user_id'], bot, state)
                             result = True
-                        elif command == "/start" or command == "/menu":
-                            # Показываем главное меню (как при кнопке "Меню бота")
+                        elif command == "/menu":
+                            # Меню ресторана (выбор: Доставка, PDF, Банкет)
+                            await handlers_delivery.menu_food_handler(message['user_id'], bot)
+                            result = True
+                        elif command == "/bot_menu" or command == "/start":
+                            # Главное меню бота (контакты, режим работы)
                             restaurant_name = database.get_setting('restaurant_name', config.RESTAURANT_NAME)
                             restaurant_phone = database.get_setting('restaurant_phone', config.RESTAURANT_PHONE)
                             restaurant_address = database.get_setting('restaurant_address', config.RESTAURANT_ADDRESS)
