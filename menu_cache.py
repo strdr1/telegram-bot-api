@@ -71,7 +71,7 @@ class MenuCache:
 
                     # Проверяем не устарел ли кэш
                     if (datetime.now() - cache_time).total_seconds() < self.cache_ttl:
-                        self.delivery_menus_cache = cache_data.get('all_menus', {})
+                        self.delivery_menus_cache = cache_data.get('all_menus') or {}
                         self.last_update = cache_time
 
                         # Также загружаем point_id из кэша если есть
