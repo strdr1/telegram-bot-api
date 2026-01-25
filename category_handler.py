@@ -533,10 +533,42 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                     if str(m_id) not in processed_ids:
                         menus_to_process.append((m_id, m_data))
 
+            # Список корней слов, указывающих на мясные/рыбные ингредиенты
+            forbidden_meat_roots = [
+                'брискет', 'говядин', 'свинин', 'куриц', 'цыплен', 'бекон', 'пастрам', 
+                'фарш', 'мяс', 'стейк', 'колбас', 'ветчин', 'лосос', 'форел', 'рыб', 
+                'креветк', 'кальмар', 'судак', 'треск', 'ребр', 'крыль', 'утка', 'индейк'
+            ]
+            
+            # Ключевые слова, требующие строгой фильтрации мяса
+            dietary_roots = ['овощ', 'веган', 'постн', 'вегет', 'без мяс']
+
             for menu_id, menu in menus_to_process:
                 for cat_id, category in menu.get('categories', {}).items():
                     for item in category.get('items', []):
-                        if search_term in item.get('name', '').lower() or search_term in item.get('description', '').lower():
+                        item_name = item.get('name', '').lower()
+                        item_desc = item.get('description', '').lower()
+                        
+                        if search_term in item_name or search_term in item_desc:
+                            # 🛑 ДОПОЛНИТЕЛЬНАЯ ФИЛЬТРАЦИЯ ДЛЯ ДИЕТИЧЕСКИХ ЗАПРОСОВ
+                            # Если ищем овощи/веганское, исключаем явные мясные блюда
+                            is_dietary_search = any(root in search_term for root in dietary_roots)
+                            
+                            if is_dietary_search:
+                                # Проверяем, не запросил ли пользователь мясо явно (напр. "мясо с овощами")
+                                user_asked_meat = any(meat in search_term for meat in forbidden_meat_roots)
+                                
+                                if not user_asked_meat:
+                                    # Ищем запрещенные слова в названии или описании
+                                    has_forbidden = False
+                                    for bad_word in forbidden_meat_roots:
+                                        if bad_word in item_name or bad_word in item_desc:
+                                            has_forbidden = True
+                                            break
+                                    
+                                    if has_forbidden:
+                                        continue
+
                             virtual_items.append(item)
 
             if virtual_items:

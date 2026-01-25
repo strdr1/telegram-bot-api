@@ -3128,13 +3128,13 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                 category_name = result.get('show_category')
                 logger.info(f"Показываем категорию: {category_name}")
 
-                # Сначала отправляем текст с вопросом, очистив от **
+                # Очищаем текст от ** и лишних пробелов
                 clean_text = result['text'].replace('**', '').strip()
-                await safe_send_message(message.bot, user.id, clean_text, parse_mode="HTML")
 
-                # Затем показываем категорию
+                # Передаем текст как вступительное сообщение в category_handler
+                # Сам handler решит, когда и как его показать (перед категорией или при ошибке)
                 from category_handler import handle_show_category
-                await handle_show_category(category_name, user.id, message.bot)
+                await handle_show_category(category_name, user.id, message.bot, intro_message=clean_text)
                 return
             elif result.get('search_query'):
                 # Умный поиск блюд

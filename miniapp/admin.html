@@ -693,6 +693,15 @@
                 <div class="chat-header-main">
                     <div class="chat-title">👤 ${chat.user_name || `ID: ${chat.user_id}`}</div>
                     <div class="chat-actions">
+                        <div style="display: flex; gap: 5px; align-items: center; margin-right: 10px;">
+                            <select id="command-select" class="btn btn-secondary" style="background: white; color: black; border: 1px solid #ccc; max-width: 150px;">
+                                <option value="">Команда...</option>
+                                <option value="/booking">📅 Бронь</option>
+                                <option value="/delivery">🚚 Доставка</option>
+                                <option value="/menu">🏠 Меню</option>
+                            </select>
+                            <button class="btn btn-primary" onclick="executeCommand()">🚀</button>
+                        </div>
                         <button class="btn btn-primary" onclick="pauseChat()">⏸️ Пауза</button>
                         <button class="btn btn-secondary" onclick="stopChat()">▶️ Возобновить авто</button>
                     </div>
@@ -771,6 +780,42 @@
         // Reply to chat
         function replyToChat() {
             document.getElementById('message-text').focus();
+        }
+
+        // Execute command
+        async function executeCommand() {
+            const select = document.getElementById('command-select');
+            const command = select.value;
+            
+            if (!command || !currentChatId) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/chats/${currentChatId}/command`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command })
+                });
+                
+                if (!response.ok) throw new Error('Failed to execute command');
+                
+                // Show feedback
+                if (tg && tg.HapticFeedback) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                }
+                
+                // Reset selection
+                select.value = "";
+                
+                // Refresh messages to see the command
+                await loadMessages(currentChatId);
+                
+            } catch (error) {
+                console.error('Error executing command:', error);
+                if (tg && tg.HapticFeedback) {
+                    tg.HapticFeedback.notificationOccurred('error');
+                }
+                alert('Ошибка выполнения команды');
+            }
         }
 
         // Pause chat

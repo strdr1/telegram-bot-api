@@ -42,6 +42,10 @@ from handlers.handlers_registration import router as registration_router
 from handlers.handlers_personal_cabinet import router as personal_cabinet_router  # <-- ДОБАВИТЬ ЭТО
 from handlers.handlers_main import error_handler
 from handlers.utils import TimeoutMiddleware
+from handlers import handlers_main, handlers_booking, handlers_delivery
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.storage.base import StorageKey
+import keyboards
 
 import database
 from menu_cache import menu_cache
@@ -77,8 +81,57 @@ async def process_message_queue(bot):
 
                 result = False
                 
-                # Если есть файл, отправляем его
-                if file_path and os.path.exists(file_path):
+                # Проверяем, является ли сообщение командой
+                if message_text and message_text.startswith("CMD:"):
+                    command = message_text[4:].strip()
+                    logger.info(f"Выполнение команды: {command} для пользователя {message['user_id']}")
+                    
+                    try:
+                        if command == "/booking":
+                            await handlers_booking.show_booking_options(message['user_id'], bot)
+                            result = True
+                        elif command == "/delivery":
+                            # Создаем контекст состояния вручную
+                            state = FSMContext(
+                                storage=dp.storage,
+                                key=StorageKey(bot_id=bot.id, chat_id=message['user_id'], user_id=message['user_id'])
+                            )
+                            await handlers_delivery.menu_delivery_handler(message['user_id'], bot, state)
+                            result = True
+                        elif command == "/start" or command == "/menu":
+                            # Показываем главное меню (как при кнопке "Меню бота")
+                            restaurant_name = database.get_setting('restaurant_name', config.RESTAURANT_NAME)
+                            restaurant_phone = database.get_setting('restaurant_phone', config.RESTAURANT_PHONE)
+                            restaurant_address = database.get_setting('restaurant_address', config.RESTAURANT_ADDRESS)
+                            restaurant_hours = database.get_setting('restaurant_hours', config.RESTAURANT_HOURS)
+                            
+                            try:
+                                clean_phone = handlers_main.clean_phone_for_link(restaurant_phone)
+                            except AttributeError:
+                                clean_phone = ''.join(c for c in restaurant_phone if c.isdigit() or c == '+')
+                            
+                            text = f"""🍽️ <b>{restaurant_name}</b>
+
+<b>Контакты:</b>
+📍 {restaurant_address}
+📞 <a href="tel:{clean_phone}">{restaurant_phone}</a>
+🕐 {restaurant_hours}"""
+                            
+                            keyboard = keyboards.main_menu_with_profile(message['user_id'])
+                            await handlers_main.safe_send_message(bot, message['user_id'], text,
+                                                reply_markup=keyboard, parse_mode="HTML")
+                            result = True
+                        else:
+                            logger.warning(f"Неизвестная команда: {command}")
+                            # Если команда не распознана, логируем и помечаем как обработанное
+                            result = True
+                    except Exception as e:
+                        logger.error(f"Ошибка выполнения команды {command}: {e}")
+                        # Отмечаем как отправленное, чтобы не зацикливаться
+                        result = True
+                
+                # Если есть файл, отправляем его (если это не команда)
+                elif file_path and os.path.exists(file_path):
                     try:
                         # Определяем тип файла
                         file_ext = os.path.splitext(file_path)[1].lower()

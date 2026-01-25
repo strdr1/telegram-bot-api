@@ -114,6 +114,44 @@ def send_message(chat_id):
         logger.error(f"Error sending message: {e}")
         return jsonify({'error': 'Failed to send message'}), 500
 
+@app.route('/chats/<int:chat_id>/command', methods=['POST'])
+def execute_command(chat_id):
+    """Execute a command for a chat"""
+    try:
+        data = request.json
+        command = data.get('command', '').strip()
+
+        if not command:
+            return jsonify({'error': 'Command cannot be empty'}), 400
+
+        # Получаем информацию о чате
+        chat_info = database.get_chat_by_id(chat_id)
+        if not chat_info:
+            logger.error(f"Chat {chat_id} not found in database")
+            return jsonify({'error': 'Chat not found'}), 404
+
+        user_chat_id = chat_info.get('user_id')
+        user_name = chat_info.get('user_name', f'Пользователь {user_chat_id}')
+
+        logger.info(f"Executing command {command} for user {user_chat_id} ({user_name})")
+
+        # Save command message to database with CMD: prefix
+        # This allows bot.py to distinguish commands from regular messages
+        command_message = f"CMD:{command}"
+        success = database.save_chat_message(chat_id, 'admin', command_message)
+
+        if not success:
+            logger.error(f"Failed to save command to database for chat {chat_id}")
+            return jsonify({'error': 'Failed to save command'}), 500
+
+        logger.info(f"Command saved to queue for user {user_chat_id}, bot will execute it")
+
+        return jsonify({'success': True})
+
+    except Exception as e:
+        logger.error(f"Error executing command: {e}")
+        return jsonify({'error': 'Failed to execute command'}), 500
+
 @app.route('/files', methods=['GET'])
 def list_files():
     """List files in allowed directories"""

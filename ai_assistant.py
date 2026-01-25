@@ -2523,6 +2523,18 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         show_wc_photos = 'SHOW_WC_PHOTOS' in ai_text
         show_restaurant_menu = 'SHOW_RESTAURANT_MENU' in ai_text
         call_human = 'CALL_HUMAN' in ai_text
+        
+        # Fallback: если маркер не найден, но есть ключевая фраза из промпта или похожие вариации
+        if not call_human:
+            # Проверяем точное совпадение с промптом
+            if "Сейчас позову человека, который поможет вам с вашим вопросом" in ai_text:
+                call_human = True
+                logger.info("CALL_HUMAN detected by exact phrase match")
+            # Проверяем более мягкое совпадение
+            elif "позову человека" in ai_text.lower() and "поможет" in ai_text.lower():
+                call_human = True
+                logger.info("CALL_HUMAN detected by robust phrase match")
+            
         logger.info(f"CALL_HUMAN flag set: {call_human}")
         show_category = None
 
