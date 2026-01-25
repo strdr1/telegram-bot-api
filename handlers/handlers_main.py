@@ -3140,12 +3140,12 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                 search_query = result.get('search_query')
                 logger.info(f"Выполняем поиск блюд: {search_query}")
 
-                # Сначала отправляем текст AI
-                await safe_send_message(message.bot, user.id, result['text'], parse_mode="HTML")
+                # Очищаем текст от ** и лишних пробелов
+                intro_text = result['text'].replace('**', '').strip()
 
-                # Затем выполняем поиск через category_handler (он умеет искать по названию)
+                # Выполняем поиск через category_handler с передачей вступительного текста
                 from category_handler import handle_show_category
-                await handle_show_category(search_query, user.id, message.bot)
+                await handle_show_category(search_query, user.id, message.bot, intro_message=intro_text)
                 return
             elif result.get('show_delivery_button', False):
                 keyboard = types.InlineKeyboardMarkup(inline_keyboard=[

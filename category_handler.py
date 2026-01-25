@@ -322,7 +322,7 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
         logger.error(f"Ошибка обработки краткого списка категории '{category_name}': {e}")
         await safe_send_message(bot, user_id, "Произошла ошибка при показе категории. Попробуйте позже.", parse_mode="HTML")
 
-async def handle_show_category(category_name: str, user_id: int, bot):
+async def handle_show_category(category_name: str, user_id: int, bot, intro_message: str = None):
     """
     Показывает всю категорию блюд с фото и описаниями
     """
@@ -448,7 +448,11 @@ async def handle_show_category(category_name: str, user_id: int, bot):
                             emoji = em
                             break
                             
-                    await safe_send_message(bot, user_id, f"{emoji} <b>{category_title}</b>\n\nВот что у нас есть:", parse_mode="HTML")
+                    header_text = f"{emoji} <b>{category_title}</b>\n\nВот что у нас есть:"
+                    if intro_message:
+                        header_text = f"{intro_message}\n\n{emoji} <b>{category_title}</b>"
+                    
+                    await safe_send_message(bot, user_id, header_text, parse_mode="HTML")
                     
                     # Убираем дубликаты по ID блюда
                     unique_items = {}
@@ -550,11 +554,15 @@ async def handle_show_category(category_name: str, user_id: int, bot):
                 limit = 20
                 items_list = list(unique_items.values())
                 
+                text = ""
+                if intro_message:
+                    text += f"{intro_message}\n\n"
+
                 if len(items_list) > limit:
-                    text = f"🍽️ <b>{category_title}</b> (найдено по названию, показаны первые {limit}):\n\n"
+                    text += f"🍽️ <b>{category_title}</b> (найдено по названию, показаны первые {limit}):\n\n"
                     items_list = items_list[:limit]
                 else:
-                    text = f"🍽️ <b>{category_title}</b> (найдено по названию):\n\n"
+                    text += f"🍽️ <b>{category_title}</b> (найдено по названию):\n\n"
                 
                 for item in items_list:
                     text += f"• {item['name']} — {item['price']}₽"
@@ -571,6 +579,12 @@ async def handle_show_category(category_name: str, user_id: int, bot):
                 return
 
         if not found:
+            # Если это был поисковый запрос от AI и ничего не найдено
+            if intro_message:
+                text = f"{intro_message}\n\nК сожалению, я не нашел блюд по запросу '{category_name}'."
+                await safe_send_message(bot, user_id, text, parse_mode="HTML")
+                return
+
             # Если категория не найдена, ищем похожие
             all_categories = []
             if menu_cache.all_menus_cache:
