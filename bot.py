@@ -7,8 +7,10 @@ import asyncio
 import logging
 import sys
 import os
+import re
 from aiohttp import web
 from aiohttp.web_request import Request
+from aiogram import types
 
 # Настройка кодировки для Windows
 if sys.platform == 'win32':
@@ -91,12 +93,31 @@ async def process_message_queue(bot):
                             await handlers_booking.show_booking_options(message['user_id'], bot)
                             result = True
                         elif command == "/delivery":
-                            # Создаем контекст состояния вручную
-                            state = FSMContext(
-                                storage=dp.storage,
-                                key=StorageKey(bot_id=bot.id, chat_id=message['user_id'], user_id=message['user_id'])
-                            )
-                            await handlers_delivery.menu_delivery_handler(message['user_id'], bot, state)
+                            # Меню доставки (Мини-приложение)
+                            text = """🚚 <b>Заказать доставку</b>
+
+📱 Мы запустили новое мини-приложение для заказа доставки!
+
+<b>Преимущества нового приложения:</b>
+• 🍽️ Полное меню с фотографиями
+• 🛒 Удобная корзина
+• 💳 Онлайн оплата
+• 📍 Точное определение адреса
+• ⏱️ Отслеживание заказа
+
+Нажмите кнопку ниже, чтобы открыть приложение доставки:"""
+                            
+                            keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+                                [types.InlineKeyboardButton(text="🚚 Открыть мини-приложение", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))],
+                                [types.InlineKeyboardButton(text="🍎 App Store", url=config.APP_IOS)],
+                                [types.InlineKeyboardButton(text="🤖 Google Play", url=config.APP_ANDROID)],
+                                [types.InlineKeyboardButton(text="🟦 RuStore", url=config.APP_RUSTORE)],
+                                [types.InlineKeyboardButton(text="📞 Заказать по телефону", callback_data="call_us")],
+                                [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+                            ])
+                            
+                            await handlers_main.safe_send_message(bot, message['user_id'], text,
+                                                reply_markup=keyboard, parse_mode="HTML")
                             result = True
                         elif command == "/menu":
                             # Меню ресторана (выбор: Доставка, PDF, Банкет)
@@ -109,10 +130,14 @@ async def process_message_queue(bot):
                             restaurant_address = database.get_setting('restaurant_address', config.RESTAURANT_ADDRESS)
                             restaurant_hours = database.get_setting('restaurant_hours', config.RESTAURANT_HOURS)
                             
-                            try:
-                                clean_phone = handlers_main.clean_phone_for_link(restaurant_phone)
-                            except AttributeError:
-                                clean_phone = ''.join(c for c in restaurant_phone if c.isdigit() or c == '+')
+                            # Очистка телефона
+                            clean_phone = ''.join(c for c in restaurant_phone if c.isdigit() or c == '+')
+                            if clean_phone.startswith('8'):
+                                clean_phone = '+7' + clean_phone[1:]
+                            elif clean_phone.startswith('7') and not clean_phone.startswith('+7'):
+                                clean_phone = '+7' + clean_phone[1:]
+                            elif not clean_phone.startswith('+'):
+                                clean_phone = '+7' + clean_phone
                             
                             text = f"""🍽️ <b>{restaurant_name}</b>
 
