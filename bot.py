@@ -346,14 +346,13 @@ async def main():
     # Загрузка меню из Presto API
     await load_presto_menus()
     
-    # Регистрация всех обработчиков в правильном порядке
-    # Важен порядок! Сначала общие, потом конкретные
+    # Регистрация роутеров (ПОРЯДОК ВАЖЕН!)
     dp.include_router(registration_router)
-    dp.include_router(admin_router)  # <-- АДМИН РОУТЕР ПЕРВЫМ
+    dp.include_router(personal_cabinet_router)
+    dp.include_router(admin_router)
     dp.include_router(main_router)
     dp.include_router(delivery_router)
     dp.include_router(booking_router)
-    dp.include_router(personal_cabinet_router)  # <-- ДОБАВИТЬ ПЕРЕД АДМИНКОЙ
     
     # Регистрируем обработчик ошибок
     dp.errors.register(error_handler)

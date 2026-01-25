@@ -489,71 +489,28 @@ async def show_no_menu_available(user_id: int, bot):
                             bot=bot)
 
 async def menu_delivery_handler(user_id: int, bot, state: FSMContext = None):
-    if user_id in user_document_history and user_document_history[user_id]:
-        for doc_id in user_document_history[user_id][:]:
-            try:
-                await bot.delete_message(user_id, doc_id)
-            except Exception as e:
-                logger.debug(f"Не удалось удалить документ {doc_id} при входе в меню доставки: {e}")
-        user_document_history[user_id] = []
-    
-    if user_id in user_photo_messages:
-        await cleanup_photo_messages(user_id, bot)
-    
-    # УБРАНА проверка регистрации здесь!
-    # Теперь можно заходить в меню без регистрации
-    
-    await menu_cache.load_all_menus()
-    
-    available_menus = menu_cache.get_available_menus()
-    
-    if not available_menus:
-        await show_no_menu_available(user_id, bot)
-        return
-    
-    cart_summary = cart_manager.get_cart_summary(user_id)
-    
-    text = f"""🍽️ <b>Меню доставки</b>
+    text = """🚚 <b>Заказать доставку</b>
 
-🛒 <b>Корзина ({cart_summary['item_count']}):</b> {cart_summary['item_count']} позиций на {cart_summary['total']}₽
+📱 Мы запустили новое мини-приложение для заказа доставки!
 
-<i>Выберите меню:</i>"""
-    
-    current_dt = datetime.now(MOSCOW_TZ)
-    weekday = current_dt.weekday()
-    end_time = time(13, 0) if weekday < 5 else time(16, 0)
-    if current_dt.time() > end_time:
-        pass
-    
-    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[])
-    
-    for menu in available_menus:
-        keyboard.inline_keyboard.append([
-            types.InlineKeyboardButton(
-                text=menu['name'],
-                callback_data=f"select_menu_{menu['id']}"
-            )
-        ])
-    
-    cart_button_text = f"🛒 Корзина ({cart_summary['item_count']})"
-    keyboard.inline_keyboard.append([
-        types.InlineKeyboardButton(text="🔍 Поиск блюда", callback_data="search_dish"),
-        types.InlineKeyboardButton(text=cart_button_text, callback_data="view_cart")
+<b>Преимущества нового приложения:</b>
+• 🍽️ Полное меню с фотографиями
+• 🛒 Удобная корзина
+• 💳 Онлайн оплата
+• 📍 Точное определение адреса
+• ⏱️ Отслеживание заказа
+
+Нажмите кнопку ниже, чтобы открыть приложение доставки:"""
+
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="🚚 Открыть мини-приложение", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))],
+        [types.InlineKeyboardButton(text="🍎 App Store", url=config.APP_IOS)],
+        [types.InlineKeyboardButton(text="🤖 Google Play", url=config.APP_ANDROID)],
+        [types.InlineKeyboardButton(text="🟦 RuStore", url=config.APP_RUSTORE)],
+        [types.InlineKeyboardButton(text="📞 Заказать по телефону", callback_data="call_us")],
+        [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
     ])
-    
-    keyboard.inline_keyboard.append([
-        types.InlineKeyboardButton(text="🔄 Обновить меню", callback_data="refresh_menu_all")
-    ])
-    
-    keyboard.inline_keyboard.append([
-        types.InlineKeyboardButton(text="📋 PDF меню с барной картой", callback_data="menu_pdf"),
-        types.InlineKeyboardButton(text="🎉 Банкетное меню", callback_data="menu_banquet")
-    ])
-    
-    keyboard.inline_keyboard.append([
-        types.InlineKeyboardButton(text="⬅️ Назад", callback_data="back_main")
-    ])
-    
+
     await update_message(user_id, text,
                         reply_markup=keyboard,
                         parse_mode="HTML",
