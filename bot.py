@@ -33,6 +33,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.fsm.storage.memory import MemoryStorage
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
+import config
 from config import BOT_TOKEN, REQUEST_TIMEOUT
 
 # Импортируем все роутеры
