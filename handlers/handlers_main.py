@@ -3128,8 +3128,9 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                 category_name = result.get('show_category')
                 logger.info(f"Показываем категорию: {category_name}")
 
-                # Сначала отправляем текст с вопросом
-                await safe_send_message(message.bot, user.id, result['text'], parse_mode="HTML")
+                # Сначала отправляем текст с вопросом, очистив от **
+                clean_text = result['text'].replace('**', '').strip()
+                await safe_send_message(message.bot, user.id, clean_text, parse_mode="HTML")
 
                 # Затем показываем категорию
                 from category_handler import handle_show_category
@@ -3153,7 +3154,9 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                 ])
                 await safe_send_message(message.bot, user.id, result['text'], reply_markup=keyboard, parse_mode="HTML")
             else:
-                await safe_send_message(message.bot, user.id, result['text'])
+                # Очищаем текст от ** и лишних пробелов перед отправкой
+                clean_text = result['text'].replace('**', '').strip()
+                await safe_send_message(message.bot, user.id, clean_text)
 
             # Сохраняем ответ бота
             try:
@@ -3163,6 +3166,8 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                 logger.error(f"Ошибка сохранения ответа бота: {e}")
 
         elif result['type'] == 'photo_with_text':
+            # Очищаем текст от **
+            clean_text = result['text'].replace('**', '').strip()
             # Проверяем нужны ли кнопки
             if result.get('show_delivery_apps', False):
                 keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
@@ -3174,9 +3179,9 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                 if result.get('photo_path'):
                     from aiogram.types import FSInputFile
                     photo = FSInputFile(result['photo_path'])
-                    await message.answer_photo(photo, caption=result['text'], reply_markup=keyboard, parse_mode="HTML")
+                    await message.answer_photo(photo, caption=clean_text, reply_markup=keyboard, parse_mode="HTML")
                 else:
-                    await message.answer_photo(result['photo_url'], caption=result['text'], reply_markup=keyboard, parse_mode="HTML")
+                    await message.answer_photo(result['photo_url'], caption=clean_text, reply_markup=keyboard, parse_mode="HTML")
             elif result.get('show_delivery_button', False):
                 keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
                     [types.InlineKeyboardButton(text="🚚 Заказать доставку", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))]
@@ -3184,16 +3189,16 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                 if result.get('photo_path'):
                     from aiogram.types import FSInputFile
                     photo = FSInputFile(result['photo_path'])
-                    await message.answer_photo(photo, caption=result['text'], reply_markup=keyboard, parse_mode="HTML")
+                    await message.answer_photo(photo, caption=clean_text, reply_markup=keyboard, parse_mode="HTML")
                 else:
-                    await message.answer_photo(result['photo_url'], caption=result['text'], reply_markup=keyboard, parse_mode="HTML")
+                    await message.answer_photo(result['photo_url'], caption=clean_text, reply_markup=keyboard, parse_mode="HTML")
             else:
                 if result.get('photo_path'):
                     from aiogram.types import FSInputFile
                     photo = FSInputFile(result['photo_path'])
-                    await message.answer_photo(photo, caption=result['text'], parse_mode="HTML")
+                    await message.answer_photo(photo, caption=clean_text, parse_mode="HTML")
                 else:
-                    await message.answer_photo(result['photo_url'], caption=result['text'], parse_mode="HTML")
+                    await message.answer_photo(result['photo_url'], caption=clean_text, parse_mode="HTML")
 
             # Сохраняем ответ бота
             try:
