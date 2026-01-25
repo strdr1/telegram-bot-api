@@ -1,3 +1,4 @@
+
 """
 handlers_personal_cabinet.py - Упрощенный личный кабинет
 """
@@ -300,17 +301,17 @@ async def delete_account_start_handler(callback: types.CallbackQuery):
 
 Вы действительно хотите удалить свой аккаунт?
 
-❗️ <b>Будут удалены:</b>
-• Ваши личные данные (телефон, имя)
-• История заказов и бронирований
-• Сохраненные адреса
-• Персональные скидки и бонусы
+<b>Это действие необратимо!</b>
+❌ Вся история заказов будет удалена
+❌ Все накопленные бонусы будут потеряны
+❌ Вам придется регистрироваться заново
 
-<i>Это действие нельзя отменить.</i>"""
+Вы уверены?"""
     
     keyboard = keyboards.delete_account_confirm_menu()
     
-    await update_message(callback.from_user.id, text,
+    user_id = callback.from_user.id
+    await update_message(user_id, text,
                        reply_markup=keyboard,
                        parse_mode="HTML",
                        bot=callback.bot)
@@ -322,29 +323,29 @@ async def delete_account_confirm_handler(callback: types.CallbackQuery, state: F
     
     user_id = callback.from_user.id
     
-    # Очищаем корзину
+    # 1. Очищаем корзину
     cart_manager.clear_cart(user_id)
     
-    # Удаляем пользователя из БД
+    # 2. Удаляем данные из БД
     success = database.delete_user(user_id)
     
+    # 3. Очищаем состояние FSM
+    await state.clear()
+    
     if success:
-        await state.clear()
-        
-        text = """✅ <b>Аккаунт удален</b>
+        text = """✅ <b>Аккаунт успешно удален</b>
 
-Ваши данные были успешно удалены из системы.
-
-Если захотите вернуться - просто нажмите /start"""
+Все ваши данные были стерты.
+Если захотите вернуться, просто нажмите /start"""
         
-        # Отправляем сообщение и убираем клавиатуру
-        await callback.message.edit_text(text, reply_markup=None, parse_mode="HTML")
+        # Удаляем сообщение с подтверждением
+        await safe_delete_message(callback.bot, user_id, callback.message.message_id)
+        
+        # Отправляем прощальное сообщение
+        await callback.bot.send_message(user_id, text, parse_mode="HTML", reply_markup=types.ReplyKeyboardRemove())
         
         # Логируем
         logger.info(f"User {user_id} deleted their account via personal cabinet")
+        
     else:
-        await callback.answer("❌ Ошибка при удалении аккаунта", show_alert=True)
-        # Возвращаем в ЛК
-        await personal_cabinet_handler(callback, state)
-
-print("✅ handlers_personal_cabinet.py загружен!")
+        await callback.message.answer("❌ Произошла ошибка при удалении аккаунта. Попробуйте позже.")
