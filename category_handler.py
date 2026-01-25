@@ -99,6 +99,7 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
 
         for menu_id, menu in menus_to_process:
             for cat_id, category in menu.get('categories', {}).items():
+                is_match = False
                 # Проверка по ID (строгое совпадение)
                 if str(cat_id) == str(category_name):
                     is_match = True
@@ -324,6 +325,65 @@ async def handle_show_category(category_name: str, user_id: int, bot):
         category_name = category_name.replace('_', ' ').strip()
         logger.info(f"Показываю категорию (подробно): '{category_name}'")
 
+        lower_name = category_name.lower()
+
+        # 🟢 ОБРАБОТКА ЗАВТРАКОВ (МЕНЮ 90)
+        # Список общих запросов завтраков
+        breakfast_generics = ['завтрак', 'завтраки', 'меню завтраков', 'меню завтрак', 'breakfast', 'breakfasts']
+        
+        # Проверяем, является ли запрос общим
+        is_generic_breakfast = lower_name in breakfast_generics or \
+                             (lower_name.endswith('завтрак') and len(lower_name.split()) < 2) or \
+                             (lower_name.endswith('завтраки') and len(lower_name.split()) < 2)
+
+        if is_generic_breakfast:
+            menu = menu_cache.all_menus_cache.get("90") or menu_cache.all_menus_cache.get(90)
+            if menu:
+                items = []
+                for category in menu.get('categories', {}).values():
+                    items.extend(category.get('items', []))
+
+                if not items:
+                    await safe_send_message(bot, user_id, "В меню завтраков пока нет блюд.", parse_mode="HTML")
+                    return
+
+                menu_title_raw = menu.get('name') or category_name
+                menu_title = re.sub(r'\s*\(.*?\)\s*', '', menu_title_raw).strip()
+                emoji = '🍳'
+                if emoji in menu_title:
+                    menu_title = menu_title.replace(emoji, '').strip()
+                
+                await safe_send_message(bot, user_id, f"{emoji} <b>{menu_title}</b>\n\nВот наши завтраки:", parse_mode="HTML")
+
+                unique_items = {}
+                for item in items:
+                    item_id = item.get('id')
+                    if item_id not in unique_items:
+                        unique_items[item_id] = item
+
+                for item in unique_items.values():
+                    try:
+                        photo_url = item.get('image_url')
+                        caption = f"🍳 <b>{item['name']}</b>\n\n"
+                        caption += f"💰 Цена: {item['price']}₽\n"
+                        if item.get('weight'):
+                            caption += f"⚖️ Вес: {item['weight']}г\n"
+                        if item.get('calories'):
+                            caption += f"🔥 Калории: {item['calories']} ккал\n"
+                        
+                        if item.get('description'):
+                            caption += f"\n{item['description']}"
+
+                        if photo_url:
+                            await bot.send_photo(chat_id=user_id, photo=photo_url, caption=caption, parse_mode="HTML")
+                        else:
+                            await safe_send_message(bot, user_id, caption, parse_mode="HTML")
+                    except Exception as e:
+                        logger.error(f"Ошибка отправки блюда завтрака {item.get('name')}: {e}")
+                        continue
+
+                return
+
         found = False
         
         # Определяем порядок поиска: сначала меню доставки (menu_cache.json), потом остальные
@@ -346,15 +406,20 @@ async def handle_show_category(category_name: str, user_id: int, bot):
                     menus_to_process.append((m_id, m_data))
 
         for menu_id, menu in menus_to_process:
+            if not menu: continue
             for cat_id, category in menu.get('categories', {}).items():
                 cat_name = category.get('name', '').lower().strip()
                 cat_display_name = category.get('display_name', cat_name).lower().strip()
                 search_name = category_name.lower().strip()
 
                 # Нормализация для "горячие блюда" <-> "горячее"
-                if search_name == 'горячие блюда' and (cat_name == 'горячее' or cat_display_name == 'горячее'):
+                # Явная проверка ID 4822
+                if str(cat_id) == '4822' and search_name in ['горячее', 'горячие', 'горячие блюда']:
                     is_match = True
-                elif search_name == 'горячее' and (cat_name == 'горячие блюда' or cat_display_name == 'горячие блюда'):
+                # Проверка по имени с учетом эмодзи
+                elif search_name in ['горячее', 'горячие блюда'] and \
+                     (cat_name in ['горячее', 'горячие блюда'] or \
+                      any(x in cat_display_name for x in ['горячее', 'горячие блюда'])):
                     is_match = True
                 else:
                     # Проверяем точное совпадение или вхождение
@@ -551,7 +616,6 @@ async def handle_show_category(category_name: str, user_id: int, bot):
                             all_categories.append(cat_name)
 
             # Ищем наиболее похожие категории
-            from difflib import SequenceMatcher
             similar = []
             for cat in all_categories:
                 ratio = SequenceMatcher(None, category_name.lower(), cat.lower()).ratio()
