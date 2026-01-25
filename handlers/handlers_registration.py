@@ -1,4 +1,4 @@
-﻿# handlers/handlers_registration.py
+# handlers/handlers_registration.py
 
 from aiogram import Router, F, types
 from aiogram.fsm.state import State, StatesGroup
@@ -23,10 +23,12 @@ _registration_messages: Dict[int, List[int]] = {}
 
 class RegistrationStates(StatesGroup):
     waiting_for_phone = State()
+    waiting_for_agreement = State()
     waiting_for_name = State()
 
 class EventRegistrationStates(StatesGroup):
     waiting_for_phone = State()
+    waiting_for_agreement = State()
     waiting_for_name = State()
 
 def _add_registration_message(user_id: int, message_id: int):
@@ -56,14 +58,7 @@ async def ask_for_registration_phone(user_id: int, bot, context: str = "general"
 
 Для продолжения нам нужен ваш номер телефона.
 
-<b>Нажимая кнопку "Поделиться номером телефона", вы автоматически соглашаетесь:</b>
-✅ На обработку персональных данных
-✅ С пользовательским соглашением
-
-<a href="{config.USER_AGREEMENT_URL}">📄 Пользовательское соглашение</a>
-<a href="{config.PRIVACY_POLICY_URL}">🔒 Политика конфиденциальности</a>
-
-<u>Или введите номер вручную в формате +7 XXX XXX XX XX:</u>"""
+<u>Нажмите кнопку ниже или введите номер вручную в формате +7 XXX XXX XX XX:</u>"""
     
     keyboard = ReplyKeyboardMarkup(
         keyboard=[
@@ -128,13 +123,6 @@ async def handle_contact(message: types.Message, state: FSMContext):
         # Не редактируем, а отправляем новое сообщение
         text = f"""❌ Неверный формат телефона!
 
-<b>Нажимая кнопку "Поделиться номером телефона", вы автоматически соглашаетесь:</b>
-✅ На обработку персональных данных
-✅ С пользовательским соглашением
-
-<a href="{config.USER_AGREEMENT_URL}">📄 Пользовательское соглашение</a>
-<a href="{config.PRIVACY_POLICY_URL}">🔒 Политика конфиденциальности</a>
-
 Пожалуйста, введите номер вручную в формате +7 XXX XXX XX XX:"""
         keyboard = ReplyKeyboardMarkup(
             keyboard=[[KeyboardButton(text="📱 Поделиться номером телефона", request_contact=True)]],
@@ -160,40 +148,25 @@ async def handle_contact(message: types.Message, state: FSMContext):
         context = 'booking' if current_state == RegistrationStates.waiting_for_phone.state else 'general'
         await state.update_data(context=context)
 
-    user_name = user.full_name
-    if user_name and len(user_name.strip()) >= 2:
-        text = f"""👤 <b>Это ваше имя: {user_name}?</b>
+    # Показываем "попап" с соглашением
+    text = f"""📜 <b>Пользовательское соглашение</b>
 
-<b>Подтверждая имя, вы соглашаетесь:</b>
-✅ На обработку персональных данных
-✅ С пользовательским соглашением
+Для продолжения работы с ботом необходимо принять условия использования и дать согласие на обработку персональных данных.
 
 <a href="{config.USER_AGREEMENT_URL}">📄 Пользовательское соглашение</a>
-<a href="{config.PRIVACY_POLICY_URL}">🔒 Политика конфиденциальности</a>"""
-        
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=f"✅ Да, я {user_name}", callback_data=f"confirm_name:{user_name}")],
-            [InlineKeyboardButton(text="✏️ Ввести другое имя", callback_data="enter_different_name")]
-        ])
-        # Отправляем новое сообщение вместо редактирования
-        msg = await safe_send_message(message.bot, user.id, text, reply_markup=keyboard, parse_mode="HTML", disable_web_page_preview=True)
-        if msg and msg.message_id:
-            _add_registration_message(user.id, msg.message_id)
-        await state.set_state(RegistrationStates.waiting_for_name)
-    else:
-        text = f"""👤 <b>Введите ваше имя:</b>
+<a href="{config.PRIVACY_POLICY_URL}">🔒 Политика конфиденциальности</a>
 
-<b>Вводя имя, вы соглашаетесь:</b>
-✅ На обработку персональных данных
-✅ С пользовательским соглашением
+✅ Я согласен на обработку персональных данных"""
 
-<a href="{config.USER_AGREEMENT_URL}">📄 Пользовательское соглашение</a>
-<a href="{config.PRIVACY_POLICY_URL}">🔒 Политика конфиденциальности</a>"""
-        
-        msg = await safe_send_message(message.bot, user.id, text, parse_mode="HTML", disable_web_page_preview=True)
-        if msg and msg.message_id:
-            _add_registration_message(user.id, msg.message_id)
-        await state.set_state(RegistrationStates.waiting_for_name)
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Принять и продолжить", callback_data="accept_agreement")]
+    ])
+
+    msg = await safe_send_message(message.bot, user.id, text, reply_markup=keyboard, parse_mode="HTML", disable_web_page_preview=True)
+    if msg and msg.message_id:
+        _add_registration_message(user.id, msg.message_id)
+    
+    await state.set_state(RegistrationStates.waiting_for_agreement)
 
 # Обработчик для ручного ввода телефона (если пользователь пишет номер текстом)
 @router.message(RegistrationStates.waiting_for_phone)
@@ -206,13 +179,6 @@ async def handle_manual_phone(message: types.Message, state: FSMContext):
     phone_regex = r'^\+7\s?\d{3}\s?\d{3}\s?\d{2}\s?\d{2}$|^\+7\d{10}$|^8\d{10}$|^7\d{10}$'
     if not re.match(phone_regex, phone):
         text = f"""❌ Неверный формат телефона!
-
-<b>При вводе номера телефона, вы соглашаетесь:</b>
-✅ На обработку персональных данных
-✅ С пользовательским соглашением
-
-<a href="{config.USER_AGREEMENT_URL}">📄 Пользовательское соглашение</a>
-<a href="{config.PRIVACY_POLICY_URL}">🔒 Политика конфиденциальности</a>
 
 Пожалуйста, введите номер в формате +7 XXX XXX XX XX:"""
         keyboard = ReplyKeyboardMarkup(
@@ -239,19 +205,53 @@ async def handle_manual_phone(message: types.Message, state: FSMContext):
         context = 'booking' if current_state == RegistrationStates.waiting_for_phone.state else 'general'
         await state.update_data(context=context)
 
-    text = f"""👤 <b>Введите ваше имя:</b>
+    # Показываем "попап" с соглашением
+    text = f"""📜 <b>Пользовательское соглашение</b>
 
-<b>Вводя имя, вы соглашаетесь:</b>
-✅ На обработку персональных данных
-✅ С пользовательским соглашением
+Для продолжения работы с ботом необходимо принять условия использования и дать согласие на обработку персональных данных.
 
 <a href="{config.USER_AGREEMENT_URL}">📄 Пользовательское соглашение</a>
-<a href="{config.PRIVACY_POLICY_URL}">🔒 Политика конфиденциальности</a>"""
+<a href="{config.PRIVACY_POLICY_URL}">🔒 Политика конфиденциальности</a>
+
+✅ Я согласен на обработку персональных данных"""
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="✅ Принять и продолжить", callback_data="accept_agreement")]
+    ])
     
-    msg = await safe_send_message(message.bot, user.id, text, parse_mode="HTML", disable_web_page_preview=True)
+    msg = await safe_send_message(message.bot, user.id, text, reply_markup=keyboard, parse_mode="HTML", disable_web_page_preview=True)
     if msg and msg.message_id:
         _add_registration_message(user.id, msg.message_id)
-    await state.set_state(RegistrationStates.waiting_for_name)
+    await state.set_state(RegistrationStates.waiting_for_agreement)
+
+@router.callback_query(F.data == "accept_agreement", RegistrationStates.waiting_for_agreement)
+async def accept_agreement_callback(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
+    user_id = callback.from_user.id
+    user = callback.from_user
+    
+    # Delete the agreement message (the "popup")
+    await safe_delete_message(callback.bot, user_id, callback.message.message_id)
+    
+    # Check for existing name logic
+    user_name = user.full_name
+    if user_name and len(user_name.strip()) >= 2:
+        text = f"""👤 <b>Это ваше имя: {user_name}?</b>"""
+        
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=f"✅ Да, я {user_name}", callback_data=f"confirm_name:{user_name}")],
+            [InlineKeyboardButton(text="✏️ Ввести другое имя", callback_data="enter_different_name")]
+        ])
+        msg = await safe_send_message(callback.bot, user_id, text, reply_markup=keyboard, parse_mode="HTML")
+        if msg and msg.message_id:
+            _add_registration_message(user_id, msg.message_id)
+        await state.set_state(RegistrationStates.waiting_for_name)
+    else:
+        text = f"""👤 <b>Введите ваше имя:</b>"""
+        msg = await safe_send_message(callback.bot, user_id, text, parse_mode="HTML")
+        if msg and msg.message_id:
+            _add_registration_message(user_id, msg.message_id)
+        await state.set_state(RegistrationStates.waiting_for_name)
 
 @router.message(RegistrationStates.waiting_for_name)
 async def handle_name_input(message: types.Message, state: FSMContext):
@@ -262,14 +262,7 @@ async def handle_name_input(message: types.Message, state: FSMContext):
     await safe_delete_message(message.bot, message.chat.id, message.message_id)
     
     if len(text) < 2:
-        msg_text = f"""❌ Имя должно быть от 2 символов.
-
-<b>Вводя имя, вы соглашаетесь:</b>
-✅ На обработку персональных данных
-✅ С пользовательским соглашением
-
-<a href="{config.USER_AGREEMENT_URL}">📄 Пользовательское соглашение</a>
-<a href="{config.PRIVACY_POLICY_URL}">🔒 Политика конфиденциальности</a>"""
+        msg_text = f"""❌ Имя должно быть от 2 символов."""
         
         msg = await safe_send_message(message.bot, user.id, msg_text, parse_mode="HTML", disable_web_page_preview=True)
         if msg and msg.message_id:
@@ -383,14 +376,7 @@ async def confirm_name_callback(callback: types.CallbackQuery, state: FSMContext
 async def enter_different_name_callback(callback: types.CallbackQuery, state: FSMContext):
     await callback.answer()
     
-    text = f"""👤 <b>Введите ваше имя:</b>
-
-<b>Вводя имя, вы соглашаетесь:</b>
-✅ На обработку персональных данных
-✅ С пользовательским соглашением
-
-<a href="{config.USER_AGREEMENT_URL}">📄 Пользовательское соглашение</a>
-<a href="{config.PRIVACY_POLICY_URL}">🔒 Политика конфиденциальности</a>"""
+    text = f"""👤 <b>Введите ваше имя:</b>"""
     
     msg = await safe_send_message(callback.bot, callback.from_user.id, text, parse_mode="HTML", disable_web_page_preview=True)
     if msg and msg.message_id:
@@ -530,9 +516,7 @@ async def ask_for_event_registration_phone(user_id: int, bot, context: str = "ev
 
 Для подачи заявки нам нужны ваши контактные данные.
 
-📱 <b>Поделитесь номером телефона или введите вручную:</b>
-
-<i>Нажимая кнопку "Поделиться номером", вы соглашаетесь на обработку персональных данных.</i>"""
+📱 <b>Поделитесь номером телефона или введите вручную:</b>"""
 
     # Создаем клавиатуру с кнопкой поделиться номером И кнопкой назад
     keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
@@ -647,17 +631,45 @@ async def handle_event_phone_input(message: types.Message, state: FSMContext):
     context = current_data.get('context', 'event_registration')
     await state.update_data(event_phone=phone, context=context)
     
-    # Запрашиваем имя
+    # Показываем "попап" с соглашением
+    text = f"""📜 <b>Пользовательское соглашение</b>
+
+Для продолжения работы с ботом необходимо принять условия использования и дать согласие на обработку персональных данных.
+
+<a href="{config.USER_AGREEMENT_URL}">📄 Пользовательское соглашение</a>
+<a href="{config.PRIVACY_POLICY_URL}">🔒 Политика конфиденциальности</a>
+
+✅ Я согласен на обработку персональных данных"""
+
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="✅ Принять и продолжить", callback_data="accept_event_agreement")],
+        [types.InlineKeyboardButton(text="⬅️ Назад", callback_data="event_registration")]
+    ])
+
+    msg = await message.answer(text, reply_markup=keyboard, parse_mode="HTML")
+    if msg and msg.message_id:
+        _add_registration_message(user_id, msg.message_id)
+    
+    await state.set_state(EventRegistrationStates.waiting_for_agreement)
+
+@router.callback_query(F.data == "accept_event_agreement", EventRegistrationStates.waiting_for_agreement)
+async def accept_event_agreement_callback(callback: types.CallbackQuery, state: FSMContext):
+    await callback.answer()
+    user_id = callback.from_user.id
+    
+    # Delete the agreement message
+    await safe_delete_message(callback.bot, user_id, callback.message.message_id)
+    
+    # Ask for name
     text = """👤 <b>Введите ваше имя:</b>
 
 Как к вам обращаться при связи по поводу мероприятия?"""
     
-    reply_keyboard = types.ReplyKeyboardRemove()
     inline_keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
         [types.InlineKeyboardButton(text="⬅️ Назад к мероприятиям", callback_data="event_registration")]
     ])
     
-    msg = await message.answer(text, reply_markup=inline_keyboard, parse_mode="HTML")
+    msg = await callback.message.answer(text, reply_markup=inline_keyboard, parse_mode="HTML")
     if msg and msg.message_id:
         _add_registration_message(user_id, msg.message_id)
     
