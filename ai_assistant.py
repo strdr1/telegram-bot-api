@@ -782,7 +782,9 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         is_dish_request = any(keyword in message_lower for keyword in dish_keywords)
 
         # Если это явный запрос блюда ИЛИ просто короткое сообщение (потенциально название)
-        if is_dish_request or len(message.split()) <= 5:
+        # Исключаем чисто числовые сообщения (если это не явный поиск с ключевыми словами)
+        is_numeric = message.strip().isdigit()
+        if (is_dish_request or (len(message.split()) <= 5 and not is_numeric)):
             # Формируем запрос для поиска
             dish_to_show = message.strip()
             
@@ -1043,52 +1045,34 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         # 3. Формируем ПОЛНЫЙ контекст меню для перечисления категорий
         menu_context = "ПОЛНОЕ МЕНЮ РЕСТОРАНА (все позиции для перечисления):\n\n"
 
-        # Разделяем меню на доставку и бар
-        delivery_menu_ids = {90, 92, 141}
-        bar_menu_ids = {29, 91, 86, 32}
+        # Меню, которые нужно передать в контекст (по запросу: 29, 32, 90, 92, 141)
+        target_menu_ids = [29, 32, 90, 92, 141]
 
-        # Добавляем меню доставки с КРАТКИМ списком блюд (топ-3) для контекста
-        for menu_id in delivery_menu_ids:
+        for menu_id in target_menu_ids:
             if menu_id in menu_data:
                 menu = menu_data[menu_id]
                 menu_name = menu.get('name', '').replace('🍳', '').replace('📋', '').strip()
-                menu_context += f"=== {menu_name} (ДОСТАВКА) ===\n"
+                menu_context += f"=== {menu_name} ===\n"
 
                 for category_id, category in menu.get('categories', {}).items():
                     category_name = category.get('name', '').replace('🍕', '').replace('🥗', '').strip()
                     menu_context += f"\n{category_name}:\n"
 
                     items = category.get('items', [])
-                    # Берем только первые 5 блюд для контекста, чтобы не перегружать промпт
-                    for item in items[:5]:
+                    # Берем только первые 2 блюда из каждой категории
+                    for item in items[:2]:
                         desc = item.get('description', '')
+                        # Очищаем описание от HTML тегов если есть
+                        if desc:
+                            desc = re.sub(r'<[^>]+>', '', desc).strip()
+                            
                         if desc:
                             menu_context += f"• {item['name']} - {item['price']}₽ ({desc})\n"
                         else:
                             menu_context += f"• {item['name']} - {item['price']}₽\n"
                     
-                    if len(items) > 5:
-                        menu_context += f"... и еще {len(items)-5} блюд\n"
-                    menu_context += "\n"
-
-        # Добавляем меню бара с КРАТКИМ списком
-        for menu_id in bar_menu_ids:
-            if menu_id in menu_data:
-                menu = menu_data[menu_id]
-                menu_name = menu.get('name', '').replace('🍳', '').replace('📋', '').strip()
-                alcohol_note = " (АЛКОГОЛЬ)" if menu_id == 32 else ""
-                menu_context += f"=== {menu_name}{alcohol_note} (БАР) ===\n"
-
-                for category_id, category in menu.get('categories', {}).items():
-                    category_name = category.get('name', '').replace('🍕', '').replace('🥗', '').strip()
-                    menu_context += f"\n{category_name}:\n"
-
-                    items = category.get('items', [])
-                    for item in items[:5]:
-                        menu_context += f"• {item['name']} - {item['price']}₽\n"
-                    
-                    if len(items) > 5:
-                        menu_context += f"... и еще {len(items)-5} позиций\n"
+                    if len(items) > 2:
+                        menu_context += f"... и еще {len(items)-2} блюд\n"
                     menu_context += "\n"
 
         # 4. Получаем историю
@@ -1107,7 +1091,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
 
         # 5. Формируем список всех категорий для промпта
         all_categories_list = set()
-        for menu_id in delivery_menu_ids:
+        for menu_id in target_menu_ids:
             if menu_id in menu_data:
                 for cat in menu_data[menu_id].get('categories', {}).values():
                     cat_name = cat.get('name', '').strip()
