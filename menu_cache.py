@@ -34,10 +34,23 @@ class MenuCache:
         os.makedirs(os.path.dirname(self.cache_file), exist_ok=True)
         os.makedirs(self.images_dir, exist_ok=True)
 
+        # ⚠️ УДАЛЯЕМ СТАРЫЕ КЭШИ ПРИ ЗАПУСКЕ (ПО ТРЕБОВАНИЮ)
+        # Это гарантирует, что мы не загрузим устаревшие данные
+        try:
+            if os.path.exists(self.cache_file):
+                os.remove(self.cache_file)
+                logger.info(f"🗑️ Удален старый кэш доставки: {self.cache_file}")
+            
+            if os.path.exists(self.all_menus_cache_file):
+                os.remove(self.all_menus_cache_file)
+                logger.info(f"🗑️ Удален старый общий кэш: {self.all_menus_cache_file}")
+        except Exception as e:
+            logger.error(f"❌ Ошибка удаления старых кэшей: {e}")
+
         # Загружаем точку продаж из БД если есть
         self._load_point_id_from_db()
 
-        # Загружаем кэши при инициализации
+        # Загружаем кэши при инициализации (теперь они будут пустыми, но это ок)
         self._load_delivery_cache()
         self._load_all_menus_cache()
         
