@@ -1,4 +1,4 @@
-﻿"""
+"""
 handlers/utils.py
 Общие утилиты и вспомогательные функции
 """
@@ -19,12 +19,25 @@ from aiogram.types import TelegramObject
 from typing import Callable, Dict, Any, Awaitable
 from contextlib import asynccontextmanager
 
-# Импорт функции для кликабельных телефонов
-try:
-    from .handlers_main import clean_phone_for_link
-except ImportError:
-    def clean_phone_for_link(phone):
-        return ''.join(c for c in phone if c.isdigit() or c == '+')
+# Функция для очистки номера телефона для tel: ссылки
+def clean_phone_for_link(phone):
+    """Очищает номер телефона для использования в tel: ссылке"""
+    import re
+    if not phone:
+        return ""
+    
+    # Убираем все кроме цифр и плюса
+    clean = re.sub(r'[^\d+]', '', phone)
+    
+    # Преобразуем российские номера
+    if clean.startswith('8'):
+        clean = '+7' + clean[1:]
+    elif clean.startswith('7') and not clean.startswith('+7'):
+        clean = '+7' + clean[1:]
+    elif not clean.startswith('+'):
+        clean = '+7' + clean
+    
+    return clean
 
 logger = logging.getLogger(__name__)
 

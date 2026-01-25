@@ -36,7 +36,8 @@ from .utils import (
     set_operator_notifications,
     is_operator_chat,
     clear_operator_chat,
-    typing_indicator
+    typing_indicator,
+    clean_phone_for_link
 )
 from difflib import SequenceMatcher
 
@@ -173,25 +174,6 @@ def log_user_action(user_id: int, action: str, details: str = None):
         database.save_chat_message(chat_id, 'action', message_text)
     except Exception as e:
         logger.error(f"Ошибка логирования действия пользователя {user_id}: {e}")
-
-# Функция для очистки номера телефона для tel: ссылки
-def clean_phone_for_link(phone):
-    """Очищает номер телефона для использования в tel: ссылке"""
-    if not phone:
-        return ""
-    
-    # Убираем все кроме цифр и плюса
-    clean = re.sub(r'[^\d+]', '', phone)
-    
-    # Преобразуем российские номера
-    if clean.startswith('8'):
-        clean = '+7' + clean[1:]
-    elif clean.startswith('7') and not clean.startswith('+7'):
-        clean = '+7' + clean[1:]
-    elif not clean.startswith('+'):
-        clean = '+7' + clean
-    
-    return clean
 
 # Состояния для формы поставщиков
 class SupplierStates(StatesGroup):
