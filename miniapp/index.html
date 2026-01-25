@@ -73,6 +73,44 @@
     </style>
 </head>
 <body>
+    <!-- User Agreement Popup -->
+    <div id="agreement-popup" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999999; display: flex; justify-content: center; align-items: center;">
+        <div style="background: #fff; padding: 25px !important; border-radius: 16px; max-width: 85%; width: 320px; text-align: center; font-family: -apple-system, BlinkMacSystemFont, Roboto, sans-serif; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+            <h3 style="margin: 0 0 15px 0 !important; font-size: 18px; font-weight: 600; color: #333;">Пользовательское соглашение</h3>
+            <p style="margin: 0 0 15px 0 !important; font-size: 14px; line-height: 1.5; color: #555;">
+                Для продолжения работы, пожалуйста, примите условия 
+                <a href="#" onclick="alert('Текст пользовательского соглашения'); return false;" style="color: #0088cc; text-decoration: none; font-weight: 500;">пользовательского соглашения</a>.
+            </p>
+            <div style="margin: 0 0 20px 0 !important; font-size: 13px; color: #888; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <span style="color: #0088cc; font-size: 16px;">✓</span>
+                <span>Я согласен на обработку персональных данных</span>
+            </div>
+            <button onclick="closeAgreement()" style="background: #0088cc; color: white; border: none; padding: 12px 24px !important; border-radius: 12px; font-size: 16px; font-weight: 500; cursor: pointer; width: 100%; transition: opacity 0.2s;">
+                Принять и продолжить
+            </button>
+        </div>
+    </div>
+
+    <script>
+        function closeAgreement() {
+            document.getElementById('agreement-popup').style.display = 'none';
+            try {
+                localStorage.setItem('mashkov_agreement_accepted', 'true');
+            } catch (e) {
+                console.log('LocalStorage not available');
+            }
+        }
+
+        // Check if already accepted
+        try {
+            if (localStorage.getItem('mashkov_agreement_accepted') === 'true') {
+                document.getElementById('agreement-popup').style.display = 'none';
+            }
+        } catch (e) {
+            console.log('LocalStorage not available');
+        }
+    </script>
+
     <!-- SABY WIDGET -->
     <script type="text/javascript" data-saby-widget="c75e63d4-0625-473c-85e6-085fad873248">
     (
