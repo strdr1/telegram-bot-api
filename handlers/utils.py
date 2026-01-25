@@ -88,13 +88,17 @@ class TimeoutMiddleware(BaseMiddleware):
 
 async def safe_send_message(bot, chat_id: int, text: str, **kwargs) -> Optional[types.Message]:
     """Безопасная отправка сообщения с повторными попытками"""
+    logger.info(f"📤 Отправка сообщения пользователю {chat_id} (len={len(text)})")
     for attempt in range(config.MAX_RETRIES):
         try:
             async with asyncio.timeout(config.MESSAGE_TIMEOUT):
-                return await bot.send_message(chat_id=chat_id, text=text, **kwargs)
+                msg = await bot.send_message(chat_id=chat_id, text=text, **kwargs)
+                logger.info(f"✅ Сообщение отправлено пользователю {chat_id} (msg_id={msg.message_id})")
+                return msg
         except asyncio.TimeoutError:
+            logger.warning(f"⚠️ Таймаут отправки сообщения пользователю {chat_id} (попытка {attempt + 1})")
             if attempt == config.MAX_RETRIES - 1:
-                logger.error(f"Таймаут при отправке сообщения пользователю {chat_id}")
+                logger.error(f"❌ ФИНАЛЬНЫЙ Таймаут при отправке сообщения пользователю {chat_id}")
                 return None
             await asyncio.sleep(config.RETRY_DELAY)
         except TelegramRetryAfter as e:
@@ -258,14 +262,17 @@ async def update_message(user_id: int, text: str, reply_markup=None, parse_mode=
 def check_user_registration_fast(user_id: int) -> str:
     """Сверхбыстрая проверка регистрации пользователя с кэшированием"""
     if user_id in user_registration_cache:
+        logger.info(f"🔍 КЭШ: Проверка регистрации {user_id} -> {user_registration_cache[user_id]}")
         return user_registration_cache[user_id]
     
     try:
+        logger.info(f"🔍 БД: Запрос статуса регистрации для {user_id}...")
         status = database.check_user_registration_fast(user_id)
+        logger.info(f"🔍 БД: Результат для {user_id} -> {status}")
         user_registration_cache[user_id] = status
         return status
     except Exception as e:
-        logger.error(f"Ошибка проверки регистрации пользователя {user_id}: {e}")
+        logger.error(f"❌ Ошибка проверки регистрации пользователя {user_id}: {e}", exc_info=True)
         return 'not_registered'
 
 def is_admin_fast(user_id: int) -> bool:

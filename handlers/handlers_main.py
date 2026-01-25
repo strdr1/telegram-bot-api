@@ -797,6 +797,7 @@ async def delete_start_message_after_delay(message: types.Message, delay_seconds
 
 async def show_main_menu(user_id: int, bot):
     """Показать главное меню с динамической кнопкой ЛК/регистрации"""
+    logger.info(f"🏠 show_main_menu called for user_id={user_id}")
     restaurant_name = database.get_setting('restaurant_name', config.RESTAURANT_NAME)
     start_message = database.get_setting('start_message', config.START_MESSAGE)
     restaurant_phone = database.get_setting('restaurant_phone', config.RESTAURANT_PHONE)
@@ -815,9 +816,11 @@ async def show_main_menu(user_id: int, bot):
 🕐 {restaurant_hours}"""
     
     # Используем динамическую клавиатуру с проверкой регистрации
+    logger.info(f"⌨️ Generating keyboard for user_id={user_id}")
     keyboard = keyboards.main_menu_with_profile(user_id)
     
     # Отправляем новое сообщение
+    logger.info(f"📤 Sending main menu message to user_id={user_id}")
     message = await safe_send_message(
         bot=bot,
         chat_id=user_id,
@@ -827,9 +830,10 @@ async def show_main_menu(user_id: int, bot):
     )
     
     if message and message.message_id:
+        logger.info(f"✅ Main menu sent successfully to user_id={user_id}, msg_id={message.message_id}")
         last_message_ids[user_id] = message.message_id
     else:
-        logger.warning(f"Не удалось отправить главное меню пользователю {user_id}")
+        logger.warning(f"❌ Не удалось отправить главное меню пользователю {user_id}")
 
 # ===== ОБРАБОТЧИКИ МЕНЮ =====
 

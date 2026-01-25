@@ -9,6 +9,9 @@ from datetime import datetime, timedelta
 import config
 import re
 import database
+import logging
+
+logger = logging.getLogger(__name__)
 
 def main_menu():
     """Базовое главное меню (без промокодов - будет заменено динамически)"""
@@ -485,6 +488,7 @@ def main_menu_with_profile(user_id: int = None) -> types.InlineKeyboardMarkup:
 
     if user_id:
         registration_status = check_user_registration_fast(user_id)
+        logger.info(f"⌨️ Генерация клавиатуры для {user_id}. Статус: {registration_status}")
 
         if registration_status == 'completed':
             keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
