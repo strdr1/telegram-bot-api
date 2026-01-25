@@ -2029,6 +2029,11 @@ async def process_search_query(message: types.Message, state: FSMContext):
         await message.answer("⚠️ Введите хотя бы 2 символа для поиска")
         return
     
+    # Игнорируем короткие числа (до 3 цифр), чтобы не находило вес (150г) и т.д.
+    if search_text.isdigit() and len(search_text) < 3:
+        await message.answer("⚠️ Для поиска по номеру введите минимум 3 цифры")
+        return
+    
     database.log_action(message.from_user.id, "menu_search", search_text)
     
     state_data = await state.get_data()
