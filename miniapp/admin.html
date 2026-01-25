@@ -693,8 +693,8 @@
                 <div class="chat-header-main">
                     <div class="chat-title">👤 ${chat.user_name || `ID: ${chat.user_id}`}</div>
                     <div class="chat-actions">
-                        <button class="btn btn-primary" onclick="replyToChat()">💬 Ответить</button>
-                        <button class="btn btn-secondary" onclick="stopChat()">🛑 Завершить</button>
+                        <button class="btn btn-primary" onclick="pauseChat()">⏸️ Пауза</button>
+                        <button class="btn btn-secondary" onclick="stopChat()">▶️ Возобновить авто</button>
                     </div>
                 </div>
                 <div class="messages" id="messages"></div>
@@ -771,6 +771,34 @@
         // Reply to chat
         function replyToChat() {
             document.getElementById('message-text').focus();
+        }
+
+        // Pause chat
+        async function pauseChat() {
+            if (!currentChatId) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/chats/${currentChatId}/status`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'paused' })
+                });
+                
+                if (!response.ok) throw new Error('Failed to pause chat');
+                
+                await loadChats();
+                await loadMessages(currentChatId);
+                
+                if (tg) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                }
+                
+            } catch (error) {
+                console.error('Error pausing chat:', error);
+                if (tg) {
+                    tg.HapticFeedback.notificationOccurred('error');
+                }
+            }
         }
 
         // Stop chat
