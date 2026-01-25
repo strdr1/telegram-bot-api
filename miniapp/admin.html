@@ -672,7 +672,8 @@
         // Load messages
         async function loadMessages(chatId, isBackground = false) {
             try {
-                const response = await fetch(`${API_BASE}/chats/${chatId}`);
+                // Add timestamp to prevent caching
+                const response = await fetch(`${API_BASE}/chats/${chatId}?t=${Date.now()}`);
                 if (!response.ok) throw new Error('Failed to load messages');
                 
                 const newMessages = await response.json();
