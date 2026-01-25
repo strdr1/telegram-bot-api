@@ -256,20 +256,25 @@ class MenuCache:
         available_menus = []
 
         for menu_id, menu_data in self.all_menus_cache.items():
+            try:
+                m_id_int = int(menu_id)
+            except (ValueError, TypeError):
+                continue
+
             # Проверяем, что меню в списке доставочных
-            if menu_id not in delivery_menu_ids:
+            if m_id_int not in delivery_menu_ids:
                 continue
 
             menu_name = menu_data.get('name', '')
 
             # Проверяем время для завтраков (ID 90)
-            if menu_id == 90:
+            if m_id_int == 90:
                 from datetime import time
                 if current_time > time(16, 0):  # После 16:00
                     continue  # Пропускаем завтраки
 
             available_menus.append({
-                'id': menu_id,
+                'id': m_id_int,
                 'name': menu_name,
                 'categories_count': len(menu_data.get('categories', {})),
                 'total_items': sum(len(cat['items']) for cat in menu_data.get('categories', {}).values())
@@ -285,17 +290,22 @@ class MenuCache:
         bar_menus = []
 
         for menu_id, menu_data in self.all_menus_cache.items():
-            if menu_id not in bar_menu_ids:
+            try:
+                m_id_int = int(menu_id)
+            except (ValueError, TypeError):
+                continue
+                
+            if m_id_int not in bar_menu_ids:
                 continue
 
             menu_name = menu_data.get('name', '')
 
             bar_menus.append({
-                'id': menu_id,
+                'id': m_id_int,
                 'name': menu_name,
                 'categories_count': len(menu_data.get('categories', {})),
                 'total_items': sum(len(cat['items']) for cat in menu_data.get('categories', {}).values()),
-                'is_alcoholic': menu_id == 32  # МЕНЮ АЛКОГОЛЬ
+                'is_alcoholic': m_id_int == 32  # МЕНЮ АЛКОГОЛЬ
             })
 
         return bar_menus
