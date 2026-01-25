@@ -2594,8 +2594,8 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
 
                     # Создаем клавиатуру с кнопками управления чатом
                     keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-                        [types.InlineKeyboardButton(text="💬 Ответить", callback_data=f"reply_{user.id}")],
-                        [types.InlineKeyboardButton(text="❌ Завершить чат", callback_data=f"stop_chat_{user.id}")]
+                        [types.InlineKeyboardButton(text="⏸️ Пауза", callback_data=f"reply_{user.id}")],
+                        [types.InlineKeyboardButton(text="▶️ Возобновить авто", callback_data=f"stop_chat_{user.id}")]
                     ])
 
                     await safe_send_message(message.bot, admin_id,
@@ -2915,6 +2915,30 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
             except Exception as e:
                 logger.error(f"Ошибка сохранения в миниапп: {e}")
                 
+            return
+
+        # Проверяем на поисковый запрос (SEARCH:)
+        if result.get('search_query'):
+            search_query = result.get('search_query')
+            logger.info(f"Выполняем поиск по запросу: {search_query} для пользователя {user_id}")
+
+            # Отправляем текстовый ответ, если он есть
+            if result.get('text'):
+                clean_text = re.sub(r'SEARCH:.+', '', result['text'], flags=re.DOTALL | re.IGNORECASE).strip()
+                if clean_text and len(clean_text) > 2:
+                     await safe_send_message(message.bot, user_id, clean_text, parse_mode="HTML")
+
+            from category_handler import handle_show_category
+            # Используем handle_show_category, так как он имеет логику поиска по блюдам (виртуальная категория)
+            await handle_show_category(search_query, user_id, message.bot)
+
+            # Сохраняем в чат
+            try:
+                chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
+                database.save_chat_message(chat_id, 'bot', f'Показал результаты поиска: {search_query}')
+            except Exception as e:
+                logger.error(f"Ошибка сохранения в миниапп: {e}")
+
             return
 
         # Проверка запроса на показ всех категорий

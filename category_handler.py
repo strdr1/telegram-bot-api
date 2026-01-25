@@ -213,7 +213,7 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
             for menu_id, menu in sorted_menu_items:
                 for cat_id, category in menu.get('categories', {}).items():
                     for item in category.get('items', []):
-                        if search_term in item.get('name', '').lower():
+                        if search_term in item.get('name', '').lower() or search_term in item.get('description', '').lower():
                             virtual_items.append(item)
 
             if virtual_items:
@@ -532,7 +532,7 @@ async def handle_show_category(category_name: str, user_id: int, bot):
             for menu_id, menu in menus_to_process:
                 for cat_id, category in menu.get('categories', {}).items():
                     for item in category.get('items', []):
-                        if search_term in item.get('name', '').lower():
+                        if search_term in item.get('name', '').lower() or search_term in item.get('description', '').lower():
                             virtual_items.append(item)
 
             if virtual_items:
