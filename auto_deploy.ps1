@@ -129,11 +129,21 @@ function Start-Deployment {
     
     # Step 4: Clone repository
     Write-Header "[STEP 4] CLONING REPOSITORY"
+    
+    # Backup database if exists
+    Write-Info "Backing up database..."
+    Invoke-RemoteCommand "if [ -f /opt/telegram-bot/restaurant.db ]; then cp /opt/telegram-bot/restaurant.db /tmp/restaurant.db.bak; fi"
+    
     Invoke-RemoteCommand "cd /opt"
     Invoke-RemoteCommand "if [ -d 'telegram-bot' ]; then rm -rf telegram-bot; fi"
     Invoke-RemoteCommand "git clone https://github.com/strdr1/telegram-bot-api.git telegram-bot"
+    
+    # Restore database if backup exists
+    Write-Info "Restoring database..."
+    Invoke-RemoteCommand "if [ -f /tmp/restaurant.db.bak ]; then cp /tmp/restaurant.db.bak /opt/telegram-bot/restaurant.db; rm /tmp/restaurant.db.bak; fi"
+    
     Invoke-RemoteCommand "chown -R botuser:botuser /opt/telegram-bot"
-    Write-Success "Repository cloned"
+    Write-Success "Repository cloned and database restored"
     
     # Step 5: Python dependencies
     Write-Header "[STEP 5] INSTALLING PYTHON DEPENDENCIES"
