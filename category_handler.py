@@ -296,7 +296,7 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
             similar = []
             for cat in all_categories:
                 ratio = SequenceMatcher(None, category_name.lower(), cat.lower()).ratio()
-                if ratio > 0.6:  # Увеличил порог с 0.4 до 0.6 для отсечения мусора (Виски != Лисички)
+                if ratio > 0.7:  # Увеличил порог с 0.6 до 0.7 для отсечения мусора (Виски != Лисички - ratio 0.67)
                     similar.append((cat, ratio))
 
             similar.sort(key=lambda x: x[1], reverse=True)

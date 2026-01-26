@@ -1073,6 +1073,9 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                     }
 
                     items = category.get('items', [])
+                    # Фильтруем товары с ценой 0 (модификаторы, скрытые товары)
+                    items = [item for item in items if float(item.get('price', 0)) > 0]
+                    
                     # Берем первые 5 блюд из каждой категории для лучшего контекста
                     for item in items[:5]:
                         desc = item.get('description', '')
@@ -1083,7 +1086,12 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                         dish_info = {
                             "name": item['name'],
                             "price": item['price'],
-                            "description": desc
+                            "description": desc,
+                            "calories": item.get('calories'),
+                            "weight": item.get('weight'),
+                            "protein": item.get('protein'),
+                            "fat": item.get('fat'),
+                            "carbohydrate": item.get('carbohydrate')
                         }
                         category_data["items"].append(dish_info)
                     
@@ -1161,6 +1169,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             f"НЕ ИЩИ КАТЕГОРИЮ (PARSE_CATEGORY), если в FAQ сказано, что такой категории нет, но есть альтернативы.\n"
             f"Пример: 'Есть детское меню?' -> FAQ: 'Отдельного нет, но есть наггетсы...' -> Ты: 'Отдельного детского меню у нас нет, но...' (НЕ используй PARSE_CATEGORY:детское меню).\n\n"
             f"МЕНЮ И ЦЕНЫ СМОТРИ В ОТДЕЛЬНОМ СООБЩЕНИИ (JSON)!\n"
+            f"В JSON также указаны КАЛОРИИ (calories), ВЕС (weight) и БЖУ блюд. Используй эти данные, если пользователя интересует калорийность, диетические предпочтения или состав.\n"
             f"ДОСТУПНЫЕ КАТЕГОРИИ МЕНЮ: {categories_str}\n"
             f"ВАЖНО: Используй ТОЧНЫЕ названия категорий из списка выше для PARSE_CATEGORY.\n\n"
             f"Знаешь русские сказки (Колобок, Репка, Курочка Ряба, Иван-царевич, Баба-яга, Кощей Бессмертный), "
@@ -1593,7 +1602,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         if menu_context_json:
              base_messages.append({
                 "role": "system", 
-                "content": f"MENU_CONTEXT_JSON (Knowledge Base):\n{menu_context_json}\n\nИспользуй эти данные для ответов на вопросы о блюдах, ингредиентах и ценах."
+                "content": f"MENU_CONTEXT_JSON (Knowledge Base):\n{menu_context_json}\n\nИспользуй эти данные для ответов на вопросы о блюдах, ингредиентах, ценах, КАЛОРИЯХ и ВЕСЕ."
             })
 
         if faq_context:
