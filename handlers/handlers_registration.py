@@ -626,9 +626,19 @@ async def handle_event_phone_input(message: types.Message, state: FSMContext):
     elif message.text:
         # Попытка извлечь номер из текста
         import re
+        # 1. Сначала пробуем найти через regex
         phone_match = re.search(r'[\+]?[0-9\s\-\(\)]{10,}', message.text)
         if phone_match:
             phone = phone_match.group().strip()
+        
+        # 2. Если regex не сработал, пробуем очистить от лишних символов
+        if not phone:
+            # Оставляем только цифры и плюс
+            clean_digits = re.sub(r'[^\d+]', '', message.text)
+            # Если в строке есть хотя бы 10 цифр (не считая плюса)
+            digits_count = len(re.sub(r'\D', '', clean_digits))
+            if digits_count >= 10:
+                phone = clean_digits
     
     if not phone:
         text = """❌ <b>Некорректный номер телефона</b>

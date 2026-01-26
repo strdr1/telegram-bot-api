@@ -46,12 +46,17 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
         lower_name = category_name.lower()
 
         # Список общих запросов завтраков, для которых показываем полный список
-        breakfast_generics = ['завтрак', 'завтраки', 'меню завтраков', 'меню завтрак', 'breakfast', 'breakfasts']
+        breakfast_generics = [
+            'завтрак', 'завтраки', 'меню завтраков', 'меню завтрак', 'breakfast', 'breakfasts',
+            'с утра', 'поесть с утра', 'утреннее', 'утреннее меню', 'на завтрак'
+        ]
         
         # Проверяем, является ли запрос общим (точное совпадение или очень близкое)
         is_generic_breakfast = lower_name in breakfast_generics or \
-                             (lower_name.endswith('завтрак') and len(lower_name.split()) < 2) or \
-                             (lower_name.endswith('завтраки') and len(lower_name.split()) < 2)
+                             'завтрак' in lower_name or \
+                             'с утра' in lower_name or \
+                             (lower_name.endswith('завтрак') and len(lower_name.split()) < 3) or \
+                             (lower_name.endswith('завтраки') and len(lower_name.split()) < 3)
 
         if is_generic_breakfast:
             menu = menu_cache.all_menus_cache.get("90") or menu_cache.all_menus_cache.get(90)

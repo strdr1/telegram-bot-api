@@ -1,4 +1,4 @@
-﻿"""
+"""
 handlers_admin.py
 Обработчики админ-функций
 """
@@ -2482,15 +2482,59 @@ async def admin_back_to_promocodes_callback(callback: types.CallbackQuery):
 user_promocode_messages = {}
 
 async def cleanup_promocode_messages(user_id: int, bot):
-    """Удаление всех сообщений пользователя при создании промокода"""
+    """Удаляет все сообщения, связанные с созданием промокода"""
     if user_id in user_promocode_messages:
-        for msg_id in user_promocode_messages[user_id][:]:
+        for msg_id in user_promocode_messages[user_id]:
             try:
                 await bot.delete_message(user_id, msg_id)
-            except Exception as e:
-                logger.debug(f"Не удалось удалить сообщение промокода {msg_id}: {e}")
-            user_promocode_messages[user_id].remove(msg_id)
+            except Exception:
+                pass
         user_promocode_messages[user_id] = []
+
+@router.callback_query(F.data.startswith("stop_chat_"))
+async def stop_chat_callback_handler(callback: types.CallbackQuery):
+    """Обработчик кнопки завершения чата с пользователем"""
+    user_id_str = callback.data.replace("stop_chat_", "")
+    try:
+        user_id = int(user_id_str)
+        
+        # Выключаем режим чата и убираем уведомления/назначения
+        # Используем clear_operator_chat из utils, который очищает все списки
+        clear_operator_chat(user_id)
+        
+        # Сбрасываем статус в базе данных
+        try:
+            chat_id = database.get_or_create_chat(user_id, f'User {user_id}')
+            database.update_chat_status(chat_id, 'active')
+        except Exception as e:
+            logger.error(f"Ошибка сброса статуса в БД: {e}")
+
+        # Оповещаем пользователя
+        try:
+            await safe_send_message(callback.bot, user_id, 
+                                   "ℹ️ <b>Оператор завершил диалог.</b>\n\n"
+                                   "Бот снова работает в автоматическом режиме! 🤖\n"
+                                   "Если у вас появятся новые вопросы — пишите!",
+                                   parse_mode="HTML")
+        except Exception:
+            pass
+
+        await callback.answer("✅ Чат завершен")
+        
+        # Обновляем сообщение админа (убираем кнопки)
+        try:
+            await callback.message.edit_text(
+                f"{callback.message.text}\n\n✅ <b>Чат завершен</b>",
+                reply_markup=None,
+                parse_mode="HTML"
+            )
+        except Exception:
+            pass
+            
+    except Exception as e:
+        logger.error(f"Ошибка при завершении чата (callback) для {user_id_str}: {e}")
+        await callback.answer("❌ Ошибка", show_alert=True)
+
 
 async def add_promocode_message(user_id: int, message_id: int):
     """Добавление ID сообщения в список для удаления"""

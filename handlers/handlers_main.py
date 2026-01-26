@@ -2039,7 +2039,12 @@ async def chat_operator_callback(callback: types.CallbackQuery):
     asyncio.create_task(notify_admins())
     # Подтверждаем пользователю, что оператор оповещён
     try:
-        await safe_send_message(callback.bot, user_id, "✅ Оператор оповещён — напишите ваш вопрос, мы свяжемся с вами как можно скорее.")
+        await safe_send_message(callback.bot, user_id, 
+                               "✅ <b>Оператор оповещён</b>\n\n"
+                               "Напишите ваш вопрос, мы свяжемся с вами как можно скорее.\n"
+                               "Бот переведен в ручной режим.\n\n"
+                               "❌ Чтобы завершить диалог и вернуть бота, нажмите: /stop",
+                               parse_mode="HTML")
     except Exception:
         pass
 
@@ -2367,6 +2372,51 @@ async def show_restaurant_menu(user_id: int, bot):
 
 
 
+@router.message(Command("stop"))
+async def stop_operator_chat_command(message: types.Message):
+    """Команда для ручного завершения чата с оператором"""
+    user_id = message.from_user.id
+    
+    # Проверяем статус в базе (для MiniApp)
+    try:
+        chat_id = database.get_or_create_chat(user_id, message.from_user.full_name or f'User {user_id}')
+        chat_info = database.get_chat_by_id(chat_id)
+        db_paused = chat_info and chat_info.get('chat_status') == 'paused'
+    except Exception as e:
+        logger.error(f"Ошибка проверки статуса чата при /stop: {e}")
+        db_paused = False
+        
+    # Проверяем статус в памяти (для Telegram-пересылки)
+    mem_active = is_operator_chat(user_id)
+    
+    if db_paused or mem_active:
+        # Сбрасываем статус в базе
+        try:
+            chat_id = database.get_or_create_chat(user_id, message.from_user.full_name or f'User {user_id}')
+            database.update_chat_status(chat_id, 'active')
+        except Exception as e:
+            logger.error(f"Ошибка сброса статуса чата: {e}")
+            
+        # Сбрасываем статус в памяти
+        from .utils import clear_operator_chat
+        clear_operator_chat(user_id)
+        
+        await safe_send_message(message.bot, user_id, 
+                               "ℹ️ <b>Вы завершили чат с оператором.</b>\n\n"
+                               "Бот снова работает в автоматическом режиме! 🤖\n"
+                               "Если у вас появятся вопросы — пишите!",
+                               parse_mode="HTML")
+        
+        # Оповещаем админов, если был активный чат
+        if mem_active:
+             assigned = get_assigned_operator(user_id)
+             if assigned:
+                 await safe_send_message(message.bot, assigned, f"ℹ️ Пользователь {message.from_user.full_name} завершил чат командой /stop.")
+    else:
+        await safe_send_message(message.bot, user_id, 
+                               "ℹ️ Вы сейчас не находитесь в режиме чата с оператором.",
+                               parse_mode="HTML")
+
 # ===== ТЕКСТОВЫЙ ОБРАБОТЧИК =====
 
 @router.message(F.text, StateFilter(None))
@@ -2399,9 +2449,9 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
 
             # Отправляем уведомление пользователю, что диалог на паузе
             await safe_send_message(message.bot, user.id,
-                                   "🤖 <b>Диалог переведен в ручной режим</b>\n\n"
-                                   "Ваши сообщения будут обрабатываться администратором. "
-                                   "Пожалуйста, подождите ответа оператора.",
+                                   "💬 <b>Режим диалога с оператором</b>\n\n"
+                                   "Ваше сообщение передано администратору.\n"
+                                   "❌ Для завершения чата и включения бота нажмите: /stop",
                                    parse_mode="HTML")
             return
     except Exception as e:
@@ -2439,15 +2489,11 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
             # Подтверждаем пользователю, что сообщение отправлено
             try:
                 await safe_send_message(message.bot, user.id,
-                                       "✅ Ваше сообщение отправлено администратору. Ожидайте ответа...")
+                                       "✅ Сообщение отправлено оператору.\nДля завершения чата: /stop")
             except Exception:
                 pass
 
-            # Удаляем сообщение пользователя чтобы не хранить в чате
-            try:
-                await safe_delete_message(message.bot, user.id, message.message_id)
-            except Exception:
-                pass
+            # НЕ удаляем сообщение пользователя, чтобы он видел историю переписки
             return
     except Exception as e:
         logger.debug(f"Ошибка в обработчике операторского чата: {e}")
