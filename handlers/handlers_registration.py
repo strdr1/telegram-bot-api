@@ -317,13 +317,13 @@ async def handle_name_input(message: types.Message, state: FSMContext):
         disable_web_page_preview=True
     )
     
-    # Добавляем ID этого сообщения в список для удаления
-    if reg_message and reg_message.message_id:
-        _add_registration_message(user.id, reg_message.message_id)
+    # ВАЖНО: Не добавляем это сообщение в список для удаления, чтобы пользователь мог его видеть
+    # if reg_message and reg_message.message_id:
+    #     _add_registration_message(user.id, reg_message.message_id)
     
     await asyncio.sleep(2)
     
-    # Удаляем ВСЕ сообщения регистрации
+    # Удаляем ВСЕ сообщения регистрации (кроме финального, который мы не добавили)
     await _cleanup_registration_messages(user.id, message.bot)
     
     # Вызываем функцию перенаправления после регистрации ПЕРЕД очисткой state
@@ -370,9 +370,11 @@ async def confirm_name_callback(callback: types.CallbackQuery, state: FSMContext
         disable_web_page_preview=True
     )
     
-    # Добавляем ID сообщений для удаления
-    if reg_message and reg_message.message_id:
-        _add_registration_message(callback.from_user.id, reg_message.message_id)
+    # ВАЖНО: Не добавляем финальное сообщение в список для удаления
+    # if reg_message and reg_message.message_id:
+    #     _add_registration_message(callback.from_user.id, reg_message.message_id)
+    
+    # Добавляем текущий callback (сообщение с кнопками подтверждения) для удаления
     _add_registration_message(callback.from_user.id, callback.message.message_id)
     
     await asyncio.sleep(2)
