@@ -3076,6 +3076,43 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
             except Exception as e:
                 logger.error(f"Ошибка сохранения ответа бота: {e}")
 
+        elif result['type'] == 'show_dish_card':
+            # Показываем полноценную карточку блюда (как при навигации по меню)
+            from handlers.handlers_delivery import send_dish_photo
+            
+            dish = result['dish']
+            menu_id = result.get('menu_id')
+            category_id = result.get('category_id')
+            
+            if menu_id and category_id:
+                await send_dish_photo(user.id, dish, menu_id, category_id, message.bot)
+                
+                # Сохраняем факт отправки (хотя send_dish_photo это не делает в БД, но это ок)
+                # Можно сохранить текстовое описание для истории
+                try:
+                    chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
+                    database.save_chat_message(chat_id, 'bot', f"[Карточка блюда: {dish['name']}]")
+                except Exception as e:
+                    logger.error(f"Ошибка сохранения ответа бота: {e}")
+            else:
+                # Если IDs не найдены (странно, но бывает), фоллбек на старый метод
+                # Формируем caption вручную
+                caption = f"🍽️ <b>{dish['name']}</b>\n\n"
+                caption += f"💰 Цена: {dish['price']}₽\n"
+                if dish.get('calories'):
+                    caption += f"🔥 Калории: {dish['calories']} ккал/100г\n"
+                
+                # Используем logic for photo_with_text
+                # ... (reuse logic or just send photo)
+                if dish.get('image_url'):
+                    await message.answer_photo(dish['image_url'], caption=caption, parse_mode="HTML")
+                elif dish.get('image_local_path'):
+                     from aiogram.types import FSInputFile
+                     photo = FSInputFile(dish['image_local_path'])
+                     await message.answer_photo(photo, caption=caption, parse_mode="HTML")
+                else:
+                    await safe_send_message(message.bot, user.id, caption)
+
         elif result['type'] == 'photo_with_text':
             # Очищаем текст от **
             clean_text = result['text'].replace('**', '').strip()

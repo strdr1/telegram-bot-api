@@ -808,6 +808,8 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             menu_data = load_menu_cache()
             found_dish = None
             best_score = 0
+            best_menu_id = None
+            best_category_id = None
             search_results = []
 
             for menu_id, menu in menu_data.items():
@@ -842,6 +844,8 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                         if score > best_score:
                             best_score = score
                             found_dish = item
+                            best_menu_id = menu_id
+                            best_category_id = category_id
 
             logger.info(f"Результаты поиска для '{dish_to_show}': найдено {len(search_results)} блюд, лучший score: {best_score}")
             
@@ -854,64 +858,21 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             if found_dish and best_score >= threshold:
                 logger.info(f"Выбрано блюдо: {found_dish['name']} (score: {best_score})")
 
-                caption = f"🍽️ <b>{found_dish['name']}</b>\n\n"
-                caption += f"💰 Цена: {found_dish['price']}₽\n"
-                if found_dish.get('weight'):
-                    caption += f"⚖️ Вес: {found_dish['weight']}\n"
-                if found_dish.get('calories'):
-                    caption += f"🔥 Калории: {found_dish['calories']} ккал\n"
-                if found_dish.get('protein') or found_dish.get('fat') or found_dish.get('carbohydrate') or found_dish.get('proteins') or found_dish.get('fats') or found_dish.get('carbs'):
-                    caption += f"\n🧃 БЖУ:\n"
-                    if found_dish.get('protein') is not None:
-                        caption += f"• Белки: {found_dish['protein']}г\n"
-                    elif found_dish.get('proteins'):
-                        caption += f"• Белки: {found_dish['proteins']}г\n"
-                    if found_dish.get('fat') is not None:
-                        caption += f"• Жиры: {found_dish['fat']}г\n"
-                    elif found_dish.get('fats'):
-                        caption += f"• Жиры: {found_dish['fats']}г\n"
-                    if found_dish.get('carbohydrate') is not None:
-                        caption += f"• Углеводы: {found_dish['carbohydrate']}г\n"
-                    elif found_dish.get('carbs'):
-                        caption += f"• Углеводы: {found_dish['carbs']}г\n"
-                if found_dish.get('description'):
-                    caption += f"\n{found_dish['description']}"
-
-                logger.info(f"Прямой показ блюда: {found_dish['name']} (score: {best_score})")
                 # Сохраняем сообщение пользователя в историю
                 if user_id not in user_history:
                     user_history[user_id] = []
                 user_history[user_id].append({"role": "user", "content": message})
                 if len(user_history[user_id]) > 20:
                     user_history[user_id] = user_history[user_id][-20:]
-                    
-                if found_dish.get('image_url'):
-                    return {
-                        'type': 'photo_with_text',
-                        'photo_url': found_dish['image_url'],
-                        'text': caption,
-                        'show_delivery_button': True
-                    }
-                else:
-                    local_path = found_dish.get('image_local_path')
-                    if not local_path and found_dish.get('image_filename'):
-                        try:
-                            local_path = os.path.join(config.MENU_IMAGES_DIR, found_dish['image_filename'])
-                        except Exception:
-                            local_path = None
-                    if local_path:
-                        return {
-                            'type': 'photo_with_text',
-                            'photo_path': local_path,
-                            'text': caption,
-                            'show_delivery_button': True
-                        }
-                    else:
-                        return {
-                            'type': 'text',
-                            'text': caption,
-                            'show_delivery_button': True
-                        }
+                
+                # Используем новый тип ответа для полноценной карточки
+                return {
+                    'type': 'show_dish_card',
+                    'dish': found_dish,
+                    'menu_id': best_menu_id,
+                    'category_id': best_category_id,
+                    'text': f"Вот карточка блюда {found_dish['name']}:" # Fallback text
+                }
             else:
                  logger.info(f"Блюдо не найдено или низкий score ({best_score} < {threshold}), передаем AI")
 
@@ -1196,7 +1157,8 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             f"ВАЖНО: ИСКЛЮЧАЙ АЛКОГОЛЬ из поиска, если пользователь явно не попросил алкоголь!\n"
             f"Если спрашивают 'еду', не предлагай вино или пиво.\n\n"
             f"КРИТИЧЕСКИ ВАЖНО: Если пользователь называет КОНКРЕТНОЕ блюдо или вино (например 'Вино Гевюрцтраминер Вайнхаус Каннис белое п/сухое', 'Пицца Пепперони', 'Борщ') - ОБЯЗАТЕЛЬНО используй ТОЛЬКО: DISH_PHOTO:точное_название_блюда\n"
-            f"НЕ отвечай текстом на запросы о конкретных блюдах - используй DISH_PHOTO!\n\n"
+            f"НЕ отвечай текстом на запросы о конкретных блюдах - используй DISH_PHOTO! Это мгновенно покажет карточку блюда с фото, ценой и кнопкой заказа.\n"
+            f"Ты также можешь использовать этот маркер САМ, если хочешь предложить конкретное блюдо (например: 'Рекомендую попробовать Американский завтрак!' + DISH_PHOTO:Американский завтрак).\n\n"
             f"ВАЖНО: На приветствия ('привет', 'здравствуйте', 'добрый день') отвечай ОБЩИМ приветствием с представлением и предложением посмотреть меню, а НЕ показывай конкретные блюда!\n"
             f"Пример правильного ответа на 'Привет!':\n"
             f"'👋 Привет! Меня зовут Мак — ваш помощник от ресторана Машков! У нас богатое меню: пиццы, супы, салаты, горячие блюда, десерты и напитки! 🍽️ Что вас интересует?'\n"
@@ -2372,6 +2334,8 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                 found = False
                 best_match = None
                 best_score = 0
+                best_menu_id = None
+                best_category_id = None
 
                 for menu_id, menu in menu_data.items():
                     for category_id, category in menu.get('categories', {}).items():
@@ -2392,15 +2356,26 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                             if score > best_score:
                                 best_score = score
                                 best_match = item
+                                best_menu_id = menu_id
+                                best_category_id = category_id
 
                 # Возвращаем лучший результат
                 if best_match:
+                    # Используем специальный тип для показа полноценной карточки блюда
+                    return {
+                        'type': 'show_dish_card',
+                        'dish': best_match,
+                        'menu_id': best_menu_id,
+                        'category_id': best_category_id,
+                        'text': f"Вот карточка блюда {best_match['name']}:" # Fallback text
+                    }
+                    
                     caption = f"🍽️ <b>{best_match['name']}</b>\n\n"
                     caption += f"💰 Цена: {best_match['price']}₽\n"
                     if best_match.get('weight'):
                         caption += f"⚖️ Вес: {best_match['weight']}\n"
                     if best_match.get('calories'):
-                        caption += f"🔥 Калории: {best_match['calories']} ккал\n"
+                        caption += f"🔥 Калории: {best_match['calories']} ккал/100г\n"
                     if best_match.get('protein') or best_match.get('fat') or best_match.get('carbohydrate') or best_match.get('proteins') or best_match.get('fats') or best_match.get('carbs'):
                         caption += f"\n🧃 БЖУ:\n"
                         if best_match.get('protein') is not None:
