@@ -571,7 +571,8 @@ async def format_full_dish_description(dish: Dict) -> str:
 
 async def send_dish_photo(user_id: int, dish: Dict, menu_id: int, category_id: int, bot):
     try:
-        caption = f"<b>{dish['name']}</b>\n"
+        # Формируем расширенное описание сразу, как просил пользователь
+        caption = f"🍽️ <b>{dish['name']}</b>\n\n"
         
         if dish.get('price', 0) > 0:
             caption += f"💰 <b>Цена:</b> {dish['price']}₽\n"
@@ -579,32 +580,77 @@ async def send_dish_photo(user_id: int, dish: Dict, menu_id: int, category_id: i
         if dish.get('weight'):
             caption += f"⚖️ <b>Вес:</b> {dish['weight']}\n"
         
-        if dish.get('unit') and dish['unit'] != 'шт':
-            caption += f"📏 <b>Единица:</b> {dish['unit']}"
+        # Расчет и вывод калорий (попытка рассчитать на весь вес или взять готовое значение)
+        total_calories = None
+        calories_per_100 = None
         
-        cart_summary = cart_manager.get_cart_summary(user_id)
-        in_cart_count = 0
-        for item in cart_summary['items']:
-            if item['dish_id'] == dish['id']:
-                in_cart_count = item['quantity']
-                break
+        if dish.get('calories_per_100') is not None:
+             calories_per_100 = float(dish['calories_per_100'])
+             
+             # Пробуем рассчитать общую калорийность
+             if dish.get('weight'):
+                try:
+                    weight_str = str(dish['weight']).replace('г', '').replace('мл', '').strip()
+                    if weight_str.replace('.', '').isdigit():
+                        weight_grams = float(weight_str)
+                        total_calories = (calories_per_100 * weight_grams) / 100
+                    else:
+                        # Если вес некорректный, считаем как 100г
+                        total_calories = calories_per_100 
+                except:
+                    total_calories = calories_per_100
+        elif dish.get('calories'):
+             # Если есть просто поле calories (обычно это на 100г в старой базе, но проверим)
+             # Предполагаем, что это на 100г
+             calories_per_100 = float(dish['calories'])
+             if dish.get('weight'):
+                try:
+                    weight_str = str(dish['weight']).replace('г', '').replace('мл', '').strip()
+                    if weight_str.replace('.', '').isdigit():
+                        weight_grams = float(weight_str)
+                        total_calories = (calories_per_100 * weight_grams) / 100
+                except:
+                    pass
+
+        if total_calories:
+            caption += f"🔥 <b>Калории:</b> {total_calories:.2f} ккал\n"
+        elif calories_per_100:
+            caption += f"🔥 <b>Калории (100г):</b> {calories_per_100:.2f} ккал\n"
+
+        # БЖУ
+        bju_lines = []
+        if dish.get('protein'): bju_lines.append(f"• Белки: {dish['protein']:.2f}г")
+        if dish.get('fat'): bju_lines.append(f"• Жиры: {dish['fat']:.2f}г")
+        if dish.get('carbohydrate'): bju_lines.append(f"• Углеводы: {dish['carbohydrate']:.2f}г")
         
-        cart_button_text = "Добавить в корзину 🛒"
-        if in_cart_count > 0:
-            cart_button_text = f"Добавлено ({in_cart_count}) ✅"
+        if bju_lines:
+            caption += f"\n🧃 <b>БЖУ:</b>\n" + "\n".join(bju_lines) + "\n"
+            
+        # Описание
+        if dish.get('description'):
+            caption += f"\n{dish['description']}\n"
         
+        # Кнопка доставки (вместо корзины)
         keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-            [
-                types.InlineKeyboardButton(text=cart_button_text, callback_data=f"add_to_cart_{menu_id}_{dish['id']}"),
-                types.InlineKeyboardButton(text="📝 Полное описание", callback_data=f"view_full_desc_{menu_id}_{category_id}_{dish['id']}")
-            ],
-            [types.InlineKeyboardButton(text="⬅️ Назад к категориям", callback_data=f"back_from_photos_{menu_id}")]
+            [types.InlineKeyboardButton(text="🚚 Заказать доставку", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))]
         ])
         
         image_path = dish.get('image_local_path')
         if not image_path and dish.get('image_filename'):
             image_path = os.path.join(config.MENU_IMAGES_DIR, dish['image_filename'])
         
+        # Если путь не найден в словаре, пробуем найти по ID
+        if not image_path:
+             try:
+                 possible_names = [f"{dish.get('id')}.jpg", f"{dish.get('id')}.png"]
+                 for name in possible_names:
+                     path = os.path.join("files", "imagesMenu", name)
+                     if os.path.exists(path):
+                         image_path = path
+                         break
+             except:
+                 pass
+
         if image_path and os.path.exists(image_path):
             with open(image_path, 'rb') as photo_file:
                 message = await bot.send_photo(
@@ -614,6 +660,8 @@ async def send_dish_photo(user_id: int, dish: Dict, menu_id: int, category_id: i
                     parse_mode="HTML",
                     reply_markup=keyboard
                 )
+        elif dish.get('image_url'):
+             message = await bot.send_photo(chat_id=user_id, photo=dish['image_url'], caption=caption, parse_mode="HTML", reply_markup=keyboard)
         else:
             message = await bot.send_message(
                 chat_id=user_id,
