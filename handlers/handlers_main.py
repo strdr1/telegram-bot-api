@@ -2796,7 +2796,25 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
         # Проверяем на поисковый запрос (SEARCH:)
         if result.get('search_query'):
             search_query = result.get('search_query')
-            logger.info(f"Выполняем поиск по запросу: {search_query} для пользователя {user_id}")
+            
+            # Проверяем на REST_PHOTO внутри search_query (если AI вдруг засунул его туда) или в тексте
+            if 'REST_PHOTO' in result['text'] or 'REST_PHOTO' in search_query:
+                result['text'] = result['text'].replace('REST_PHOTO', '').strip()
+                try:
+                    rest_photo_path = 'rest_photos/REST_PHOTO.webp'
+                    if os.path.exists(rest_photo_path):
+                        await message.bot.send_photo(
+                            chat_id=user.id,
+                            photo=types.FSInputFile(rest_photo_path),
+                            caption="🏛️ <b>Ресторан Mashkov</b>\n📍 ул. Машкова, 13",
+                            parse_mode="HTML"
+                        )
+                    else:
+                        logger.warning(f"Файл {rest_photo_path} не найден")
+                except Exception as e:
+                    logger.error(f"Ошибка отправки REST_PHOTO: {e}")
+            
+            logger.info(f"Выполняем поиск по запросу: {search_query} для пользователя {user.id}")
 
             # Отправляем текстовый ответ, если он есть
             if result.get('text'):
@@ -2816,6 +2834,23 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                 logger.error(f"Ошибка сохранения в миниапп: {e}")
 
             return
+
+        # Проверяем на REST_PHOTO в обычном ответе (без поиска)
+        if 'REST_PHOTO' in result['text']:
+            result['text'] = result['text'].replace('REST_PHOTO', '').strip()
+            try:
+                rest_photo_path = 'rest_photos/REST_PHOTO.webp'
+                if os.path.exists(rest_photo_path):
+                    await message.bot.send_photo(
+                        chat_id=user.id,
+                        photo=types.FSInputFile(rest_photo_path),
+                        caption="🏛️ <b>Ресторан Mashkov</b>\n📍 ул. Машкова, 13",
+                        parse_mode="HTML"
+                    )
+                else:
+                    logger.warning(f"Файл {rest_photo_path} не найден")
+            except Exception as e:
+                logger.error(f"Ошибка отправки REST_PHOTO: {e}")
 
         # Проверка запроса на показ всех категорий
         if result.get('show_all_categories'):

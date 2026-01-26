@@ -296,7 +296,7 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
             similar = []
             for cat in all_categories:
                 ratio = SequenceMatcher(None, category_name.lower(), cat.lower()).ratio()
-                if ratio > 0.4:  # Порог похожести
+                if ratio > 0.6:  # Увеличил порог с 0.4 до 0.6 для отсечения мусора (Виски != Лисички)
                     similar.append((cat, ratio))
 
             similar.sort(key=lambda x: x[1], reverse=True)
@@ -308,18 +308,11 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
                     text += f"• {cat_name}\n"
                 text += "\nПопробуйте уточнить запрос."
             else:
-                text = f"Категория '{category_name}' не найдена."
+                # Если ничего похожего не найдено, просто говорим что не нашли, без рандома
+                text = f"К сожалению, я не нашел категорию или блюдо '{category_name}' в нашем меню. 😔\n\nПопробуйте спросить по-другому или посмотрите основные разделы меню!"
                 
-                # Предлагаем 5 случайных категорий
-                unique_categories = sorted(list(set(all_categories)))
-                if unique_categories:
-                    count = min(5, len(unique_categories))
-                    random_cats = random.sample(unique_categories, count)
-                    text += f"\n\nВозможно, вас заинтересуют эти разделы:\n"
-                    for cat in random_cats:
-                        text += f"• {cat}\n"
-                
-                text += "\nПопробуйте другой запрос."
+                # Рандомные категории убираем, чтобы не сбивать с толку
+
 
             await safe_send_message(bot, user_id, text, parse_mode="HTML")
 

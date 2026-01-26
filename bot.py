@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+﻿﻿# -*- coding: utf-8 -*-
 """
 bot.py - ИСПРАВЛЕННЫЙ (с личным кабинетом) + Webhook support
 """
