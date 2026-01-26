@@ -17,9 +17,9 @@ ssh -o StrictHostKeyChecking=no root@155.212.164.61 "echo '=== ОСТАНАВЛ�
 
 echo.
 echo ========================================
-echo ШАГ 3: Обновление кода...
+echo ШАГ 3: Обновление кода с сохранением БД...
 echo ========================================
-ssh -o StrictHostKeyChecking=no root@155.212.164.61 "echo '=== ОБНОВЛЯЕМ КОД ===' && cd /opt/telegram-bot && git reset --hard HEAD && git clean -fd && git pull origin master && echo '=== ЧИСТИМ SQLite WAL/SHM ===' && rm -f /opt/telegram-bot/restaurant.db-wal /opt/telegram-bot/restaurant.db-shm && echo '=== ПРАВА НА БАЗУ ДАННЫХ ===' && chown botuser:botuser /opt/telegram-bot/restaurant.db || true && chmod 664 /opt/telegram-bot/restaurant.db || true && ls -l /opt/telegram-bot/restaurant.db && echo '=== ПРОВЕРКА КОДА ===' && git log --oneline -1"
+ssh -o StrictHostKeyChecking=no root@155.212.164.61 "echo '=== БЭКАП БД ===' && (cp /opt/telegram-bot/restaurant.db /tmp/restaurant.db.bak 2>/dev/null || echo '⚠️ БД не найдена для бэкапа') && echo '=== ОБНОВЛЕНИЕ ===' && cd /opt/telegram-bot && git reset --hard HEAD && git clean -fd && git pull origin master && echo '=== ВОССТАНОВЛЕНИЕ БД ===' && (cp /tmp/restaurant.db.bak /opt/telegram-bot/restaurant.db 2>/dev/null || echo '⚠️ Нет бэкапа для восстановления') && echo '=== ЧИСТИМ WAL/SHM ===' && rm -f /opt/telegram-bot/restaurant.db-wal /opt/telegram-bot/restaurant.db-shm && echo '=== ПРАВА ===' && (chown botuser:botuser /opt/telegram-bot/restaurant.db 2>/dev/null || true) && (chmod 664 /opt/telegram-bot/restaurant.db 2>/dev/null || true) && ls -l /opt/telegram-bot/restaurant.db 2>/dev/null && echo '=== ПРОВЕРКА КОДА ===' && git log --oneline -1"
 
 echo.
 echo ========================================
