@@ -469,7 +469,7 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                                 if item.get('weight'):
                                     caption += f"⚖️ Вес: {item['weight']}г\n"
                                 if item.get('calories'):
-                                    caption += f"🔥 Калории: {item['calories']} ккал\n"
+                                    caption += f"🔥 Калории: {item['calories']} ккал/100г\n"
                                 
                                 # БЖУ
                                 if item.get('proteins') or item.get('fats') or item.get('carbs'):

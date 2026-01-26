@@ -548,10 +548,10 @@ async def format_full_dish_description(dish: Dict) -> str:
             text += f"📊 <b>На 100г:</b> {calories_per_100:.1f} ккал\n"
         except:
             if dish.get('calories'):
-                text += f"🔥 <b>Ккал:</b> {dish['calories']:.1f} ккал\n"
+        text += f"🔥 <b>Ккал:</b> {dish['calories']:.1f} ккал/100г\n"
     
     elif dish.get('calories'):
-        text += f"🔥 <b>Ккал:</b> {dish['calories']:.1f} ккал\n"
+        text += f"🔥 <b>Ккал:</b> {dish['calories']:.1f} ккал/100г\n"
     
     if dish.get('protein') or dish.get('fat') or dish.get('carbohydrate'):
         bju = []
