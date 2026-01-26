@@ -6,7 +6,7 @@ from aiogram import types
 from aiogram.fsm.state import State, StatesGroup
 import os
 import json
-from aiogram.types import BufferedInputFile
+from aiogram.types import BufferedInputFile, FSInputFile, InputMediaPhoto
 from aiogram import Router, F, types
 from aiogram.filters import CommandStart, Command, StateFilter
 from aiogram.fsm.context import FSMContext
@@ -2177,295 +2177,128 @@ async def our_app_callback_handler(callback: types.CallbackQuery):
             parse_mode="HTML"
         )
 
-async def show_hall_photos(user_id: int, bot):
-    """Показать фотографии зала"""
+async def _send_photo_group(user_id: int, bot, photo_paths: list, caption: str, error_message: str, final_text: str, keyboard: types.InlineKeyboardMarkup):
+    """Вспомогательная функция для отправки группы фотографий"""
     try:
-        # Отправляем фото зала
-        hall_photos = ['rest_photos/holl1.jpg', 'rest_photos/holl2.jpg']
-        photos_sent = 0
+        media = []
+        valid_paths = []
         
-        for i, photo_path in enumerate(hall_photos):
-            if os.path.exists(photo_path):
-                try:
-                    # Проверяем размер файла
-                    file_size = os.path.getsize(photo_path)
-                    logger.info(f"Отправляем фото {photo_path}, размер: {file_size / (1024*1024):.1f}MB")
-                    
-                    if file_size > 10 * 1024 * 1024:  # 10MB limit
-                        logger.warning(f"Файл {photo_path} слишком большой ({file_size / (1024*1024):.1f}MB), отправляем как документ")
-                        # Отправляем как документ
-                        with open(photo_path, 'rb') as photo:
-                            await bot.send_document(
-                                user_id,
-                                BufferedInputFile(photo.read(), filename=f"hall_{i+1}.jpg"),
-                                caption=f"🏛️ <b>Наш уютный зал</b> ({i+1}/{len(hall_photos)})" if i == 0 else f"🏛️ <b>Фото зала</b> ({i+1}/{len(hall_photos)})",
-                                parse_mode="HTML"
-                            )
-                            photos_sent += 1
-                    else:
-                        try:
-                            with open(photo_path, 'rb') as photo:
-                                caption = f"🏛️ <b>Наш уютный зал</b> ({i+1}/{len(hall_photos)})" if i == 0 else None
-                                await bot.send_photo(
-                                    user_id,
-                                    BufferedInputFile(photo.read(), filename=f"hall_{i+1}.jpg"),
-                                    caption=caption,
-                                    parse_mode="HTML"
-                                )
-                                photos_sent += 1
-                        except Exception as photo_send_error:
-                            # Если не удалось отправить как фото (например, PHOTO_INVALID_DIMENSIONS), отправляем как документ
-                            logger.warning(f"Не удалось отправить {photo_path} как фото ({photo_send_error}), отправляем как документ")
-                            try:
-                                with open(photo_path, 'rb') as photo:
-                                    await bot.send_document(
-                                        user_id,
-                                        BufferedInputFile(photo.read(), filename=f"hall_{i+1}.jpg"),
-                                        caption=f"🏛️ <b>Наш уютный зал</b> ({i+1}/{len(hall_photos)})" if i == 0 else f"🏛️ <b>Фото зала</b> ({i+1}/{len(hall_photos)})",
-                                        parse_mode="HTML"
-                                    )
-                                    photos_sent += 1
-                            except Exception as doc_error:
-                                logger.error(f"Не удалось отправить {photo_path} даже как документ: {doc_error}")
-                    
-                    logger.info(f"Фото {photo_path} отправлено успешно")
-                except Exception as photo_error:
-                    logger.error(f"Ошибка отправки фото {photo_path}: {photo_error}")
+        for path in photo_paths:
+            if os.path.exists(path):
+                valid_paths.append(path)
             else:
-                logger.warning(f"Файл {photo_path} не найден")
+                logger.warning(f"Файл {path} не найден для группы фото")
         
-        # Если не удалось отправить ни одного фото
-        if photos_sent == 0:
-            await safe_send_message(
-                bot,
-                user_id,
-                "🏛️ К сожалению, не удалось загрузить фотографии зала. Приходите к нам и увидите всё своими глазами! 😊",
-                parse_mode="HTML"
+        if not valid_paths:
+             await safe_send_message(bot, user_id, error_message, parse_mode="HTML")
+             # Даже если фото нет, показываем меню назад
+             await safe_send_message(bot, user_id, final_text, reply_markup=keyboard, parse_mode="HTML")
+             return
+
+        # Формируем медиагруппу
+        for i, path in enumerate(valid_paths):
+            media.append(
+                types.InputMediaPhoto(
+                    media=types.FSInputFile(path),
+                    caption=caption if i == 0 else None,
+                    parse_mode="HTML"
+                )
             )
+
+        # Отправляем группу
+        if media:
+            await bot.send_media_group(user_id, media)
+            logger.info(f"Отправлена группа фото ({len(media)} шт.) пользователю {user_id}")
         
-        # Отправляем сообщение с кнопкой назад
-        text = "🏛️ Вот наш просторный и уютный зал! Здесь проходят все наши мероприятия и банкеты."
-        
-        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-            [types.InlineKeyboardButton(text="📅 Забронировать столик", callback_data="booking")],
-            [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
-        ])
-        
+        # Отправляем сообщение с кнопками
         await safe_send_message(
             bot,
             user_id,
-            text,
+            final_text,
             reply_markup=keyboard,
             parse_mode="HTML"
         )
         
-        logger.info(f"Отправлены фото зала пользователю {user_id} (отправлено: {photos_sent})")
     except Exception as e:
-        logger.error(f"Ошибка отправки фото зала пользователю {user_id}: {e}")
+        logger.error(f"Ошибка отправки группы фото: {e}")
+        # В случае ошибки пробуем отправить хотя бы меню
+        await safe_send_message(bot, user_id, error_message, parse_mode="HTML")
+        await safe_send_message(bot, user_id, final_text, reply_markup=keyboard, parse_mode="HTML")
+
+async def show_hall_photos(user_id: int, bot):
+    """Показать фотографии зала"""
+    hall_photos = ['rest_photos/holl1.jpg', 'rest_photos/holl2.jpg', 'rest_photos/holl3.jpg', 'rest_photos/holl4.jpg']
+    
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="📅 Забронировать столик", callback_data="booking")],
+        [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+    ])
+    
+    await _send_photo_group(
+        user_id, 
+        bot, 
+        hall_photos, 
+        "🏛️ <b>Наш уютный зал</b>",
+        "🏛️ К сожалению, не удалось загрузить фотографии зала. Приходите к нам и увидите всё своими глазами! 😊",
+        "🏛️ Вот наш просторный и уютный зал! Здесь проходят все наши мероприятия и банкеты.",
+        keyboard
+    )
 
 async def show_bar_photos(user_id: int, bot):
     """Показать фотографии бара"""
-    try:
-        # Отправляем фото бара
-        bar_photos = ['rest_photos/bar_1.jpg', 'rest_photos/bar_2.jpg']
-        
-        for i, photo_path in enumerate(bar_photos):
-            if os.path.exists(photo_path):
-                with open(photo_path, 'rb') as photo:
-                    caption = f"🍸 <b>Наш стильный бар</b> ({i+1}/{len(bar_photos)})" if i == 0 else None
-                    await bot.send_photo(
-                        user_id,
-                        BufferedInputFile(photo.read(), filename=f"bar_{i+1}.jpg"),
-                        caption=caption,
-                        parse_mode="HTML"
-                    )
-        
-        # Отправляем сообщение с кнопкой назад
-        text = "🍸 Вот наш стильный бар! Здесь вы можете насладиться широким выбором напитков и коктейлей."
-        
-        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-            [types.InlineKeyboardButton(text="🍽️ Открыть меню ресторана", callback_data="menu_food")],
-            [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
-        ])
-        
-        await safe_send_message(
-            bot,
-            user_id,
-            text,
-            reply_markup=keyboard,
-            parse_mode="HTML"
-        )
-        
-        logger.info(f"Отправлены фото бара пользователю {user_id}")
-    except Exception as e:
-        logger.error(f"Ошибка отправки фото бара пользователю {user_id}: {e}")
+    bar_photos = ['rest_photos/bar_1.jpg', 'rest_photos/bar_2.jpg']
+    
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="🍽️ Открыть меню ресторана", callback_data="menu_food")],
+        [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+    ])
+    
+    await _send_photo_group(
+        user_id,
+        bot,
+        bar_photos,
+        "🍸 <b>Наш стильный бар</b>",
+        "🍸 К сожалению, не удалось загрузить фотографии бара. Приходите к нам и увидите всё своими глазами! 😊",
+        "🍸 Вот наш стильный бар! Здесь вы можете насладиться широким выбором напитков и коктейлей.",
+        keyboard
+    )
 
 async def show_kassa_photos(user_id: int, bot):
     """Показать фотографии кассы"""
-    try:
-        # Отправляем фото кассы
-        kassa_photos = ['rest_photos/kassa1.jpg', 'rest_photos/kassa2.jpg']
-        photos_sent = 0
-        
-        for i, photo_path in enumerate(kassa_photos):
-            if os.path.exists(photo_path):
-                try:
-                    # Проверяем размер файла
-                    file_size = os.path.getsize(photo_path)
-                    logger.info(f"Отправляем фото {photo_path}, размер: {file_size / (1024*1024):.1f}MB")
-                    
-                    if file_size > 10 * 1024 * 1024:  # 10MB limit
-                        logger.warning(f"Файл {photo_path} слишком большой ({file_size / (1024*1024):.1f}MB), отправляем как документ")
-                        with open(photo_path, 'rb') as photo:
-                            await bot.send_document(
-                                user_id,
-                                BufferedInputFile(photo.read(), filename=f"kassa_{i+1}.jpg"),
-                                caption=f"💳 <b>Наша касса</b> ({i+1}/{len(kassa_photos)})" if i == 0 else f"💳 <b>Фото кассы</b> ({i+1}/{len(kassa_photos)})",
-                                parse_mode="HTML"
-                            )
-                            photos_sent += 1
-                    else:
-                        try:
-                            with open(photo_path, 'rb') as photo:
-                                caption = f"💳 <b>Наша касса</b> ({i+1}/{len(kassa_photos)})" if i == 0 else None
-                                await bot.send_photo(
-                                    user_id,
-                                    BufferedInputFile(photo.read(), filename=f"kassa_{i+1}.jpg"),
-                                    caption=caption,
-                                    parse_mode="HTML"
-                                )
-                                photos_sent += 1
-                        except Exception as photo_send_error:
-                            logger.warning(f"Не удалось отправить {photo_path} как фото ({photo_send_error}), отправляем как документ")
-                            try:
-                                with open(photo_path, 'rb') as photo:
-                                    await bot.send_document(
-                                        user_id,
-                                        BufferedInputFile(photo.read(), filename=f"kassa_{i+1}.jpg"),
-                                        caption=f"💳 <b>Наша касса</b> ({i+1}/{len(kassa_photos)})" if i == 0 else f"💳 <b>Фото кассы</b> ({i+1}/{len(kassa_photos)})",
-                                        parse_mode="HTML"
-                                    )
-                                    photos_sent += 1
-                            except Exception as doc_error:
-                                logger.error(f"Не удалось отправить {photo_path} даже как документ: {doc_error}")
-                    
-                    logger.info(f"Фото {photo_path} отправлено успешно")
-                except Exception as photo_error:
-                    logger.error(f"Ошибка отправки фото {photo_path}: {photo_error}")
-            else:
-                logger.warning(f"Файл {photo_path} не найден")
-        
-        # Если не удалось отправить ни одного фото
-        if photos_sent == 0:
-            await safe_send_message(
-                bot,
-                user_id,
-                "💳 К сожалению, не удалось загрузить фотографии кассы. Приходите к нам и увидите всё своими глазами! 😊",
-                parse_mode="HTML"
-            )
-        
-        # Отправляем сообщение с кнопкой назад
-        text = "💳 Вот наша касса! Здесь вы можете оплатить заказ наличными или картой."
-        
-        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-            [types.InlineKeyboardButton(text="🍽️ Посмотреть меню", callback_data="menu_food")],
-            [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
-        ])
-        
-        await safe_send_message(
-            bot,
-            user_id,
-            text,
-            reply_markup=keyboard,
-            parse_mode="HTML"
-        )
-        
-        logger.info(f"Отправлены фото кассы пользователю {user_id} (отправлено: {photos_sent})")
-    except Exception as e:
-        logger.error(f"Ошибка отправки фото кассы пользователю {user_id}: {e}")
+    kassa_photos = ['rest_photos/kassa1.jpg', 'rest_photos/kassa2.jpg']
+    
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="🍽️ Посмотреть меню", callback_data="menu_food")],
+        [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+    ])
+    
+    await _send_photo_group(
+        user_id,
+        bot,
+        kassa_photos,
+        "💳 <b>Наша касса</b>",
+        "💳 К сожалению, не удалось загрузить фотографии кассы. Приходите к нам и увидите всё своими глазами! 😊",
+        "💳 Вот наша касса! Здесь вы можете оплатить заказ наличными или картой.",
+        keyboard
+    )
 
 async def show_wc_photos(user_id: int, bot):
     """Показать фотографии туалета"""
-    try:
-        # Отправляем фото туалета
-        wc_photos = ['rest_photos/wc1.jpg', 'rest_photos/wc2.jpg']
-        photos_sent = 0
-        
-        for i, photo_path in enumerate(wc_photos):
-            if os.path.exists(photo_path):
-                try:
-                    # Проверяем размер файла
-                    file_size = os.path.getsize(photo_path)
-                    logger.info(f"Отправляем фото {photo_path}, размер: {file_size / (1024*1024):.1f}MB")
-                    
-                    if file_size > 10 * 1024 * 1024:  # 10MB limit
-                        logger.warning(f"Файл {photo_path} слишком большой ({file_size / (1024*1024):.1f}MB), отправляем как документ")
-                        with open(photo_path, 'rb') as photo:
-                            await bot.send_document(
-                                user_id,
-                                BufferedInputFile(photo.read(), filename=f"wc_{i+1}.jpg"),
-                                caption=f"🚻 <b>Наш туалет</b> ({i+1}/{len(wc_photos)})" if i == 0 else f"🚻 <b>Фото туалета</b> ({i+1}/{len(wc_photos)})",
-                                parse_mode="HTML"
-                            )
-                            photos_sent += 1
-                    else:
-                        try:
-                            with open(photo_path, 'rb') as photo:
-                                caption = f"🚻 <b>Наш туалет</b> ({i+1}/{len(wc_photos)})" if i == 0 else None
-                                await bot.send_photo(
-                                    user_id,
-                                    BufferedInputFile(photo.read(), filename=f"wc_{i+1}.jpg"),
-                                    caption=caption,
-                                    parse_mode="HTML"
-                                )
-                                photos_sent += 1
-                        except Exception as photo_send_error:
-                            logger.warning(f"Не удалось отправить {photo_path} как фото ({photo_send_error}), отправляем как документ")
-                            try:
-                                with open(photo_path, 'rb') as photo:
-                                    await bot.send_document(
-                                        user_id,
-                                        BufferedInputFile(photo.read(), filename=f"wc_{i+1}.jpg"),
-                                        caption=f"🚻 <b>Наш туалет</b> ({i+1}/{len(wc_photos)})" if i == 0 else f"🚻 <b>Фото туалета</b> ({i+1}/{len(wc_photos)})",
-                                        parse_mode="HTML"
-                                    )
-                                    photos_sent += 1
-                            except Exception as doc_error:
-                                logger.error(f"Не удалось отправить {photo_path} даже как документ: {doc_error}")
-                    
-                    logger.info(f"Фото {photo_path} отправлено успешно")
-                except Exception as photo_error:
-                    logger.error(f"Ошибка отправки фото {photo_path}: {photo_error}")
-            else:
-                logger.warning(f"Файл {photo_path} не найден")
-        
-        # Если не удалось отправить ни одного фото
-        if photos_sent == 0:
-            await safe_send_message(
-                bot,
-                user_id,
-                "🚻 К сожалению, не удалось загрузить фотографии туалета. Приходите к нам и увидите всё своими глазами! 😊",
-                parse_mode="HTML"
-            )
-        
-        # Отправляем сообщение с кнопкой назад
-        text = "🚻 Вот наш туалет! Чистый и уютный для комфорта наших гостей."
-        
-        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-            [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
-        ])
-        
-        await safe_send_message(
-            bot,
-            user_id,
-            text,
-            reply_markup=keyboard,
-            parse_mode="HTML"
-        )
-        
-        logger.info(f"Отправлены фото туалета пользователю {user_id} (отправлено: {photos_sent})")
-    except Exception as e:
-        logger.error(f"Ошибка отправки фото туалета пользователю {user_id}: {e}")
+    wc_photos = ['rest_photos/wc1.jpg', 'rest_photos/wc2.jpg']
+    
+    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+        [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+    ])
+    
+    await _send_photo_group(
+        user_id,
+        bot,
+        wc_photos,
+        "🚻 <b>Наш туалет</b>",
+        "🚻 К сожалению, не удалось загрузить фотографии туалета. Приходите к нам и увидите всё своими глазами! 😊",
+        "🚻 Вот наш туалет! Чистый и уютный для комфорта наших гостей.",
+        keyboard
+    )
 
 async def show_restaurant_menu(user_id: int, bot):
     """Показать меню ресторана с проверкой возраста"""
