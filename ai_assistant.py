@@ -25,7 +25,7 @@ user_history: Dict[int, List[Dict]] = {}
 def _normalize_text(s: str) -> str:
     s = s.lower().strip()
     s = re.sub(r'[–—-]+', ' ', s)
-    s = re.sub(r'[\"\'“”„«»]', '', s)
+    s = re.sub(r'[\"\'“”„«».,?!:;()]', '', s) # Удаляем пунктуацию
     s = re.sub(r'\s+', ' ', s)
     s = s.replace('четыре', '4')
     s = s.replace('пять', '5')
@@ -40,8 +40,23 @@ def _normalize_text(s: str) -> str:
 def _specific_tokens(s: str) -> List[str]:
     s = _normalize_text(s)
     tokens = [t for t in re.split(r'[\s\-]+', s) if t]
-    stop = {'пицца','суп','салат','десерт','напиток','напитки','вино','пиво','бургер','паста','и','в','на','про','что','какой','какая','какие','есть'}
+    stop = {'пицца','суп','салат','десерт','напиток','напитки','вино','пиво','бургер','паста','и','в','на','про','что','какой','какая','какие','есть','для','с','по','у','из','от'}
     return [t for t in tokens if t not in stop and len(t) > 1]
+
+def _stem_word(word: str) -> str:
+    """Простой стемминг для русского языка (удаление окончаний)"""
+    # Сортируем окончания по длине (сначала длинные)
+    endings = ['ами', 'ями', 'ов', 'ев', 'ей', 'ом', 'ем', 'ах', 'ях', 'ую', 'юю', 'ая', 'яя', 'ое', 'ее', 'ый', 'ий', 'ые', 'ие', 'ой', 'ей', 'а', 'я', 'о', 'е', 'ы', 'и', 'у', 'ю']
+    word_lower = word.lower()
+    for end in endings:
+        if word_lower.endswith(end) and len(word_lower) > len(end) + 1:
+             return word_lower[:-len(end)]
+    return word_lower
+
+def _stem_text(text: str) -> str:
+    words = re.split(r'[\s\-]+', _normalize_text(text))
+    return ' '.join([_stem_word(w) for w in words if w])
+
 
 def find_similar_dishes(menu_data: Dict, query: str) -> List[Dict]:
     results = []
@@ -784,25 +799,28 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
 
         # СПЕЦИАЛЬНАЯ ОБРАБОТКА ЗАПРОСОВ О КОНКРЕТНЫХ БЛЮДАХ (ДО AI)
         # Если сообщение похоже на запрос конкретного блюда - сразу показываем фото
-        dish_keywords = ['что в составе', 'покажи фото', 'расскажи про', 'сколько калорий', 'калории в', 'фото', 'состав']
+        dish_keywords = ['что в составе', 'покажи фото', 'расскажи про', 'сколько калорий', 'калории в', 'фото', 'состав', 'ккал', 'цена', 'сколько стоит', 'стоимость', 'вес', 'бжу', 'белки', 'жиры', 'углеводы']
         is_dish_request = any(keyword in message_lower for keyword in dish_keywords)
 
         # Если это явный запрос блюда ИЛИ просто короткое сообщение (потенциально название)
         # Исключаем чисто числовые сообщения (если это не явный поиск с ключевыми словами)
         is_numeric = message.strip().isdigit()
-        if (is_dish_request or (len(message.split()) <= 5 and not is_numeric)):
+        if (is_dish_request or (len(message.split()) <= 7 and not is_numeric)): # Увеличил лимит слов до 7 для длинных вопросов
             # Формируем запрос для поиска
             dish_to_show = message.strip()
             
             # Если это явный запрос с ключевыми словами, пробуем их убрать для чистоты
             if is_dish_request:
                 clean_query = message_lower
-                for kw in dish_keywords:
+                # Сортируем ключевые слова по длине, чтобы сначала удалять длинные фразы
+                for kw in sorted(dish_keywords, key=len, reverse=True):
                     clean_query = clean_query.replace(kw, '')
+                # Также удаляем вопросительные слова и предлоги, если они остались
+                clean_query = re.sub(r'\b(сколько|какой|какая|какие|где|почем|в|с|у|для|про)\b', '', clean_query)
                 if clean_query.strip():
                     dish_to_show = clean_query.strip()
 
-            logger.info(f"Прямая обработка запроса блюда: '{dish_to_show}'")
+            logger.info(f"Прямая обработка запроса блюда: '{dish_to_show}' (original: '{message}')")
 
             # Ищем блюдо в меню
             menu_data = load_menu_cache()
@@ -818,6 +836,11 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                         item_name = item.get('name', '')
                         item_norm = _normalize_text(item_name)
                         search_norm = _normalize_text(dish_to_show)
+                        
+                        # Используем стемминг для нечеткого поиска
+                        item_stem = _stem_text(item_name)
+                        search_stem = _stem_text(dish_to_show)
+                        
                         q_tokens = _specific_tokens(dish_to_show)
                         n_tokens = _specific_tokens(item_name)
 
@@ -825,14 +848,26 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                         # 1. Точное совпадение нормализованных строк
                         if item_norm == search_norm:
                             score = 1000
-                        # 2. Вхождение одной строки в другую (нормализованных)
+                        # 2. Точное совпадение основ (стемминг)
+                        elif item_stem == search_stem:
+                            score = 950
+                        # 3. Вхождение одной строки в другую (нормализованных)
                         elif search_norm and (item_norm.startswith(search_norm) or search_norm in item_norm or item_norm in search_norm):
                             score = 900
-                        # 3. Пересечение смысловых токенов
+                        # 4. Вхождение основ (стемминг)
+                        elif search_stem and (item_stem.startswith(search_stem) or search_stem in item_stem or item_stem in search_stem):
+                            score = 850
+                        # 5. Пересечение смысловых токенов
                         else:
                             inter = set(q_tokens) & set(n_tokens)
                             if inter:
                                 score = 100 + 50 * len(inter)
+                                # Бонус за совпадение основ токенов
+                                q_stem_tokens = set([_stem_word(t) for t in q_tokens])
+                                n_stem_tokens = set([_stem_word(t) for t in n_tokens])
+                                stem_inter = q_stem_tokens & n_stem_tokens
+                                if len(stem_inter) > len(inter):
+                                    score += 50 * (len(stem_inter) - len(inter))
 
                         if score > 0:
                             search_results.append({
