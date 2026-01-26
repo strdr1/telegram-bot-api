@@ -2590,7 +2590,12 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
         'меню горячее', 'горячее меню', 'горячего',
         'из горячего', 'по горячему', 'стейки', 'мясо', 'мясное'
     ]
-    if any(q in text for q in hot_dishes_queries) and len(text.split()) < 5:
+
+    # Ключевые слова для рекомендаций - если они есть, пропускаем перехват и даем AI ответить
+    recommendation_keywords = ['посоветуй', 'рекомендуй', 'что-то с', 'какое-нибудь', 'хочу', 'подскажи', 'есть ли', 'а есть', 'что есть', 'что взять', 'выбери', 'предложи']
+    is_recommendation = any(keyword in text for keyword in recommendation_keywords)
+
+    if any(q in text for q in hot_dishes_queries) and len(text.split()) < 5 and not is_recommendation:
         logger.info(f"🔄 Прямой перехват 'горячее' запроса от пользователя {user.id}")
         from category_handler import handle_show_category_brief
         await handle_show_category_brief("ГОРЯЧИЕ БЛЮДА", user.id, message.bot)
@@ -2749,18 +2754,7 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
     except Exception as e:
         logger.debug(f"Ошибка в обработчике операторского чата: {e}")
 
-    # 🟢 ПРЯМОЕ ПЕРЕХВАТ (ПО ЗАПРОСУ)
-    hot_dishes_queries = [
-        'горячее', 'горячие', 'горячие блюда', 
-        'что у вас из горячего', 'покажи горячее',
-        'что у вас горячего', 'что есть из горячего',
-        'меню горячее', 'горячее меню', 'горячего'
-    ]
-    if any(q in message.text.lower().strip() for q in hot_dishes_queries) and len(message.text.split()) < 5:
-        logger.info(f"🔄 Прямой перехват 'горячее' запроса от пользователя {user.id}")
-        from category_handler import handle_show_category_brief
-        await handle_show_category_brief("🍖 ГОРЯЧИЕ БЛЮДА", user.id, message.bot)
-        return
+
 
     # Если ничего не найдено - используем AI
     try:

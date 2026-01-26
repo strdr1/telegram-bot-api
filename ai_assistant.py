@@ -612,6 +612,10 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         # Если сообщение начинается с обращения к Маку
         is_mac_greeting = any(message_lower.startswith(greeting) for greeting in mac_greetings) or message_lower in mac_greetings
 
+        # Ключевые слова для рекомендаций - если они есть, пропускаем "глупые" проверки и даем AI ответить
+        recommendation_keywords = ['посоветуй', 'рекомендуй', 'что-то с', 'какое-нибудь', 'хочу', 'подскажи', 'есть ли', 'а есть', 'что есть', 'что взять', 'выбери', 'предложи']
+        is_recommendation = any(keyword in message_lower for keyword in recommendation_keywords)
+
         # Проверка запроса списка завтраков (более расширенная)
         breakfast_queries = [
             'завтрак', 'завтраки', 'меню завтраков', 'меню завтрак', 'завтраки меню',
@@ -800,15 +804,37 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         # СПЕЦИАЛЬНАЯ ОБРАБОТКА ЗАПРОСОВ О КОНКРЕТНЫХ БЛЮДАХ (ДО AI)
         # Если сообщение похоже на запрос конкретного блюда - сразу показываем фото
         dish_keywords = ['что в составе', 'покажи фото', 'расскажи про', 'сколько калорий', 'калории в', 'фото', 'состав', 'ккал', 'цена', 'сколько стоит', 'стоимость', 'вес', 'бжу', 'белки', 'жиры', 'углеводы']
+        
+        # Ключевые слова для рекомендаций и вопросов о наличии - отправляем в AI
+        recommendation_keywords = ['посоветуй', 'рекомендуй', 'что-то с', 'какое-нибудь', 'хочу', 'подскажи', 'есть ли', 'а есть', 'что есть', 'что взять', 'выбери', 'предложи']
+        is_recommendation = any(keyword in message_lower for keyword in recommendation_keywords)
+        
         is_dish_request = any(keyword in message_lower for keyword in dish_keywords)
-
-        # Если это явный запрос блюда ИЛИ просто короткое сообщение (потенциально название)
-        # Исключаем чисто числовые сообщения (если это не явный поиск с ключевыми словами)
         is_numeric = message.strip().isdigit()
-        if (is_dish_request or (len(message.split()) <= 7 and not is_numeric)): # Увеличил лимит слов до 7 для длинных вопросов
+
+        # Логика решения: искать напрямую или через AI
+        should_search = False
+        if is_dish_request:
+            should_search = True # Явный запрос характеристик
+        elif is_recommendation:
+            should_search = False # Запрос рекомендации/наличия -> AI
+        elif len(message.split()) <= 3 and not is_numeric:
+            should_search = True # Очень короткое сообщение (1-3 слова) без ключевых слов -> считаем названием блюда
+            
+        if should_search:
             # Формируем запрос для поиска
             dish_to_show = message.strip()
             
+            # Очистка от вводных фраз для чистого поиска по названию (если вдруг попали сюда)
+            clean_prefixes = ['а есть ', 'есть ', 'а ', 'скажи ', 'покажи ']
+            lower_msg = message_lower
+            for prefix in clean_prefixes:
+                if lower_msg.startswith(prefix):
+                    candidate = message[len(prefix):].strip()
+                    if candidate:
+                        dish_to_show = candidate
+                    break
+
             # Если это явный запрос с ключевыми словами, пробуем их убрать для чистоты
             if is_dish_request:
                 clean_query = message_lower
