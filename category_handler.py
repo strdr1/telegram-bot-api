@@ -512,10 +512,21 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
         if not found:
             # Попытка 2: Ищем блюда по названию (виртуальная категория)
             virtual_items = []
-            search_term = category_name.lower().strip()
-            # Убираем окончание 'и' для лучшего поиска (завтраки -> завтрак)
-            if search_term.endswith('и'):
-                search_term = search_term[:-1]
+            
+            # Поддержка нескольких ключевых слов (разделенных запятой или пробелом)
+            raw_search = category_name.lower().strip()
+            # Если есть запятые, разбиваем по ним, иначе по пробелам
+            if ',' in raw_search:
+                search_keywords = [k.strip() for k in raw_search.split(',') if k.strip()]
+            else:
+                search_keywords = [k.strip() for k in raw_search.split() if k.strip()]
+            
+            # Если ключевых слов нет, используем исходную строку
+            if not search_keywords:
+                search_keywords = [raw_search]
+
+            # Убираем окончание 'и' для каждого слова
+            search_keywords = [k[:-1] if k.endswith('и') and len(k) > 3 else k for k in search_keywords]
             
             # Также используем приоритетный порядок поиска: delivery -> all
             menus_to_process = []
@@ -543,20 +554,43 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
             # Ключевые слова, требующие строгой фильтрации мяса
             dietary_roots = ['овощ', 'веган', 'постн', 'вегет', 'без мяс']
 
+            # 🛑 СТОП-СЛОВА ДЛЯ АЛКОГОЛЯ (исключаем из поиска, если не запрошено явно)
+            alcohol_roots = ['вино', 'винн', 'пиво', 'пивн', 'алкоголь', 'коктейль', 'водка', 'виски', 'ром', 'текила']
+            # Проверяем, ищет ли пользователь алкоголь явно
+            is_alcohol_search = any(root in raw_search for root in alcohol_roots)
+
             for menu_id, menu in menus_to_process:
+                # 🛑 ИСКЛЮЧАЕМ АЛКОГОЛЬНЫЕ МЕНЮ (ID 29, 32 - Бар), если не ищем алкоголь явно
+                if not is_alcohol_search and str(menu_id) in ['29', '32']:
+                    continue
+
                 for cat_id, category in menu.get('categories', {}).items():
+                    cat_name = category.get('name', '').lower()
+                    
+                    # 🛑 ИСКЛЮЧАЕМ АЛКОГОЛЬНЫЕ КАТЕГОРИИ по названию
+                    if not is_alcohol_search and any(root in cat_name for root in alcohol_roots):
+                        continue
+
                     for item in category.get('items', []):
                         item_name = item.get('name', '').lower()
                         item_desc = item.get('description', '').lower()
+                        full_text = f"{item_name} {item_desc}"
                         
-                        if search_term in item_name or search_term in item_desc:
+                        # Проверяем наличие ВСЕХ ключевых слов в названии или описании
+                        match = True
+                        for keyword in search_keywords:
+                            if keyword not in full_text:
+                                match = False
+                                break
+                        
+                        if match:
                             # 🛑 ДОПОЛНИТЕЛЬНАЯ ФИЛЬТРАЦИЯ ДЛЯ ДИЕТИЧЕСКИХ ЗАПРОСОВ
                             # Если ищем овощи/веганское, исключаем явные мясные блюда
-                            is_dietary_search = any(root in search_term for root in dietary_roots)
+                            is_dietary_search = any(root in raw_search for root in dietary_roots)
                             
                             if is_dietary_search:
                                 # Проверяем, не запросил ли пользователь мясо явно (напр. "мясо с овощами")
-                                user_asked_meat = any(meat in search_term for meat in forbidden_meat_roots)
+                                user_asked_meat = any(meat in raw_search for meat in forbidden_meat_roots)
                                 
                                 if not user_asked_meat:
                                     # Ищем запрещенные слова в названии или описании

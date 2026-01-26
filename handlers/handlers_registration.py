@@ -604,6 +604,22 @@ async def handle_event_phone_input(message: types.Message, state: FSMContext):
     
     _add_registration_message(user_id, message.message_id)
     
+    # Проверка на выход из регистрации
+    if message.text:
+        text_lower = message.text.lower().strip()
+        exit_keywords = ['отмена', 'cancel', 'стоп', 'stop', 'назад', 'back', 'привет', 'hello', 'hi', 'start', '/start', 'menu', 'меню', 'главное меню', 'домой']
+        if text_lower in exit_keywords:
+            await state.clear()
+            await _cleanup_registration_messages(user_id, message.bot)
+            
+            # Отправляем сообщение об отмене
+            await message.answer("✅ Регистрация прервана.")
+            
+            # Возвращаем в главное меню
+            from .handlers_main import show_main_menu
+            await show_main_menu(user_id, message.bot)
+            return
+
     phone = None
     if message.contact:
         phone = message.contact.phone_number

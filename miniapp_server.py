@@ -387,7 +387,7 @@ def update_chat_status(chat_id):
         data = request.get_json(force=True)
         status = data.get('status', '')
 
-        if status not in ['active', 'paused', 'completed']:
+        if status not in ['active', 'paused', 'completed', 'help_needed']:
             return jsonify({'error': 'Invalid status'}), 400
 
         # Получаем информацию о чате перед обновлением

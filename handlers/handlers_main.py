@@ -2009,6 +2009,15 @@ async def chat_operator_callback(callback: types.CallbackQuery):
     # Включаем режим чата для пользователя (час по умолчанию)
     set_operator_chat(user_id, True, ttl=3600)
 
+    # Устанавливаем статус "Требуется помощь" в базе данных для миниаппа
+    try:
+        # Создаем/получаем чат для пользователя
+        chat_id = database.get_or_create_chat(user_id, user_name)
+        # Обновляем статус
+        database.update_chat_status(chat_id, 'help_needed')
+    except Exception as e:
+        logger.error(f"Ошибка обновления статуса чата для {user_id}: {e}")
+
     # Уведомляем админов индивидуально и сохраняем ID уведомлений
     async def notify_admins():
         try:

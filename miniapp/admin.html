@@ -146,6 +146,18 @@
             color: #856404;
         }
 
+        .status-help_needed {
+            background: #f8d7da;
+            color: #721c24;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
         .chat-item.active .status-active,
         .chat-item.active .status-paused {
             background: rgba(255,255,255,0.2);
@@ -534,6 +546,10 @@
                         <span class="stat-number" id="paused-chats">0</span>
                         <div class="stat-label">На паузе</div>
                     </div>
+                    <div class="stat">
+                        <span class="stat-number" id="help-needed-chats" style="color: #dc3545;">0</span>
+                        <div class="stat-label" style="color: #dc3545;">Помощь</div>
+                    </div>
                 </div>
             </div>
             
@@ -562,6 +578,39 @@
         let chats = [];
         let currentChatId = null;
         let currentMessages = [];
+        let previousHelpNeededIds = new Set();
+        
+        // Sound notification
+        function playBeep() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+
+                oscillator.type = 'sine';
+                oscillator.frequency.value = 800; // Hz
+                gainNode.gain.value = 0.1;
+
+                oscillator.start();
+                setTimeout(() => oscillator.stop(), 200);
+                setTimeout(() => {
+                    const osc2 = audioCtx.createOscillator();
+                    const gain2 = audioCtx.createGain();
+                    osc2.connect(gain2);
+                    gain2.connect(audioCtx.destination);
+                    osc2.type = 'sine';
+                    osc2.frequency.value = 800;
+                    gain2.gain.value = 0.1;
+                    osc2.start();
+                    setTimeout(() => osc2.stop(), 200);
+                }, 300);
+            } catch (e) {
+                console.error('Audio play failed:', e);
+            }
+        }
         
         // Initialize Telegram WebApp
         const tg = window.Telegram?.WebApp;
@@ -598,6 +647,18 @@
                 
                 chats = await response.json();
                 console.log('Loaded chats:', chats);
+                
+                // Check for new help needed chats
+                const currentHelpNeededIds = new Set(chats.filter(c => c.chat_status === 'help_needed').map(c => c.id));
+                const hasNew = [...currentHelpNeededIds].some(id => !previousHelpNeededIds.has(id));
+                
+                if (hasNew) {
+                    playBeep();
+                    if (tg) tg.HapticFeedback.notificationOccurred('error');
+                }
+                
+                previousHelpNeededIds = currentHelpNeededIds;
+                
                 displayChats();
                 displayStats();
                 
@@ -623,8 +684,14 @@
                 <div class="chat-item" onclick="selectChat(${chat.id})" data-chat-id="${chat.id}">
                     <div class="chat-header">
                         <div class="chat-user">👤 ${chat.user_name || `ID: ${chat.user_id}`}</div>
-                        <div class="chat-status ${chat.chat_status === 'active' ? 'status-active' : 'status-paused'}">
-                            ${chat.chat_status === 'active' ? 'Активен' : 'На паузе'}
+                        <div class="chat-status ${
+                            chat.chat_status === 'active' ? 'status-active' : 
+                            chat.chat_status === 'help_needed' ? 'status-help_needed' : 'status-paused'
+                        }">
+                            ${
+                                chat.chat_status === 'active' ? 'Активен' : 
+                                chat.chat_status === 'help_needed' ? '❗ Требуется помощь' : 'На паузе'
+                            }
                         </div>
                     </div>
                     <div class="chat-preview">${chat.last_message || 'Нет сообщений'}</div>
@@ -642,13 +709,19 @@
                 stats = {
                     total_chats: chats.length,
                     active_chats: chats.filter(c => c.chat_status === 'active').length,
-                    paused_chats: chats.filter(c => c.chat_status === 'paused').length
+                    paused_chats: chats.filter(c => c.chat_status === 'paused').length,
+                    help_needed_chats: chats.filter(c => c.chat_status === 'help_needed').length
                 };
             }
             
             document.getElementById('total-chats').textContent = stats.total_chats;
             document.getElementById('active-chats').textContent = stats.active_chats;
             document.getElementById('paused-chats').textContent = stats.paused_chats;
+            
+            const helpNeededEl = document.getElementById('help-needed-chats');
+            if (helpNeededEl) {
+                helpNeededEl.textContent = stats.help_needed_chats || 0;
+            }
         }
 
         // Select chat
