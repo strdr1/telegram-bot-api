@@ -2612,84 +2612,44 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
     # Прямой перехват банкетов УБРАН по просьбе пользователя (все через AI)
     # banquet_keywords = [...]
 
-    booking_keywords = [
-        'забронировать', 'забранировать', 'бронировать', 'бранировать',
-        'столик', 'стол', 'бронь', 'резерв', 'резервировать',
-        'хочу забронировать', 'можно забронировать', 'заказать стол',
-        'заказать столик', 'столик на', 'бронь на', 'резерв на',
-        'забронируй', 'забронировать стол', 'забронировать столик'
-    ]
+    # Прямой перехват бронирования УБРАН по просьбе пользователя (все через AI)
+    # booking_keywords = [
+    #    'забронировать', 'забранировать', 'бронировать', 'бранировать',
+    #    'столик', 'стол', 'бронь', 'резерв', 'резервировать',
+    #    'хочу забронировать', 'можно забронировать', 'заказать стол',
+    #    'заказать столик', 'столик на', 'бронь на', 'резерв на',
+    #    'забронируй', 'забронировать стол', 'забронировать столик'
+    # ]
 
-    message_lower = message.text.lower()
+    # message_lower = message.text.lower()
     
-    # Используем regex для точного совпадения слов, чтобы избежать ложных срабатываний (как 'стол' в 'настолько')
-    # \b - граница слова
-    booking_pattern = r'\b(' + '|'.join(map(re.escape, booking_keywords)) + r')\b'
-    is_booking_request = bool(re.search(booking_pattern, message_lower))
+    # booking_pattern = r'\b(' + '|'.join(map(re.escape, booking_keywords)) + r')\b'
+    # is_booking_request = bool(re.search(booking_pattern, message_lower))
 
     user_id = message.from_user.id
 
     # Проверяем на сообщение с конкретными параметрами бронирования
-    booking_details = parse_booking_message(message.text)
-    if booking_details:
-        logger.info(f"Обнаружен запрос бронирования с параметрами: {message.text}")
-        await process_direct_booking_request(user_id, message.bot, booking_details, state)
+    # booking_details = parse_booking_message(message.text)
+    # if booking_details:
+    #    logger.info(f"Обнаружен запрос бронирования с параметрами: {message.text}")
+    #    await process_direct_booking_request(user_id, message.bot, booking_details, state)
+    #    # ... сохранение ...
+    #    return
+    # elif is_booking_request:
+    #    # Прямой показ меню бронирования без AI
+    #    logger.info(f"Обнаружен запрос бронирования: {message.text}")
+    #    await show_booking_options(user.id, message.bot)
+    #    # ... сохранение ...
+    #    return
 
-        # Сохраняем в чат для миниаппа
-        try:
-            chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
-            database.save_chat_message(chat_id, 'user', message.text)
-            database.save_chat_message(chat_id, 'bot', f'Распознал бронирование: {booking_details["guests"]} чел., {booking_details["date_str"]}, {booking_details["time_str"]}')
-        except Exception as e:
-            logger.error(f"Ошибка сохранения в миниапп: {e}")
+    # Прямой перехват алкоголя УБРАН по просьбе пользователя (все через AI)
+    # alcohol_keywords = ['вино', 'вина', 'пиво', 'пива', 'коньяк', 'водка', 'водки', 'виски', 'ром', 'джин', 'текила', 'ликер', 'ликера', 'коктейль', 'коктейли', 'алкоголь', 'напитки', 'напиток', 'выпить', 'пить', 'спиртное']
+    # message_lower = message.text.lower()
+    # is_alcohol_question = any(keyword in message_lower for keyword in alcohol_keywords)
 
-        return
-    elif is_booking_request:
-        # Прямой показ меню бронирования без AI
-        logger.info(f"Обнаружен запрос бронирования: {message.text}")
-        await show_booking_options(user.id, message.bot)
-
-        # Сохраняем в чат для миниаппа
-        try:
-            chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
-            database.save_chat_message(chat_id, 'user', message.text)
-            database.save_chat_message(chat_id, 'bot', 'Показал меню бронирования')
-        except Exception as e:
-            logger.error(f"Ошибка сохранения в миниапп: {e}")
-
-        return
-
-    # Проверяем на алкогольные вопросы ДО вызова AI
-    alcohol_keywords = ['вино', 'вина', 'пиво', 'пива', 'коньяк', 'водка', 'водки', 'виски', 'ром', 'джин', 'текила', 'ликер', 'ликера', 'коктейль', 'коктейли', 'алкоголь', 'напитки', 'напиток', 'выпить', 'пить', 'спиртное']
-    message_lower = message.text.lower()
-    is_alcohol_question = any(keyword in message_lower for keyword in alcohol_keywords)
-
-    if is_alcohol_question and not is_age_verified(user.id):
-        # Алкогольный вопрос и возраст не подтвержден - показываем диалог возраста
-        text = """🔞 <b>Подтверждение возраста</b>
-
-Информация содержит данные об алкогольных напитках.
-
-<b>Вам исполнилось 18 лет?</b>
-
-⚠️ Употребление алкоголя лицами до 18 лет запрещено законом."""
-
-        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-            [types.InlineKeyboardButton(text="✅ ДА, МНЕ ЕСТЬ 18 ЛЕТ", callback_data="confirm_age_18_menu")],
-            [types.InlineKeyboardButton(text="❌ НЕТ, МНЕ НЕТ 18 ЛЕТ", callback_data="deny_age_18_menu")]
-        ])
-
-        await safe_send_message(message.bot, user.id, text, reply_markup=keyboard, parse_mode="HTML")
-
-        # Сохраняем в чат
-        try:
-            chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
-            database.save_chat_message(chat_id, 'user', message.text)
-            database.save_chat_message(chat_id, 'bot', 'Показал диалог подтверждения возраста')
-        except Exception as e:
-            logger.error(f"Ошибка сохранения в миниапп: {e}")
-
-        return
+    # if is_alcohol_question and not is_age_verified(user.id):
+    #    # ... код проверки возраста ...
+    #    return
 
     # Всегда сохраняем сообщения пользователей в базу данных для миниаппа
     try:
