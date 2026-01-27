@@ -2192,6 +2192,25 @@ def get_or_create_chat(user_id: int, user_name: str = None) -> int:
         logger.error(f"Ошибка создания/получения чата для {user_id}: {e}")
         return 0
 
+def ensure_all_chats_exist() -> None:
+    """Гарантирует, что для каждого пользователя создан чат (для миниаппа)"""
+    try:
+        with get_cursor() as cursor:
+            cursor.execute('SELECT user_id, full_name FROM users')
+            users = cursor.fetchall() or []
+            for row in users:
+                user_id = row[0]
+                full_name = row[1] if len(row) > 1 else None
+                cursor.execute('SELECT id FROM chats WHERE user_id = ?', (user_id,))
+                exists = cursor.fetchone()
+                if not exists:
+                    cursor.execute('''
+                    INSERT INTO chats (user_id, user_name, chat_status)
+                    VALUES (?, ?, 'active')
+                    ''', (user_id, full_name or f'User {user_id}'))
+    except Exception as e:
+        logger.error(f"Ошибка при создании чатов для всех пользователей: {e}")
+
 def save_chat_message(chat_id: int, sender: str, message_text: str, file_path: str = None) -> bool:
     """Сохранение сообщения в чат"""
     try:
@@ -2220,6 +2239,8 @@ def save_chat_message(chat_id: int, sender: str, message_text: str, file_path: s
 def get_all_chats_for_admin() -> List[Dict[str, Any]]:
     """Получение всех чатов для админ-панели"""
     try:
+        # Перед выборкой гарантируем наличие записей чатов для всех пользователей
+        ensure_all_chats_exist()
         with get_cursor() as cursor:
             # Простой запрос без JOIN
             cursor.execute('''
