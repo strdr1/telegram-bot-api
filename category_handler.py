@@ -196,10 +196,10 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                     text += f"\n💡 <i>Спросите про конкретное блюдо, чтобы увидеть фото и подробное описание!</i>"
                     
                     await safe_send_message(bot, user_id, text, parse_mode="HTML")
-                    
-                    found = True
-                    logger.info(f"Показал краткий список категории: {category_title} с {len(unique_items)} блюдами")
-                    break
+                
+                found = True
+                logger.info(f"Показал краткий список категории: {category_title} с {len(unique_items)} блюдами")
+                return text
 
             if found:
                 break
@@ -272,7 +272,7 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                 
                 found = True
                 logger.info(f"Показал виртуальную категорию: {category_title} с {len(unique_items)} блюдами")
-                return
+                return text
 
         if not found:
             text = f"К сожалению, я не нашел категорию или блюдо '{category_name}' в нашем меню. 😔\n\nПопробуйте спросить по-другому или опишите, какое блюдо вы ищете."
@@ -328,8 +328,7 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
             # Пользователь просил список как для пиццы или горячего
             # Перенаправляем на краткий список
             logger.info(f"🔄 Перенаправление запроса завтрака на краткий список")
-            await handle_show_category_brief("завтрак", user_id, bot)
-            return
+            return await handle_show_category_brief("завтрак", user_id, bot)
 
         found = False
         
@@ -465,7 +464,11 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
 
                     found = True
                     logger.info(f"Показал категорию (подробно): {category_title} с {len(unique_items)} блюдами")
-                    break
+                    
+                    # Form summary for AI context
+                    shown_dishes = [item['name'] for item in unique_items.values()]
+                    summary = f"Показана категория {category_title}. Блюда: {', '.join(shown_dishes)}"
+                    return summary
 
             if found:
                 break
@@ -617,7 +620,7 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                 
                 found = True
                 logger.info(f"Показал виртуальную категорию (кратко): {category_title} с {len(unique_items)} блюдами")
-                return
+                return text
 
         if not found:
             if is_search or ',' in category_name:

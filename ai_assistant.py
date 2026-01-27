@@ -602,7 +602,23 @@ async def check_and_reset_ai_limit(user_id: int) -> None:
     except Exception as e:
         logger.error(f"Ошибка проверки баланса бонусов для пользователя {user_id}: {e}")
 
-async def get_ai_response(message: str, user_id: int) -> Dict:
+def add_bot_message_to_history(user_id: int, message_text: str):
+    """
+    Manually adds a bot message to the user's history context.
+    Useful when the bot sends a message via handlers (not AI generated) but we want AI to know about it.
+    """
+    if user_id not in user_history:
+        user_history[user_id] = []
+    
+    user_history[user_id].append({"role": "assistant", "content": message_text})
+    
+    # Trim history if needed
+    if len(user_history[user_id]) > 20:
+        user_history[user_id] = user_history[user_id][-20:]
+    
+    logger.info(f"Manually added bot message to history for user {user_id}: {message_text[:50]}...")
+
+async def get_ai_response(message: str, user_id: int) -> dict:
     """
     Получение ответа от AI
 
@@ -727,7 +743,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                 'show_banquet_options': True
             }
 
-        second_phrases = ['а вторую', 'вторую', 'и вторую', 'а второе', 'второй', 'второе', 'а другая', 'другая', 'а другую', 'другую', 'еще одну', 'ещё одну', 'еще', 'ещё']
+        second_phrases = ['а вторую', 'вторую', 'и вторую', 'а второе', 'второй', 'второе', 'а другая', 'другая', 'а другую', 'другую', 'еще одну', 'ещё одну', 'еще', 'ещё', 'другие', 'а другие', 'других', 'а других']
         if any(phrase in message_lower for phrase in second_phrases) and len(message_lower.split()) <= 5:
             base_query = None
             if user_id in user_history:
@@ -935,7 +951,7 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
                     'dish': found_dish,
                     'menu_id': best_menu_id,
                     'category_id': best_category_id,
-                    'text': f"Вот карточка блюда {found_dish['name']}:" # Fallback text
+                    'text': f"🍽️ Вот карточка блюда {found_dish['name']}:" # Fallback text
                 }
             else:
                  logger.info(f"Блюдо не найдено или низкий score ({best_score} < {threshold}), передаем AI")
@@ -2872,8 +2888,8 @@ def get_random_delivery_dish(menu_data: Dict) -> Optional[Dict]:
     Получить случайное блюдо из меню доставки (без алкоголя)
     """
     try:
-        # ID меню доставки
-        delivery_menu_ids = {90, 92, 141}
+        # ID меню доставки (преобразуем в строки, так как ключи JSON - строки)
+        delivery_menu_ids = {'90', '92', '141'}
 
         # Собираем все блюда из меню доставки (исключая алкоголь)
         all_dishes = []

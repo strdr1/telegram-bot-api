@@ -2602,31 +2602,15 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
     recommendation_keywords = ['посоветуй', 'рекомендуй', 'что-то с', 'какое-нибудь', 'хочу', 'подскажи', 'есть ли', 'а есть', 'что есть', 'что взять', 'выбери', 'предложи']
     is_recommendation = any(keyword in text for keyword in recommendation_keywords)
 
-    if any(q in text for q in hot_dishes_queries) and len(text.split()) < 5 and not is_recommendation:
-        logger.info(f"🔄 Прямой перехват 'горячее' запроса от пользователя {user.id}")
-        from category_handler import handle_show_category_brief
-        await handle_show_category_brief("ГОРЯЧИЕ БЛЮДА", user.id, message.bot)
-        return
+    # Прямой перехват "горячего" УБРАН, чтобы сохранялся контекст в AI
+    # if any(q in text for q in hot_dishes_queries) and len(text.split()) < 5 and not is_recommendation:
+    #    logger.info(f"🔄 Прямой перехват 'горячее' запроса от пользователя {user.id}")
+    #    from category_handler import handle_show_category_brief
+    #    await handle_show_category_brief("ГОРЯЧИЕ БЛЮДА", user.id, message.bot)
+    #    return
 
-    # Сначала проверяем на банкеты/мероприятия (ПРЯМОЙ ПЕРЕХВАТ)
-    banquet_keywords = [
-        'банкет', 'свадьба', 'корпоратив', 'день рождения', 'юбилей', 
-        'праздник', 'мероприятие', 'отметить', 'праздновать', 'др',
-        'отметить день рождения', 'организовать', 'забронировать на день рождения'
-    ]
-    if any(keyword in text for keyword in banquet_keywords):
-        logger.info(f"🎉 Прямой перехват запроса о мероприятии: {text}")
-        await show_private_event_options_menu(user.id, message.bot)
-        
-        # Сохраняем в чат
-        try:
-            chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
-            database.save_chat_message(chat_id, 'user', message.text)
-            database.save_chat_message(chat_id, 'bot', 'Показал опции мероприятий (прямой перехват)')
-        except Exception as e:
-            logger.error(f"Ошибка сохранения в миниапп: {e}")
-            
-        return
+    # Прямой перехват банкетов УБРАН по просьбе пользователя (все через AI)
+    # banquet_keywords = [...]
 
     booking_keywords = [
         'забронировать', 'забранировать', 'бронировать', 'бранировать',
@@ -2637,7 +2621,11 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
     ]
 
     message_lower = message.text.lower()
-    is_booking_request = any(keyword in message_lower for keyword in booking_keywords)
+    
+    # Используем regex для точного совпадения слов, чтобы избежать ложных срабатываний (как 'стол' в 'настолько')
+    # \b - граница слова
+    booking_pattern = r'\b(' + '|'.join(map(re.escape, booking_keywords)) + r')\b'
+    is_booking_request = bool(re.search(booking_pattern, message_lower))
 
     user_id = message.from_user.id
 
@@ -2831,7 +2819,12 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
 
             from category_handler import handle_show_category
             # Используем handle_show_category, так как он имеет логику поиска по блюдам (виртуальная категория)
-            await handle_show_category(search_query, user_id, message.bot, intro_message=clean_text, is_search=True)
+            search_result_text = await handle_show_category(search_query, user_id, message.bot, intro_message=clean_text, is_search=True)
+            
+            # Добавляем результаты поиска в контекст AI, чтобы он знал, что мы показали
+            if search_result_text:
+                from ai_assistant import add_bot_message_to_history
+                add_bot_message_to_history(user_id, search_result_text)
 
             # Сохраняем в чат
             try:
