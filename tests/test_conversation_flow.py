@@ -93,12 +93,18 @@ async def test_seafood_conversation_flow():
                 
                 # Check SYSTEM PROMPT for the new Seafood rule
                 system_msg = messages[0]['content']
-                if "СПЕЦИАЛЬНО ДЛЯ МОРЕПРОДУКТОВ" in system_msg:
-                    print("✅ VERIFIED: System prompt contains SEAFOOD context rule!")
+                if "СПЕЦИАЛЬНО ДЛЯ МОРЕПРОДУКТОВ" in system_msg and "Если ты УЖЕ показал список" in system_msg:
+                    print("✅ VERIFIED: System prompt contains UPDATED SEAFOOD context rule!")
                 else:
-                    print("❌ FAILED: System prompt MISSING SEAFOOD context rule.")
+                    print("❌ FAILED: System prompt MISSING UPDATED SEAFOOD context rule.")
                     print(f"System Prompt snippet: {system_msg[:500]}...")
                 assert "СПЕЦИАЛЬНО ДЛЯ МОРЕПРОДУКТОВ" in system_msg
+
+                if "Пример (ТОЛЬКО ЕСЛИ НЕТ КОНТЕКСТА)" in system_msg:
+                    print("✅ VERIFIED: System prompt contains UPDATED GENERIC EXAMPLE!")
+                else:
+                    print("❌ FAILED: System prompt MISSING UPDATED GENERIC EXAMPLE.")
+                assert "Пример (ТОЛЬКО ЕСЛИ НЕТ КОНТЕКСТА)" in system_msg
 
                 # Check if any message in history contains our simulated text
                 found_context = any("Мидии Мариньер" in msg.get('content', '') for msg in messages)
