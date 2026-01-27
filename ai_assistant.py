@@ -818,8 +818,8 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
             should_search = True # Явный запрос характеристик
         elif is_recommendation:
             should_search = False # Запрос рекомендации/наличия -> AI
-        elif len(message.split()) <= 3 and not is_numeric:
-            should_search = True # Очень короткое сообщение (1-3 слова) без ключевых слов -> считаем названием блюда
+        elif len(message.split()) <= 5 and not is_numeric:
+            should_search = True # Очень короткое сообщение (1-5 слов) без ключевых слов -> считаем названием блюда
             
         if should_search:
             # Формируем запрос для поиска

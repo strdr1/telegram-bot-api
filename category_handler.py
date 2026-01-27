@@ -528,7 +528,7 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                 search_keywords = [
                     'креветк',
                     'кальмар',
-                    'мид',
+                    'миди',
                     'осьминог',
                     'гребешк',
                     'краб',
