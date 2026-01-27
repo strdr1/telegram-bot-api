@@ -2759,9 +2759,9 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
             found_dishes = find_dishes_by_name(dish_query, limit=5)
             
             if found_dishes:
-                # Если блюдо найдено, отправляем текст ТОЛЬКО если он длинный (>60 символов)
-                # Это предотвращает дублирование (текст "Вот ваш салат" + подпись к фото)
-                if result.get('text') and len(result['text']) > 60:
+                # Если блюдо найдено, отправляем текст AI (если он есть и не пустой)
+                # Раньше был лимит >60 символов, но теперь разрешаем короткие дружелюбные вставки
+                if result.get('text') and len(result['text']) > 0:
                      await safe_send_message(message.bot, user.id, result['text'])
 
                 # Берем лучшее совпадение (первое)
