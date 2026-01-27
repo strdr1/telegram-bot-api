@@ -227,7 +227,19 @@ async def update_message(user_id: int, text: str, reply_markup=None, parse_mode=
     """Обновляет существующее сообщение или отправляет новое если нет"""
     if bot is None:
         return None
-        
+    if is_admin_fast(user_id):
+        new_message = await safe_send_message(
+            bot=bot,
+            chat_id=user_id,
+            text=text,
+            reply_markup=reply_markup,
+            parse_mode=parse_mode
+        )
+        if new_message:
+            last_message_ids[user_id] = new_message.message_id
+            return new_message.message_id
+        return None
+
     message_id = last_message_ids.get(user_id)
     
     if message_id:
