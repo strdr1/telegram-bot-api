@@ -2810,15 +2810,21 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
             
             logger.info(f"Выполняем поиск по запросу: {search_query} для пользователя {user.id}")
 
-            # Отправляем текстовый ответ, если он есть
+            # Подготавливаем текст (если есть)
+            clean_text = None
             if result.get('text'):
                 clean_text = re.sub(r'SEARCH:.+', '', result['text'], flags=re.DOTALL | re.IGNORECASE).strip()
-                if clean_text and len(clean_text) > 2:
-                     await safe_send_message(message.bot, user_id, clean_text, parse_mode="HTML")
+                
+                # Если текст начинается с технического сообщения о поиске, убираем его
+                if clean_text and (clean_text.startswith("🔍 Ищу") or clean_text.startswith("🔍 Search") or clean_text.startswith("Ищу блюда")):
+                    clean_text = None
+                
+                if clean_text and len(clean_text) < 3:
+                     clean_text = None
 
             from category_handler import handle_show_category
             # Используем handle_show_category, так как он имеет логику поиска по блюдам (виртуальная категория)
-            await handle_show_category(search_query, user_id, message.bot)
+            await handle_show_category(search_query, user_id, message.bot, intro_message=clean_text, is_search=True)
 
             # Сохраняем в чат
             try:
