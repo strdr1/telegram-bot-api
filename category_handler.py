@@ -676,50 +676,8 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                 virtual_items = []
 
             if virtual_items:
-                # Если найдено ровно одно блюдо, показываем его полную карточку с фото!
-                if len(virtual_items) == 1:
-                    best_dish = virtual_items[0]
-                    logger.info(f"Найдено одно блюдо '{best_dish['name']}', показываем полную карточку с фото.")
-                    
-                    try:
-                        # Импортируем функцию форматирования и историю сообщений локально
-                        from handlers.handlers_delivery import format_full_dish_description, cleanup_photo_messages, user_message_history as delivery_photo_history
-                        
-                        # Очищаем старые фото
-                        await cleanup_photo_messages(user_id, bot)
-                        
-                        caption = await format_full_dish_description(best_dish)
-                        
-                        # Кнопки
-                        from aiogram import types
-                        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-                            [types.InlineKeyboardButton(text="🚚 Заказать доставку", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))]
-                        ])
-                        
-                        if best_dish.get('image_url'):
-                            msg = await bot.send_photo(
-                                chat_id=user_id, 
-                                photo=best_dish['image_url'], 
-                                caption=caption, 
-                                parse_mode="HTML", 
-                                reply_markup=keyboard
-                            )
-                            
-                            # Сохраняем в историю фото доставки
-                            if user_id not in delivery_photo_history:
-                                delivery_photo_history[user_id] = []
-                            delivery_photo_history[user_id].append(msg.message_id)
-                        else:
-                            await safe_send_message(bot, user_id, caption, reply_markup=keyboard, parse_mode="HTML")
-                            
-                        found = True
-                        return "Shown photo card"
-                        
-                    except Exception as e:
-                        logger.error(f"Ошибка при отправке фото блюда из category_handler: {e}")
-                        # Если ошибка, падаем в обычный список (код ниже)
-
-                # Нашли блюда (больше одного или ошибка фото)! Показываем их как КРАТКИЙ СПИСОК (без фото)
+                # Нашли блюда, показываем КРАТКИЙ СПИСОК (без фото).
+                # Даже если результат один — карточку блюда НЕ показываем автоматически.
                 category_title = category_name.capitalize()
                 
                 # Убираем дубликаты по ID блюда (find_dishes_by_name уже возвращает уникальные, но на всякий случай)
