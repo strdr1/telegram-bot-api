@@ -511,20 +511,28 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
             # Попытка 2: Ищем блюда по названию (виртуальная категория)
             virtual_items = []
             
-            # Поддержка нескольких ключевых слов (разделенных запятой или пробелом)
             raw_search = category_name.lower().strip()
-            # Если есть запятые, разбиваем по ним, иначе по пробелам
             if ',' in raw_search:
                 search_keywords = [k.strip() for k in raw_search.split(',') if k.strip()]
             else:
                 search_keywords = [k.strip() for k in raw_search.split() if k.strip()]
             
-            # Если ключевых слов нет, используем исходную строку
             if not search_keywords:
                 search_keywords = [raw_search]
 
-            # Убираем окончание 'и' для каждого слова
             search_keywords = [k[:-1] if k.endswith('и') and len(k) > 3 else k for k in search_keywords]
+            seafood_search = False
+            if any('морепродукт' in k for k in search_keywords) or 'морепродукт' in raw_search:
+                seafood_search = True
+                search_keywords = [
+                    'креветк',
+                    'кальмар',
+                    'мид',
+                    'осьминог',
+                    'гребешк',
+                    'краб',
+                    'лангустин'
+                ]
             
             # Также используем приоритетный порядок поиска: delivery -> all
             menus_to_process = []
@@ -573,13 +581,19 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                         item_name = item.get('name', '').lower()
                         item_desc = item.get('description', '').lower()
                         full_text = f"{item_name} {item_desc}"
-                        
-                        # Проверяем наличие ВСЕХ ключевых слов в названии или описании
-                        match = True
-                        for keyword in search_keywords:
-                            if keyword not in full_text:
-                                match = False
-                                break
+
+                        if seafood_search or ',' in raw_search:
+                            match = False
+                            for keyword in search_keywords:
+                                if keyword in full_text:
+                                    match = True
+                                    break
+                        else:
+                            match = True
+                            for keyword in search_keywords:
+                                if keyword not in full_text:
+                                    match = False
+                                    break
                         
                         if match:
                             # 🛑 ДОПОЛНИТЕЛЬНАЯ ФИЛЬТРАЦИЯ ДЛЯ ДИЕТИЧЕСКИХ ЗАПРОСОВ
@@ -643,10 +657,16 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                 return
 
         if not found:
-            # Если это был поисковый запрос от AI и ничего не найдено
             if intro_message:
-                text = f"{intro_message}\n\nК сожалению, я не нашел блюд по запросу '{category_name}'."
-                await safe_send_message(bot, user_id, text, parse_mode="HTML")
+                text = f"{intro_message}\n\nПростите, я не нашел блюд по запросу '{category_name}'. Но вы можете сами посмотреть наше актуальное меню в приложении доставки."
+                try:
+                    from aiogram import types
+                    keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+                        [types.InlineKeyboardButton(text="🚚 Доставка", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))]
+                    ])
+                    await safe_send_message(bot, user_id, text, reply_markup=keyboard, parse_mode="HTML")
+                except Exception:
+                    await safe_send_message(bot, user_id, text, parse_mode="HTML")
                 return
 
             # Если категория не найдена, ищем похожие
