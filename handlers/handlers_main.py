@@ -2865,16 +2865,9 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
 
             return
 
-        # Проверяем на показ категории (краткий список)
         if result.get('show_category_brief'):
             category_name = result.get('show_category_brief')
             logger.info(f"Показываем краткий список категории: {category_name} для пользователя {user_id}")
-            
-            # Отправляем текстовый ответ, если он есть (очищенный от маркера)
-            if result.get('text'):
-                clean_text = re.sub(r'PARSE_CATEGORY:.+', '', result['text'], flags=re.DOTALL | re.IGNORECASE).strip()
-                if clean_text and len(clean_text) > 2:
-                     await safe_send_message(message.bot, user_id, clean_text, parse_mode="HTML")
 
             from category_handler import handle_show_category_brief
             await handle_show_category_brief(category_name, user_id, message.bot)
