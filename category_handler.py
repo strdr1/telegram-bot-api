@@ -521,7 +521,7 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
             if not search_keywords:
                 search_keywords = [raw_search]
 
-            search_keywords = [k[:-1] if k.endswith('и') and len(k) > 3 else k for k in search_keywords]
+            search_keywords = [k[:-1] if k.endswith('и') and len(k) > 3 and k != 'миди' else k for k in search_keywords]
             seafood_search = False
             if any('морепродукт' in k for k in search_keywords) or 'морепродукт' in raw_search:
                 seafood_search = True
