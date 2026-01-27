@@ -40,6 +40,7 @@ from .utils import (
     clean_phone_for_link
 )
 from difflib import SequenceMatcher
+from ai_assistant import get_ai_response
 
 # Импортируем функции из других модулей с отложенным импортом для избежания циклических зависимостей
 
@@ -1119,13 +1120,19 @@ async def deny_age_18_callback(callback: types.CallbackQuery):
 
 @router.callback_query(F.data == "menu_delivery")
 async def menu_delivery_callback(callback: types.CallbackQuery):
-    """Обработчик доставки - теперь показывает мини-апп"""
+    """Обработчик доставки - теперь показывает мини-апп с AI рекомендациями"""
     await callback.answer()
 
     user_id = callback.from_user.id
     log_user_action(user_id, "Открыл меню доставки")
 
-    text = """🚚 <b>Заказать доставку</b>
+    # Получаем рекомендацию от AI для доставки
+    ai_response = await get_ai_response("рекомендуй доставку", user_id)
+    ai_text = ai_response.get('text', '') if ai_response else ''
+
+    text = f"""🚚 <b>Заказать доставку</b>
+
+{ai_text}
 
 📱 Мы запустили новое мини-приложение для заказа доставки!
 

@@ -9,6 +9,7 @@ from difflib import SequenceMatcher
 from menu_cache import menu_cache
 from handlers.utils import safe_send_message
 from aiogram.types import BufferedInputFile
+from ai_assistant import get_ai_response
 
 logger = logging.getLogger(__name__)
 
@@ -637,8 +638,19 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                 return
 
             # Обычный fallback для запросов категорий
-            text = f"К сожалению, я не нашел категорию или блюдо '{category_name}' в нашем меню. 😔\n\nПопробуйте спросить по-другому или опишите, какое блюдо вы ищете."
-            await safe_send_message(bot, user_id, text, parse_mode="HTML")
+            # 🟢 ВМЕСТО СТАНДАРТНОЙ ОТБИВКИ - СПРАШИВАЕМ AI
+            logger.info(f"Категория '{category_name}' не найдена, передаю запрос в AI")
+            try:
+                ai_response = await get_ai_response(f"У меня нет категории '{category_name}', что посоветуешь похожее?", user_id)
+                if ai_response and ai_response.get('text'):
+                     await safe_send_message(bot, user_id, ai_response['text'], parse_mode="HTML")
+                else:
+                    text = f"К сожалению, я не нашел категорию или блюдо '{category_name}' в нашем меню. 😔\n\nПопробуйте спросить по-другому или опишите, какое блюдо вы ищете."
+                    await safe_send_message(bot, user_id, text, parse_mode="HTML")
+            except Exception as e:
+                logger.error(f"Ошибка при запросе к AI из category_handler: {e}")
+                text = f"К сожалению, я не нашел категорию или блюдо '{category_name}' в нашем меню. 😔\n\nПопробуйте спросить по-другому или опишите, какое блюдо вы ищете."
+                await safe_send_message(bot, user_id, text, parse_mode="HTML")
 
     except Exception as e:
         logger.error(f"Ошибка обработки категории '{category_name}': {e}")
