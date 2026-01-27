@@ -2839,7 +2839,7 @@ def get_random_delivery_dish(menu_data: Dict) -> Optional[Dict]:
                         all_dishes.append(item)
                         logger.debug(f"➕ Добавлено блюдо: {item.get('name', 'Без названия')} (фото: {bool(item.get('image_url'))})")
 
-++        logger.info(f"📊 Всего найдено блюд: {len(all_dishes)}")
+        logger.info(f"📊 Всего найдено блюд: {len(all_dishes)}")
 
         if all_dishes:
             # Выбираем случайное блюдо
