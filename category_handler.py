@@ -268,52 +268,7 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
                 return
 
         if not found:
-            # Если категория не найдена, ищем похожие
-            all_categories = []
-            # Также используем приоритетный порядок поиска: delivery -> all
-            menus_to_process = []
-            processed_ids = set()
-            
-            # 1. Добавляем меню из кэша доставки
-            if menu_cache.delivery_menus_cache:
-                for m_id, m_data in menu_cache.delivery_menus_cache.items():
-                    menus_to_process.append((m_id, m_data))
-                    processed_ids.add(str(m_id))
-                    
-            # 2. Добавляем остальные меню из общего кэша
-            if menu_cache.all_menus_cache:
-                for m_id, m_data in menu_cache.all_menus_cache.items():
-                    if str(m_id) not in processed_ids:
-                        menus_to_process.append((m_id, m_data))
-
-            for menu_id, menu in menus_to_process:
-                for cat_id, category in menu.get('categories', {}).items():
-                    cat_name = category.get('name', '')
-                    if cat_name:
-                        all_categories.append(cat_name)
-
-            # Ищем наиболее похожие категории
-            similar = []
-            for cat in all_categories:
-                ratio = SequenceMatcher(None, category_name.lower(), cat.lower()).ratio()
-                if ratio > 0.7:  # Увеличил порог с 0.6 до 0.7 для отсечения мусора (Виски != Лисички - ratio 0.67)
-                    similar.append((cat, ratio))
-
-            similar.sort(key=lambda x: x[1], reverse=True)
-            similar = similar[:3]  # Максимум 3 похожих
-
-            if similar:
-                text = f"Категория '{category_name}' не найдена. Возможно, вы имели в виду:\n\n"
-                for cat_name, ratio in similar:
-                    text += f"• {cat_name}\n"
-                text += "\nПопробуйте уточнить запрос."
-            else:
-                # Если ничего похожего не найдено, просто говорим что не нашли, без рандома
-                text = f"К сожалению, я не нашел категорию или блюдо '{category_name}' в нашем меню. 😔\n\nПопробуйте спросить по-другому или посмотрите основные разделы меню!"
-                
-                # Рандомные категории убираем, чтобы не сбивать с толку
-
-
+            text = f"К сожалению, я не нашел категорию или блюдо '{category_name}' в нашем меню. 😔\n\nПопробуйте спросить по-другому или опишите, какое блюдо вы ищете."
             await safe_send_message(bot, user_id, text, parse_mode="HTML")
 
     except Exception as e:
@@ -658,7 +613,6 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                 return
 
         if not found:
-            # Логируем неудачный поиск для отладки
             if is_search or ',' in category_name:
                 logger.warning(f"Не найдено блюд по запросу: '{category_name}'")
 
@@ -675,44 +629,7 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                     await safe_send_message(bot, user_id, text, parse_mode="HTML")
                 return
 
-            # Если категория не найдена, ищем похожие
-            all_categories = []
-            if menu_cache.all_menus_cache:
-                for menu_id, menu in menu_cache.all_menus_cache.items():
-                    for cat_id, category in menu.get('categories', {}).items():
-                        cat_name = category.get('name', '')
-                        if cat_name:
-                            all_categories.append(cat_name)
-
-            # Ищем наиболее похожие категории
-            similar = []
-            for cat in all_categories:
-                ratio = SequenceMatcher(None, category_name.lower(), cat.lower()).ratio()
-                if ratio > 0.4:  # Порог похожести
-                    similar.append((cat, ratio))
-
-            similar.sort(key=lambda x: x[1], reverse=True)
-            similar = similar[:3]  # Максимум 3 похожих
-
-            if similar:
-                text = f"Категория '{category_name}' не найдена. Возможно, вы имели в виду:\n\n"
-                for cat_name, ratio in similar:
-                    text += f"• {cat_name}\n"
-                text += "\nПопробуйте уточнить запрос."
-            else:
-                text = f"Категория '{category_name}' не найдена."
-                
-                # Предлагаем 5 случайных категорий
-                unique_categories = sorted(list(set(all_categories)))
-                if unique_categories:
-                    count = min(5, len(unique_categories))
-                    random_cats = random.sample(unique_categories, count)
-                    text += f"\n\nВозможно, вас заинтересуют эти разделы:\n"
-                    for cat in random_cats:
-                        text += f"• {cat}\n"
-                
-                text += "\nПопробуйте другой запрос."
-
+            text = f"К сожалению, я не нашел категорию или блюдо '{category_name}' в нашем меню. 😔\n\nПопробуйте спросить по-другому или опишите, какое блюдо вы ищете."
             await safe_send_message(bot, user_id, text, parse_mode="HTML")
 
     except Exception as e:
