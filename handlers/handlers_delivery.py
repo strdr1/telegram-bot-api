@@ -614,8 +614,9 @@ async def send_dish_photo(user_id: int, dish: Dict, menu_id: int, category_id: i
 
         if total_calories:
             caption += f"🔥 <b>Калории:</b> {total_calories:.2f} ккал\n"
-        elif calories_per_100:
-            caption += f"🔥 <b>Калории (100г):</b> {calories_per_100:.2f} ккал\n"
+        
+        if calories_per_100:
+            caption += f"📊 <b>На 100г:</b> {calories_per_100:.2f} ккал\n"
 
         # БЖУ
         bju_lines = []
