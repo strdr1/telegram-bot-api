@@ -3049,9 +3049,13 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                 # Очищаем текст от ** и лишних пробелов
                 intro_text = result['text'].replace('**', '').strip()
 
+                # Если текст начинается с технического сообщения о поиске, убираем его
+                if intro_text.startswith("🔍 Ищу") or intro_text.startswith("🔍 Search") or intro_text.startswith("Ищу блюда"):
+                    intro_text = ""
+
                 # Выполняем поиск через category_handler с передачей вступительного текста
                 from category_handler import handle_show_category
-                await handle_show_category(search_query, user.id, message.bot, intro_message=intro_text)
+                await handle_show_category(search_query, user.id, message.bot, intro_message=intro_text, is_search=True)
                 return
             elif result.get('show_delivery_button', False):
                 keyboard = types.InlineKeyboardMarkup(inline_keyboard=[

@@ -320,9 +320,10 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
         logger.error(f"Ошибка обработки краткого списка категории '{category_name}': {e}")
         await safe_send_message(bot, user_id, "Произошла ошибка при показе категории. Попробуйте позже.", parse_mode="HTML")
 
-async def handle_show_category(category_name: str, user_id: int, bot, intro_message: str = None):
+async def handle_show_category(category_name: str, user_id: int, bot, intro_message: str = None, is_search: bool = False):
     """
     Показывает всю категорию блюд с фото и описаниями
+    :param is_search: Является ли это поисковым запросом (для показа fallback с доставкой)
     """
     try:
         # Очищаем от эмодзи и лишних символов
@@ -657,8 +658,13 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                 return
 
         if not found:
-            if intro_message:
-                text = f"{intro_message}\n\nПростите, я не нашел блюд по запросу '{category_name}'. Но вы можете сами посмотреть наше актуальное меню в приложении доставки."
+            # Логируем неудачный поиск для отладки
+            if is_search or ',' in category_name:
+                logger.warning(f"Не найдено блюд по запросу: '{category_name}'")
+
+            if intro_message or is_search:
+                msg_prefix = f"{intro_message}\n\n" if intro_message else ""
+                text = f"{msg_prefix}Простите, я не нашел блюд по запросу '{category_name}'. Но вы можете сами посмотреть наше актуальное меню в приложении доставки."
                 try:
                     from aiogram import types
                     keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
