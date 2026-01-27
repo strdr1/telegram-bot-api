@@ -622,9 +622,10 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
             if is_search or ',' in category_name:
                 logger.warning(f"Не найдено блюд по запросу: '{category_name}'")
 
-            if intro_message or is_search:
-                msg_prefix = f"{intro_message}\n\n" if intro_message else ""
-                text = f"{msg_prefix}Простите, я не нашел блюд по запросу '{category_name}'. Но вы можете сами посмотреть наше актуальное меню в приложении доставки."
+            # Если это поисковый запрос по ингридиентам/ключевым словам,
+            # не используем intro_message вообще — только честное сообщение «не нашел»
+            if is_search:
+                text = f"Простите, я не нашел блюд по запросу '{category_name}'. Но вы можете сами посмотреть наше актуальное меню в приложении доставки."
                 try:
                     from aiogram import types
                     keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
@@ -635,6 +636,7 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                     await safe_send_message(bot, user_id, text, parse_mode="HTML")
                 return
 
+            # Обычный fallback для запросов категорий
             text = f"К сожалению, я не нашел категорию или блюдо '{category_name}' в нашем меню. 😔\n\nПопробуйте спросить по-другому или опишите, какое блюдо вы ищете."
             await safe_send_message(bot, user_id, text, parse_mode="HTML")
 
