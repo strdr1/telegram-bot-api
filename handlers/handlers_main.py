@@ -2782,6 +2782,80 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                 
             return
 
+        # Проверяем на запрос фото блюда (DISH_PHOTO:)
+        if result.get('dish_photo_query'):
+            dish_query = result.get('dish_photo_query')
+            logger.info(f"AI запросил фото блюда: {dish_query} для пользователя {user.id}")
+            
+            # Удаляем маркер из текста ответа, если он там есть
+            if result.get('text'):
+                result['text'] = result['text'].replace(f'DISH_PHOTO:{dish_query}', '').strip()
+                # Если остался пустой текст или мусор, очищаем
+                if len(result['text']) < 5:
+                     result['text'] = ""
+            
+            # Отправляем текст ответа AI (если есть)
+            if result.get('text'):
+                 await safe_send_message(message.bot, user.id, result['text'])
+
+            # Ищем блюдо
+            from category_handler import find_dishes_by_name
+            found_dishes = find_dishes_by_name(dish_query, limit=5)
+            
+            if found_dishes:
+                # Берем лучшее совпадение (первое)
+                best_dish = found_dishes[0]
+                
+                # Импортируем функцию форматирования и историю сообщений
+                from .handlers_delivery import format_full_dish_description, cleanup_photo_messages, user_message_history as delivery_photo_history
+                
+                # Очищаем старые фото
+                await cleanup_photo_messages(user.id, message.bot)
+                
+                caption = await format_full_dish_description(best_dish)
+                
+                # Кнопки
+                keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+                    [types.InlineKeyboardButton(text="🛒 В корзину", callback_data=f"add_to_cart_{best_dish['menu_id']}_{best_dish['id']}")],
+                    [types.InlineKeyboardButton(text="⬅️ Меню", callback_data="menu_delivery")]
+                ])
+                
+                try:
+                    if best_dish.get('image_url'):
+                        msg = await message.bot.send_photo(
+                            chat_id=user.id, 
+                            photo=best_dish['image_url'], 
+                            caption=caption, 
+                            parse_mode="HTML", 
+                            reply_markup=keyboard
+                        )
+                        
+                        # Сохраняем в историю фото доставки
+                        if user.id not in delivery_photo_history:
+                            delivery_photo_history[user.id] = []
+                        delivery_photo_history[user.id].append(msg.message_id)
+                        
+                    else:
+                        await safe_send_message(message.bot, user.id, caption, reply_markup=keyboard, parse_mode="HTML")
+                        
+                    # Сохраняем в чат
+                    try:
+                        chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
+                        database.save_chat_message(chat_id, 'bot', f'Показал фото блюда: {best_dish["name"]}')
+                    except Exception as e:
+                        logger.error(f"Ошибка сохранения в миниапп: {e}")
+
+                except Exception as e:
+                    logger.error(f"Ошибка отправки фото блюда {best_dish['name']}: {e}")
+                    await safe_send_message(message.bot, user.id, caption, reply_markup=keyboard, parse_mode="HTML")
+            else:
+                # Если блюдо не найдено
+                logger.info(f"Блюдо '{dish_query}' не найдено в базе")
+                if not result.get('text'):
+                     await safe_send_message(message.bot, user.id, f"К сожалению, я не нашел фото для '{dish_query}'.")
+
+            return
+
         # Проверяем на поисковый запрос (SEARCH:)
         if result.get('search_query'):
             search_query = result.get('search_query')

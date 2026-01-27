@@ -2686,6 +2686,12 @@ async def get_ai_response(message: str, user_id: int) -> dict:
             if match:
                 search_query_result = match.group(1).strip().split('\n')[0].strip()
 
+        dish_photo_query = None
+        if 'DISH_PHOTO:' in ai_text:
+            match = re.search(r'DISH_PHOTO:(.+)', ai_text, re.DOTALL)
+            if match:
+                dish_photo_query = match.group(1).strip().split('\n')[0].strip()
+
         # Убираем маркеры из текста, но сохраняем логику показа кнопок
         ai_text = re.sub(r'SHOW_DELIVERY_BUTTON\s*', '', ai_text).strip()
         ai_text = re.sub(r'SHOW_DELIVERY_APPS\s*', '', ai_text).strip()
@@ -2762,6 +2768,7 @@ async def get_ai_response(message: str, user_id: int) -> dict:
             'show_restaurant_menu': show_restaurant_menu,
             'show_category': show_category,
             'search_query': search_query_result,
+            'dish_photo_query': dish_photo_query,
             'parse_booking': parse_booking,
             'call_human': call_human,
             'confirm_age_verification': confirm_age_verification

@@ -13,6 +13,132 @@ from ai_assistant import get_ai_response
 
 logger = logging.getLogger(__name__)
 
+def find_dishes_by_name(raw_search: str, limit: int = 20) -> list:
+    """
+    Ищет блюда по названию (нечеткий поиск).
+    Возвращает список найденных блюд (словарей с menu_id и category_id).
+    """
+    virtual_items = []
+    
+    raw_search = raw_search.lower().strip()
+    if ',' in raw_search:
+        search_keywords = [k.strip() for k in raw_search.split(',') if k.strip()]
+    else:
+        search_keywords = [k.strip() for k in raw_search.split() if k.strip()]
+    
+    if not search_keywords:
+        search_keywords = [raw_search]
+
+    search_keywords = [k[:-1] if k.endswith('и') and len(k) > 3 and k != 'миди' else k for k in search_keywords]
+    seafood_search = False
+    if any('морепродукт' in k for k in search_keywords) or 'морепродукт' in raw_search:
+        seafood_search = True
+        search_keywords = [
+            'креветк',
+            'кальмар',
+            'миди',
+            'осьминог',
+            'гребешк',
+            'краб',
+            'лангустин'
+        ]
+    
+    # Также используем приоритетный порядок поиска: delivery -> all
+    menus_to_process = []
+    processed_ids = set()
+    
+    # 1. Добавляем меню из кэша доставки
+    if menu_cache.delivery_menus_cache:
+        for m_id, m_data in menu_cache.delivery_menus_cache.items():
+            menus_to_process.append((m_id, m_data))
+            processed_ids.add(str(m_id))
+            
+    # 2. Добавляем остальные меню из общего кэша
+    if menu_cache.all_menus_cache:
+        for m_id, m_data in menu_cache.all_menus_cache.items():
+            if str(m_id) not in processed_ids:
+                menus_to_process.append((m_id, m_data))
+
+    # Список корней слов, указывающих на мясные/рыбные ингредиенты
+    forbidden_meat_roots = [
+        'брискет', 'говядин', 'свинин', 'куриц', 'цыплен', 'бекон', 'пастрам', 
+        'фарш', 'мяс', 'стейк', 'колбас', 'ветчин', 'лосос', 'форел', 'рыб', 
+        'креветк', 'кальмар', 'судак', 'треск', 'ребр', 'крыль', 'утка', 'индейк'
+    ]
+    
+    # Ключевые слова, требующие строгой фильтрации мяса
+    dietary_roots = ['овощ', 'веган', 'постн', 'вегет', 'без мяс']
+
+    # 🛑 СТОП-СЛОВА ДЛЯ АЛКОГОЛЯ (исключаем из поиска, если не запрошено явно)
+    alcohol_roots = ['вино', 'винн', 'пиво', 'пивн', 'алкоголь', 'коктейль', 'водка', 'виски', 'ром', 'текила']
+    # Проверяем, ищет ли пользователь алкоголь явно
+    is_alcohol_search = any(root in raw_search for root in alcohol_roots)
+
+    for menu_id, menu in menus_to_process:
+        # 🛑 ИСКЛЮЧАЕМ АЛКОГОЛЬНЫЕ МЕНЮ (ID 29, 32 - Бар), если не ищем алкоголь явно
+        if not is_alcohol_search and str(menu_id) in ['29', '32']:
+            continue
+
+        for cat_id, category in menu.get('categories', {}).items():
+            cat_name = category.get('name', '').lower()
+            
+            # 🛑 ИСКЛЮЧАЕМ АЛКОГОЛЬНЫЕ КАТЕГОРИИ по названию
+            if not is_alcohol_search and any(root in cat_name for root in alcohol_roots):
+                continue
+
+            for item in category.get('items', []):
+                item_name = item.get('name', '').lower()
+                item_desc = item.get('description', '').lower()
+                full_text = f"{item_name} {item_desc}"
+
+                if seafood_search or ',' in raw_search:
+                    match = False
+                    for keyword in search_keywords:
+                        if keyword in full_text:
+                            match = True
+                            break
+                else:
+                    match = True
+                    for keyword in search_keywords:
+                        if keyword not in full_text:
+                            match = False
+                            break
+                
+                if match:
+                    # 🛑 ДОПОЛНИТЕЛЬНАЯ ФИЛЬТРАЦИЯ ДЛЯ ДИЕТИЧЕСКИХ ЗАПРОСОВ
+                    # Если ищем овощи/веганское, исключаем явные мясные блюда
+                    is_dietary_search = any(root in raw_search for root in dietary_roots)
+                    
+                    if is_dietary_search:
+                        # Проверяем, не запросил ли пользователь мясо явно (напр. "мясо с овощами")
+                        user_asked_meat = any(meat in raw_search for meat in forbidden_meat_roots)
+                        
+                        if not user_asked_meat:
+                            # Ищем запрещенные слова в названии или описании
+                            has_forbidden = False
+                            for bad_word in forbidden_meat_roots:
+                                if bad_word in item_name or bad_word in item_desc:
+                                    has_forbidden = True
+                                    break
+                            
+                            if has_forbidden:
+                                continue
+
+                    # Add menu_id and category_id to item if not present
+                    item_copy = item.copy()
+                    item_copy['menu_id'] = menu_id
+                    item_copy['category_id'] = cat_id
+                    virtual_items.append(item_copy)
+    
+    # Remove duplicates
+    unique_items = {}
+    for item in virtual_items:
+        item_id = item.get('id')
+        if item_id not in unique_items:
+            unique_items[item_id] = item
+            
+    return list(unique_items.values())[:limit]
+
 async def handle_show_category_brief(category_name: str, user_id: int, bot, intro_message: str = None):
     """
     Показывает краткий список категории блюд (только названия и цены)
