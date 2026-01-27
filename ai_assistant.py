@@ -1986,11 +1986,6 @@ async def get_ai_response(message: str, user_id: int) -> dict:
                 category_name = category_name.lower().strip()
                 logger.info(f"Парсим категорию (русский маркер): '{category_name}'")
                 category_parsed = True
-        elif calories_category_question:
-            # Принудительно парсим категорию для вопросов про калории
-            category_name = category_name_for_calories
-            category_parsed = True
-            logger.info(f"Принудительный парсинг категории для вопроса про калории: '{category_name}'")
                     
         # Также проверяем на кастомные маркеры AI
         elif 'SHOW_BEER_MENU' in ai_text or 'SHOW_BEER_LIST' in ai_text:
@@ -2096,9 +2091,11 @@ async def get_ai_response(message: str, user_id: int) -> dict:
 
                             # Проверяем, является ли категория пиццей
                             is_pizza_category = (
-                                'пицц' in cat_name or 
+                                ('пицц' in cat_name or 
                                 'пицц' in cat_display or
-                                cat_name == 'пицца'
+                                cat_name == 'пицца')
+                                and 'добавки' not in cat_name 
+                                and 'добавки' not in cat_display
                             )
                             
                             if is_pizza_category:

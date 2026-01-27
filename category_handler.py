@@ -14,6 +14,26 @@ from ai_assistant import get_ai_response
 
 logger = logging.getLogger(__name__)
 
+# 🛑 СПИСОК ЗАПРЕЩЕННЫХ КАТЕГОРИЙ (Blacklist)
+# Эти категории никогда не должны показываться пользователю, даже если найдены поиском.
+BLOCKED_CATEGORIES = [
+    'добавки', 
+    'добавки в пиццу', 
+    'модификаторы', 
+    'топпинги', 
+    'с собой', 
+    'упаковка',
+    'прочее'
+]
+
+def is_category_blocked(category_name: str) -> bool:
+    """Проверяет, является ли категория запрещенной"""
+    name_lower = category_name.lower().strip()
+    for blocked in BLOCKED_CATEGORIES:
+        if blocked in name_lower:
+            return True
+    return False
+
 def find_dishes_by_name(raw_search: str, limit: int = 20) -> list:
     """
     Ищет блюда по названию (нечеткий поиск).
@@ -119,6 +139,10 @@ def find_dishes_by_name(raw_search: str, limit: int = 20) -> list:
         for cat_id, category in menu.get('categories', {}).items():
             cat_name = category.get('name', '').lower()
             
+            # 🛑 ИСКЛЮЧАЕМ ЗАПРЕЩЕННЫЕ КАТЕГОРИИ
+            if is_category_blocked(cat_name):
+                continue
+
             # 🛑 ИСКЛЮЧАЕМ АЛКОГОЛЬНЫЕ КАТЕГОРИИ по названию
             if not is_alcohol_search and any(root in cat_name for root in alcohol_roots):
                 continue
@@ -282,6 +306,10 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
 
         for menu_id, menu in menus_to_process:
             for cat_id, category in menu.get('categories', {}).items():
+                # 🛑 ИСКЛЮЧАЕМ ЗАПРЕЩЕННЫЕ КАТЕГОРИИ
+                if is_category_blocked(category.get('name', '')):
+                    continue
+
                 is_match = False
                 # Проверка по ID (строгое совпадение)
                 if str(cat_id) == str(category_name):
@@ -526,6 +554,11 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
             if not menu: continue
             for cat_id, category in menu.get('categories', {}).items():
                 cat_name = category.get('name', '').lower().strip()
+                
+                # 🛑 ИСКЛЮЧАЕМ ЗАПРЕЩЕННЫЕ КАТЕГОРИИ
+                if is_category_blocked(cat_name):
+                    continue
+
                 cat_display_name = category.get('display_name', cat_name).lower().strip()
                 search_name = category_name.lower().strip()
 
