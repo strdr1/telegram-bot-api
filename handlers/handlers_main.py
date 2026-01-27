@@ -3052,7 +3052,11 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
 
                 # Если текст начинается с технического сообщения о поиске, убираем его
                 if intro_text.startswith("🔍 Ищу") or intro_text.startswith("🔍 Search") or intro_text.startswith("Ищу блюда"):
-                    intro_text = ""
+                    intro_text = None
+                
+                # Если текст слишком короткий или бессмысленный - не показываем
+                if intro_text and len(intro_text) < 3:
+                    intro_text = None
 
                 # Выполняем поиск через category_handler с передачей вступительного текста
                 from category_handler import handle_show_category
