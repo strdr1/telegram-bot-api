@@ -12,7 +12,7 @@ from aiogram.types import BufferedInputFile
 
 logger = logging.getLogger(__name__)
 
-async def handle_show_category_brief(category_name: str, user_id: int, bot):
+async def handle_show_category_brief(category_name: str, user_id: int, bot, intro_message: str = None):
     """
     Показывает краткий список категории блюд (только названия и цены)
     """
@@ -176,7 +176,10 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
                             emoji = em
                             break
                     
-                    text = f"{emoji} <b>{category_title}</b>\n\n"
+                    text = ""
+                    if intro_message:
+                        text += f"{intro_message}\n\n"
+                    text += f"{emoji} <b>{category_title}</b>\n\n"
                     
                     # Убираем дубликаты по ID блюда
                     unique_items = {}
@@ -243,7 +246,10 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot):
                         emoji = em
                         break
                 
-                text = f"{emoji} <b>{category_title}</b> (найдено по названию)\n\n"
+                text = ""
+                if intro_message:
+                    text += f"{intro_message}\n\n"
+                text += f"{emoji} <b>{category_title}</b> (найдено по названию)\n\n"
                 
                 # Убираем дубликаты по ID блюда
                 unique_items = {}
