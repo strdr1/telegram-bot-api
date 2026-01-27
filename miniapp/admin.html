@@ -573,17 +573,34 @@
     <input type="file" id="file-input" class="hidden" accept="*/*">
 
     <script>
-        // Глобальные переменные
         const API_BASE = 'https://a950841.fvds.ru/api';
         let chats = [];
         let currentChatId = null;
         let currentMessages = [];
         let previousHelpNeededIds = new Set();
-        
-        // Sound notification
-        function playBeep() {
+        let audioCtx = null;
+        let audioEnabled = false;
+
+        function initAudio() {
+            if (audioCtx) return;
             try {
-                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                audioCtx.resume().then(() => {
+                    audioEnabled = true;
+                }).catch((e) => {
+                    console.error('Audio resume failed:', e);
+                });
+            } catch (e) {
+                console.error('Audio init failed:', e);
+            }
+        }
+
+        document.addEventListener('click', initAudio, { once: true });
+        document.addEventListener('touchstart', initAudio, { once: true });
+
+        function playBeep() {
+            if (!audioCtx || !audioEnabled) return;
+            try {
                 const oscillator = audioCtx.createOscillator();
                 const gainNode = audioCtx.createGain();
 
@@ -591,7 +608,7 @@
                 gainNode.connect(audioCtx.destination);
 
                 oscillator.type = 'sine';
-                oscillator.frequency.value = 800; // Hz
+                oscillator.frequency.value = 800;
                 gainNode.gain.value = 0.1;
 
                 oscillator.start();
@@ -628,14 +645,13 @@
             document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', tg.themeParams.secondary_bg_color || '#f1f1f1');
         }
 
-        // Load chats
         async function loadChats() {
             try {
                 console.log('Loading chats from:', `${API_BASE}/chats`);
                 console.log('User agent:', navigator.userAgent);
                 console.log('Is Telegram WebApp:', !!window.Telegram?.WebApp);
                 
-                const response = await fetch(`${API_BASE}/chats`);
+                const response = await fetch(`${API_BASE}/chats?t=${Date.now()}`);
                 
                 console.log('Response status:', response.status);
                 
@@ -1042,13 +1058,10 @@
             e.target.value = '';
         });
 
-        // Initialize
         loadChats();
-        
-        // Auto-refresh every 30 seconds
-        setInterval(loadChats, 30000);
 
-        // Auto-refresh messages every 3 seconds if a chat is selected
+        setInterval(loadChats, 5000);
+
         setInterval(() => {
             if (currentChatId) {
                 loadMessages(currentChatId, true);
