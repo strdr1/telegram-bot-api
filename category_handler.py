@@ -8,6 +8,7 @@ import random
 from difflib import SequenceMatcher
 from menu_cache import menu_cache
 from handlers.utils import safe_send_message
+from aiogram import types
 from aiogram.types import BufferedInputFile
 from ai_assistant import get_ai_response
 
@@ -22,14 +23,50 @@ def find_dishes_by_name(raw_search: str, limit: int = 20) -> list:
     
     raw_search = raw_search.lower().strip()
     if ',' in raw_search:
-        search_keywords = [k.strip() for k in raw_search.split(',') if k.strip()]
+        raw_tokens = [k.strip() for k in raw_search.split(',') if k.strip()]
     else:
-        search_keywords = [k.strip() for k in raw_search.split() if k.strip()]
+        raw_tokens = [k.strip() for k in raw_search.split() if k.strip()]
     
+    search_keywords = []
+    for k in raw_tokens:
+        k = k.strip()
+        if not k: continue
+        
+        # Простой стемминг для русского языка
+        # Убираем окончания падежей и множественного числа
+        if len(k) > 4:
+            if k.endswith('ами'): k = k[:-3]
+            elif k.endswith('ями'): k = k[:-3]
+            elif k.endswith('ов'): k = k[:-2]
+            elif k.endswith('ев'): k = k[:-2]
+            elif k.endswith('ей'): k = k[:-2]
+            elif k.endswith('и'): k = k[:-1]
+            elif k.endswith('ы'): k = k[:-1]
+            elif k.endswith('а'): k = k[:-1]
+            elif k.endswith('я'): k = k[:-1]
+            elif k.endswith('е'): k = k[:-1]
+            elif k.endswith('у'): k = k[:-1]
+            elif k.endswith('ю'): k = k[:-1]
+        
+        search_keywords.append(k)
+
     if not search_keywords:
         search_keywords = [raw_search]
-
-    search_keywords = [k[:-1] if k.endswith('и') and len(k) > 3 and k != 'миди' else k for k in search_keywords]
+    
+    # Расширение поисковых ключевых слов по синонимам для ингредиентов
+    synonyms_map = {
+        'мёд': ['мёд', 'мед', 'медов'],
+        'мед': ['мёд', 'мед', 'медов'],
+        'арахис': ['арахис', 'арахисов', 'арахисовая', 'землян', 'peanut'],
+    }
+    expanded_keywords = list(search_keywords)
+    for k in search_keywords:
+        for base, syns in synonyms_map.items():
+            if base in k:
+                for s in syns:
+                    if s not in expanded_keywords:
+                        expanded_keywords.append(s)
+    search_keywords = expanded_keywords
     seafood_search = False
     if any('морепродукт' in k for k in search_keywords) or 'морепродукт' in raw_search:
         seafood_search = True
@@ -321,11 +358,15 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                     
                     text += f"\n💡 <i>Спросите про конкретное блюдо, чтобы увидеть фото и подробное описание!</i>"
                     
-                    await safe_send_message(bot, user_id, text, parse_mode="HTML")
-                
-                found = True
-                logger.info(f"Показал краткий список категории: {category_title} с {len(unique_items)} блюдами")
-                return text
+                    kb = types.InlineKeyboardMarkup(inline_keyboard=[
+                        [types.InlineKeyboardButton(text="🚚 Заказать доставку", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))]
+                    ])
+    
+                    await safe_send_message(bot, user_id, text, parse_mode="HTML", reply_markup=kb)
+                    
+                    found = True
+                    logger.info(f"Показал краткий список категории: {category_title} с {len(unique_items)} блюдами")
+                    return text
 
             if found:
                 break
@@ -394,7 +435,11 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                 
                 text += f"\n💡 <i>Спросите про конкретное блюдо, чтобы увидеть фото, БЖУ, вес и подробное описание!</i>"
                 
-                await safe_send_message(bot, user_id, text, parse_mode="HTML")
+                kb = types.InlineKeyboardMarkup(inline_keyboard=[
+                    [types.InlineKeyboardButton(text="🚚 Заказать доставку", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))]
+                ])
+                
+                await safe_send_message(bot, user_id, text, parse_mode="HTML", reply_markup=kb)
                 
                 found = True
                 logger.info(f"Показал виртуальную категорию: {category_title} с {len(unique_items)} блюдами")
@@ -547,6 +592,11 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                         if item_id not in unique_items:
                             unique_items[item_id] = item
                     
+                    # 🟢 ЗАЩИТА ОТ СПАМА: Если блюд слишком много (> 5), показываем краткий список
+                    if len(unique_items) > 5:
+                        logger.info(f"Слишком много блюд в категории '{category_title}' ({len(unique_items)}). Переключаюсь на краткий список.")
+                        return await handle_show_category_brief(category_name, user_id, bot, intro_message)
+
                     # Отправляем каждое блюдо с фото
                     for item in unique_items.values():
                         try:
@@ -571,22 +621,39 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                                 if item.get('description'):
                                     caption += f"\n{item['description']}"
 
+                                # Кнопка доставки (WebApp)
+                                kb = types.InlineKeyboardMarkup(inline_keyboard=[
+                                    [types.InlineKeyboardButton(text="🚚 Заказать доставку", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))]
+                                ])
+
                                 await bot.send_photo(
                                     chat_id=user_id,
                                     photo=photo_url,
                                     caption=caption,
-                                    parse_mode="HTML"
+                                    parse_mode="HTML",
+                                    reply_markup=kb
                                 )
                             else:
                                 # Если нет фото - отправляем текстом
                                 text = f"🍽️ <b>{item['name']}</b>\n💰 Цена: {item['price']}₽"
                                 if item.get('description'):
                                     text += f"\n{item['description']}"
-                                await safe_send_message(bot, user_id, text, parse_mode="HTML")
+                                    
+                                kb = types.InlineKeyboardMarkup(inline_keyboard=[
+                                    [types.InlineKeyboardButton(text="🚚 Заказать доставку", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))]
+                                ])
+                                
+                                await safe_send_message(bot, user_id, text, parse_mode="HTML", reply_markup=kb)
 
                         except Exception as e:
                             logger.error(f"Ошибка отправки блюда {item.get('name', 'unknown')}: {e}")
                             continue
+                    
+                    # Кнопка возврата к доставке в конце списка (убрана по просьбе, заменена на кнопки у блюд)
+                    # back_kb = types.InlineKeyboardMarkup(inline_keyboard=[
+                    #     [types.InlineKeyboardButton(text="◀️ Доставка", callback_data="menu_delivery")]
+                    # ])
+                    # await safe_send_message(bot, user_id, "Вернуться в меню:", reply_markup=back_kb)
 
                     found = True
                     logger.info(f"Показал категорию (подробно): {category_title} с {len(unique_items)} блюдами")
@@ -602,7 +669,11 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
         if not found:
             # Попытка 2: Ищем блюда по названию (виртуальная категория)
             # Используем централизованную функцию поиска
-            virtual_items = find_dishes_by_name(category_name, limit=20)
+            try:
+                virtual_items = find_dishes_by_name(category_name, limit=20)
+            except Exception as e:
+                logger.error(f"Ошибка при поиске блюд по названию '{category_name}': {e}")
+                virtual_items = []
 
             if virtual_items:
                 # Если найдено ровно одно блюдо, показываем его полную карточку с фото!
@@ -611,7 +682,7 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                     logger.info(f"Найдено одно блюдо '{best_dish['name']}', показываем полную карточку с фото.")
                     
                     try:
-                        # Импортируем функцию форматирования и историю сообщений локально, чтобы избежать циклических импортов
+                        # Импортируем функцию форматирования и историю сообщений локально
                         from handlers.handlers_delivery import format_full_dish_description, cleanup_photo_messages, user_message_history as delivery_photo_history
                         
                         # Очищаем старые фото
@@ -622,8 +693,7 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                         # Кнопки
                         from aiogram import types
                         keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-                            [types.InlineKeyboardButton(text="🛒 В корзину", callback_data=f"add_to_cart_{best_dish['menu_id']}_{best_dish['id']}")],
-                            [types.InlineKeyboardButton(text="⬅️ Меню", callback_data="menu_delivery")]
+                            [types.InlineKeyboardButton(text="🚚 Заказать доставку", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))]
                         ])
                         
                         if best_dish.get('image_url'):
@@ -698,7 +768,7 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                 try:
                     from aiogram import types
                     keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-                        [types.InlineKeyboardButton(text="🚚 Доставка", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))]
+                        [types.InlineKeyboardButton(text="🚚 Заказать доставку", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))]
                     ])
                     await safe_send_message(bot, user_id, text, reply_markup=keyboard, parse_mode="HTML")
                 except Exception:

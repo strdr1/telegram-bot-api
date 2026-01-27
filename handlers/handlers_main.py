@@ -2794,15 +2794,16 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                 if len(result['text']) < 5:
                      result['text'] = ""
             
-            # Отправляем текст ответа AI (если есть)
-            if result.get('text'):
-                 await safe_send_message(message.bot, user.id, result['text'])
-
             # Ищем блюдо
             from category_handler import find_dishes_by_name
             found_dishes = find_dishes_by_name(dish_query, limit=5)
             
             if found_dishes:
+                # Если блюдо найдено, отправляем текст ТОЛЬКО если он длинный (>60 символов)
+                # Это предотвращает дублирование (текст "Вот ваш салат" + подпись к фото)
+                if result.get('text') and len(result['text']) > 60:
+                     await safe_send_message(message.bot, user.id, result['text'])
+
                 # Берем лучшее совпадение (первое)
                 best_dish = found_dishes[0]
                 
@@ -2816,8 +2817,7 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                 
                 # Кнопки
                 keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-                    [types.InlineKeyboardButton(text="🛒 В корзину", callback_data=f"add_to_cart_{best_dish['menu_id']}_{best_dish['id']}")],
-                    [types.InlineKeyboardButton(text="⬅️ Меню", callback_data="menu_delivery")]
+                    [types.InlineKeyboardButton(text="🚚 Заказать доставку", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))]
                 ])
                 
                 try:
@@ -2851,7 +2851,10 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
             else:
                 # Если блюдо не найдено
                 logger.info(f"Блюдо '{dish_query}' не найдено в базе")
-                if not result.get('text'):
+                # Отправляем текст AI, так как мы не показали фото
+                if result.get('text'):
+                     await safe_send_message(message.bot, user.id, result['text'])
+                else:
                      await safe_send_message(message.bot, user.id, f"К сожалению, я не нашел фото для '{dish_query}'.")
 
             return
