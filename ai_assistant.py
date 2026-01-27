@@ -856,8 +856,8 @@ async def get_ai_response(message: str, user_id: int) -> dict:
             should_search = True # Явный запрос характеристик
         elif is_recommendation:
             should_search = False # Запрос рекомендации/наличия -> AI
-        elif len(message.split()) <= 5 and not is_numeric:
-            should_search = True # Очень короткое сообщение (1-5 слов) без ключевых слов -> считаем названием блюда
+        # elif len(message.split()) <= 5 and not is_numeric:
+        #    should_search = True # ОТКЛЮЧЕНО: Короткие сообщения теперь тоже идут через AI для "человечности" и правильного контекста
             
         if should_search:
             # Формируем запрос для поиска

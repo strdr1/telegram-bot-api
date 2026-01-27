@@ -170,7 +170,12 @@ def find_dishes_by_name(raw_search: str, limit: int = 20) -> list:
                     # Если искали "паст" (паста), но нашли "антипасти" и не искали "антипаст" специально
                     if 'паст' in search_keywords and 'антипаст' not in search_keywords:
                         if 'антипаст' in item_name.lower():
+                            logger.info(f"🛑 Filtered out Antipasti for Pasta query: {item_name}")
                             continue
+                        else:
+                            # Debug: why wasn't it filtered if it looks like antipasti?
+                            if 'анти' in item_name.lower():
+                                logger.info(f"⚠️ Suspicious item passed filter: {item_name} (keywords: {search_keywords})")
 
                     # 🛑 ДОПОЛНИТЕЛЬНАЯ ФИЛЬТРАЦИЯ ДЛЯ ДИЕТИЧЕСКИХ ЗАПРОСОВ
                     # Если ищем овощи/веганское, исключаем явные мясные блюда
