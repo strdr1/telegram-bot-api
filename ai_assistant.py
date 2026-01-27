@@ -19,6 +19,25 @@ import requests
 
 logger = logging.getLogger(__name__)
 
+# 🛑 СПИСОК ЗАПРЕЩЕННЫХ КАТЕГОРИЙ (Blacklist) для AI
+BLOCKED_CATEGORIES = [
+    'добавки', 
+    'добавки в пиццу', 
+    'модификаторы', 
+    'топпинги', 
+    'с собой', 
+    'упаковка',
+    'прочее'
+]
+
+def is_category_blocked(category_name: str) -> bool:
+    """Проверяет, является ли категория запрещенной"""
+    name_lower = category_name.lower().strip()
+    for blocked in BLOCKED_CATEGORIES:
+        if blocked in name_lower:
+            return True
+    return False
+
 # История сообщений пользователей
 user_history: Dict[int, List[Dict]] = {}
 
@@ -2021,6 +2040,10 @@ async def get_ai_response(message: str, user_id: int) -> dict:
                             cat_name = category.get('name', '').lower().strip()
                             cat_display = category.get('display_name', '').lower().strip()
 
+                            # 🛑 ИСКЛЮЧАЕМ ЗАПРЕЩЕННЫЕ КАТЕГОРИИ
+                            if is_category_blocked(cat_name):
+                                continue
+
                             # Более широкие условия поиска супов, но исключаем явные салаты
                             is_soup_category = (
                                 ('суп' in cat_name or 'суп' in cat_display or
@@ -2088,14 +2111,16 @@ async def get_ai_response(message: str, user_id: int) -> dict:
                         for cat_id, category in menu.get('categories', {}).items():
                             cat_name = category.get('name', '').lower().strip()
                             cat_display = category.get('display_name', '').lower().strip()
+                            
+                            # 🛑 ИСКЛЮЧАЕМ ЗАПРЕЩЕННЫЕ КАТЕГОРИИ
+                            if is_category_blocked(cat_name):
+                                continue
 
                             # Проверяем, является ли категория пиццей
                             is_pizza_category = (
-                                ('пицц' in cat_name or 
+                                'пицц' in cat_name or 
                                 'пицц' in cat_display or
-                                cat_name == 'пицца')
-                                and 'добавки' not in cat_name 
-                                and 'добавки' not in cat_display
+                                cat_name == 'пицца'
                             )
                             
                             if is_pizza_category:
@@ -2135,6 +2160,10 @@ async def get_ai_response(message: str, user_id: int) -> dict:
                         for cat_id, category in menu.get('categories', {}).items():
                             cat_name = category.get('name', '').lower().strip()
                             cat_display = category.get('display_name', '').lower().strip()
+
+                            # 🛑 ИСКЛЮЧАЕМ ЗАПРЕЩЕННЫЕ КАТЕГОРИИ
+                            if is_category_blocked(cat_name):
+                                continue
 
                             # Проверяем, является ли категория пивной
                             is_beer_category = (
@@ -2204,6 +2233,10 @@ async def get_ai_response(message: str, user_id: int) -> dict:
                         for cat_id, category in menu.get('categories', {}).items():
                             cat_name = category.get('name', '').lower().strip()
                             cat_display = category.get('display_name', '').lower().strip()
+
+                            # 🛑 ИСКЛЮЧАЕМ ЗАПРЕЩЕННЫЕ КАТЕГОРИИ
+                            if is_category_blocked(cat_name):
+                                continue
 
                             # Проверяем, является ли категория винной
                             is_wine_category = (
