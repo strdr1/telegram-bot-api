@@ -640,9 +640,16 @@ async def get_ai_response(message: str, user_id: int) -> Dict:
         breakfast_clean = [re.sub(r'[^\w\s]', '', q).strip() for q in breakfast_queries]
         
         if clean_message in breakfast_clean or message_lower in breakfast_queries:
+            assistant_text = '🍳 У нас есть отличные завтраки!'
+            if user_id not in user_history:
+                user_history[user_id] = []
+            user_history[user_id].append({"role": "user", "content": message})
+            user_history[user_id].append({"role": "assistant", "content": assistant_text})
+            if len(user_history[user_id]) > 20:
+                user_history[user_id] = user_history[user_id][-20:]
             return {
                 'type': 'text',
-                'text': '🍳 У нас есть отличные завтраки!',
+                'text': assistant_text,
                 'show_category_brief': 'завтраки'
             }
 
