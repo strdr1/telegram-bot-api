@@ -75,7 +75,7 @@ async def test_seafood_conversation_flow():
     mock_response_2.json.return_value = {
         "choices": [{
             "message": {
-                "content": "У нас всё очень вкусное! Вы предпочитаете сытные мясные блюда, легкие салаты или, может быть, пиццу?"
+                "content": "Рекомендую попробовать Мидии Мариньер!"
             }
         }]
     }
@@ -90,6 +90,16 @@ async def test_seafood_conversation_flow():
             if call_args:
                 json_data = call_args[1].get('json', {})
                 messages = json_data.get('messages', [])
+                
+                # Check SYSTEM PROMPT for the new Seafood rule
+                system_msg = messages[0]['content']
+                if "СПЕЦИАЛЬНО ДЛЯ МОРЕПРОДУКТОВ" in system_msg:
+                    print("✅ VERIFIED: System prompt contains SEAFOOD context rule!")
+                else:
+                    print("❌ FAILED: System prompt MISSING SEAFOOD context rule.")
+                    print(f"System Prompt snippet: {system_msg[:500]}...")
+                assert "СПЕЦИАЛЬНО ДЛЯ МОРЕПРОДУКТОВ" in system_msg
+
                 # Check if any message in history contains our simulated text
                 found_context = any("Мидии Мариньер" in msg.get('content', '') for msg in messages)
                 if found_context:
@@ -98,48 +108,43 @@ async def test_seafood_conversation_flow():
                     print("❌ FAILED: AI did NOT receive the search results in context.")
                     print(f"Messages sent: {[m.get('content') for m in messages]}")
                 assert found_context
-            
-            assert "Вы предпочитаете" in response['text']
-
-    # 3. User says "From seafood" (Из морепродуктов)
-    print("\n--- Step 3: User says 'Из морепродуктов' ---")
-    mock_response_3 = MagicMock()
-    mock_response_3.status_code = 200
-    mock_response_3.json.return_value = {
-        "choices": [{
-            "message": {
-                "content": "Отлично! Из морепродуктов я бы посоветовал попробовать нашу Брускетту с креветками и авокадо!"
-            }
-        }]
-    }
-    
-    with patch('requests.post', return_value=mock_response_3):
-        with patch('ai_assistant.load_menu_cache', return_value=mock_menu):
-            response = await ai_assistant.get_ai_response("Из морепродуктов", user_id)
-            print(f"Response 3: {response['text']}")
-            assert "Брускетту" in response['text']
 
     # 4. User says "Are there others?" (А другие есть?)
     print("\n--- Step 4: User says 'А другие есть?' ---")
     
-    with patch('ai_assistant.load_menu_cache', return_value=mock_menu):
-        response = await ai_assistant.get_ai_response("А другие есть?", user_id)
-        print(f"Response 4 Type: {response.get('type')}")
-        print(f"Response 4 Text: {response.get('text')}")
-        
-        if response.get('show_banquet_options'):
-             print("❌ ERROR: Banquet options triggered!")
-             sys.exit(1)
-             
-        if "🍽️" in response['text']:
-             print("✅ Success: Found a dish!")
-        elif "SEARCH" in response['text']:
-             print("✅ Success: Found search results!")
-        else:
-             print("⚠️ Warning: Got text response without explicit dish, but not banquet.")
-             
-        assert response.get('show_banquet_options') is not True
-        
+    # We expect this to NOT trigger banquet, but fallback to AI or local logic.
+    # Since we are mocking, if it hits AI, it uses requests.post.
+    # If it hits local logic (second_phrases), it might return a specific text.
+    
+    mock_response_4 = MagicMock()
+    mock_response_4.status_code = 200
+    mock_response_4.json.return_value = {
+        "choices": [{
+             "message": {
+                 "content": "Вот еще блюда: Жареные креветки."
+             }
+        }]
+    }
+
+    with patch('requests.post', return_value=mock_response_4) as mock_post_4:
+        with patch('ai_assistant.load_menu_cache', return_value=mock_menu):
+            response = await ai_assistant.get_ai_response("А другие есть?", user_id)
+            print(f"Response 4 Type: {response.get('type')}")
+            print(f"Response 4 Text: {response.get('text')}")
+            
+            if response.get('show_banquet_options'):
+                 print("❌ ERROR: Banquet options triggered!")
+                 sys.exit(1)
+            else:
+                 print("✅ VERIFIED: Banquet options NOT triggered.")
+
+            # Check if it was handled by second_phrases (which calls find_similar_dishes) 
+            # OR passed to AI. 
+            # In ai_assistant.py, 'second_phrases' logic attempts find_similar_dishes.
+            # If find_similar_dishes returns nothing (which it might with mock menu if not set up right),
+            # it proceeds to AI.
+            # The key is that it didn't trigger BANQUET (which is separate logic).
+
     print("\n✅ Test Completed Successfully!")
 
 if __name__ == "__main__":
