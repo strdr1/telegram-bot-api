@@ -856,8 +856,8 @@ async def get_ai_response(message: str, user_id: int) -> dict:
             should_search = True # Явный запрос характеристик
         elif is_recommendation:
             should_search = False # Запрос рекомендации/наличия -> AI
-        # elif len(message.split()) <= 5 and not is_numeric:
-        #    should_search = True # ОТКЛЮЧЕНО: Короткие сообщения теперь тоже идут через AI для "человечности" и правильного контекста
+        elif len(message.split()) <= 5 and not is_numeric:
+            should_search = True # Очень короткое сообщение (1-5 слов) без ключевых слов -> считаем названием блюда
             
         if should_search:
             # Формируем запрос для поиска
@@ -904,7 +904,13 @@ async def get_ai_response(message: str, user_id: int) -> dict:
                         # Используем стемминг для нечеткого поиска
                         item_stem = _stem_text(item_name)
                         search_stem = _stem_text(dish_to_show)
-                        
+
+                        # 🛑 FIX: Защита от ложного срабатывания "Паста" -> "Антипасти"
+                        # Если искали "паст" (паста), но нашли "антипасти"
+                        if 'паст' in dish_to_show.lower() and 'антипаст' not in dish_to_show.lower():
+                            if 'антипаст' in item_name.lower():
+                                continue
+
                         q_tokens = _specific_tokens(dish_to_show)
                         n_tokens = _specific_tokens(item_name)
 
