@@ -371,11 +371,21 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                     
                     # Нормализация для "горячие блюда" <-> "горячее"
                     # Если ищем "горячие блюда", а категория "горячее" -> совпадение
-                    if search_name in ['горячее', 'горячие блюда', 'второе', 'вторые блюда', 'основное', 'основные блюда']:
-                        # Ищем совпадение с корнями слов
+                    
+                    # Проверяем, является ли запрос поиском горячих блюд
+                    is_hot_search = any(root in search_name for root in ['горяч', 'основн', 'втор'])
+                    # Проверяем, является ли запрос поиском салатов
+                    is_salad_search = 'салат' in search_name
+
+                    if is_hot_search:
+                        # Ищем совпадение с корнями слов в названии категории
                         if any(root in cat_name for root in ['горяч', 'основн', 'втор']) or \
                            any(root in cat_display_name for root in ['горяч', 'основн', 'втор']):
                             is_match = True
+                    elif is_salad_search:
+                        # Для салатов ищем корень "салат"
+                        if 'салат' in cat_name or 'салат' in cat_display_name:
+                             is_match = True
                     else:
                         # Проверяем точное совпадение или вхождение
                         is_match = (search_name in cat_name or cat_name in search_name or
