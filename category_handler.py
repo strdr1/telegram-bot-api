@@ -50,15 +50,21 @@ def _extract_weight_value(item: dict):
     return None
 
 def get_calorie_info(item: dict):
-    total_cal = _to_float(item.get('calories'))
+    # Пытаемся рассчитать точные калории на основе веса и калорийности на 100г
+    # Это приоритетный метод, так как поле 'calories' часто дублирует 'calories_per_100'
+    weight_val = _extract_weight_value(item)
+    cp100_val = _to_float(item.get('calories_per_100'))
+    total_cal = None
+    
+    if weight_val is not None and cp100_val is not None and weight_val > 0:
+         total_cal = cp100_val * weight_val / 100.0
+    
     if total_cal is None:
-        weight_val = _extract_weight_value(item)
-        cp100_val = _to_float(item.get('calories_per_100'))
-        if weight_val is not None and cp100_val is not None:
-            total_cal = cp100_val * weight_val / 100.0
+         # Фаллбэк на поле calories, если расчет невозможен
+         total_cal = _to_float(item.get('calories'))
+
     total_int = int(round(total_cal)) if total_cal is not None else None
     cp100_int = None
-    cp100_val = _to_float(item.get('calories_per_100'))
     if cp100_val is not None:
         cp100_int = int(round(cp100_val))
     return total_int, cp100_int
