@@ -1182,53 +1182,53 @@ async def get_ai_response(message: str, user_id: int) -> dict:
                 continue
 
             menu_name = menu.get('name', '').replace('🍳', '').replace('📋', '').strip()
+            
+            menu_section = {
+                "menu_name": menu_name,
+                "categories": []
+            }
+
+            for category_id, category in menu.get('categories', {}).items():
+                category_name = category.get('name', '').replace('🍕', '').replace('🥗', '').strip()
                 
-                menu_section = {
-                    "menu_name": menu_name,
-                    "categories": []
+                # 🛑 Исключаем категории добавок, модификаторов и конструкторов из контекста AI
+                if any(bad_word in category_name.lower() for bad_word in ['добавки', 'модификаторы', 'топпинги', 'соусы к', 'дополнительно', 'конструктор']):
+                    continue
+
+                category_data = {
+                    "category_name": category_name,
+                    "items": []
                 }
 
-                for category_id, category in menu.get('categories', {}).items():
-                    category_name = category.get('name', '').replace('🍕', '').replace('🥗', '').strip()
-                    
-                    # 🛑 Исключаем категории добавок, модификаторов и конструкторов из контекста AI
-                    if any(bad_word in category_name.lower() for bad_word in ['добавки', 'модификаторы', 'топпинги', 'соусы к', 'дополнительно', 'конструктор']):
-                        continue
-
-                    category_data = {
-                        "category_name": category_name,
-                        "items": []
-                    }
-
-                    items = category.get('items', [])
-                    # Фильтруем товары с ценой 0 (модификаторы, скрытые товары)
-                    items = [item for item in items if float(item.get('price', 0)) > 0]
-                    
-                    # Берем первые 5 блюд из каждой категории для лучшего контекста
-                    for item in items[:5]:
-                        desc = item.get('description', '')
-                        # Очищаем описание от HTML тегов если есть
-                        if desc:
-                            desc = re.sub(r'<[^>]+>', '', desc).strip()
-                            
-                        dish_info = {
-                            "name": item['name'],
-                            "price": item['price'],
-                            "description": desc,
-                            "calories": item.get('calories'),
-                            "weight": item.get('weight'),
-                            "protein": item.get('protein'),
-                            "fat": item.get('fat'),
-                            "carbohydrate": item.get('carbohydrate')
-                        }
-                        category_data["items"].append(dish_info)
-                    
-                    if len(items) > 5:
-                        category_data["more_items_count"] = len(items) - 5
-                        
-                    menu_section["categories"].append(category_data)
+                items = category.get('items', [])
+                # Фильтруем товары с ценой 0 (модификаторы, скрытые товары)
+                items = [item for item in items if float(item.get('price', 0)) > 0]
                 
-                menu_knowledge_base.append(menu_section)
+                # Берем первые 5 блюд из каждой категории для лучшего контекста
+                for item in items[:5]:
+                    desc = item.get('description', '')
+                    # Очищаем описание от HTML тегов если есть
+                    if desc:
+                        desc = re.sub(r'<[^>]+>', '', desc).strip()
+                        
+                    dish_info = {
+                        "name": item['name'],
+                        "price": item['price'],
+                        "description": desc,
+                        "calories": item.get('calories'),
+                        "weight": item.get('weight'),
+                        "protein": item.get('protein'),
+                        "fat": item.get('fat'),
+                        "carbohydrate": item.get('carbohydrate')
+                    }
+                    category_data["items"].append(dish_info)
+                
+                if len(items) > 5:
+                    category_data["more_items_count"] = len(items) - 5
+                    
+                menu_section["categories"].append(category_data)
+            
+            menu_knowledge_base.append(menu_section)
 
         # Сохраняем в файл menu_context.json (как просил пользователь "отдельно место в json")
         try:
