@@ -236,19 +236,6 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
             await safe_send_message(bot, user_id, "Пожалуйста, уточните запрос. Введите название блюда.", parse_mode="HTML")
             return
 
-        # 🟢 ПРЯМОЕ СОПОСТАВЛЕНИЕ (ПО ЗАПРОСУ)
-        # Если ищут "горячее", сразу подменяем на точное название категории из menu_cache.json
-        hot_variations = [
-            'горячее', 'горячие', 'горячие блюда', 
-            'что у вас из горячего', 'покажи горячее',
-            'что у вас горячего', 'что есть из горячего',
-            'меню горячее', 'горячее меню', 'горячего',
-            'из горячего', 'по горячему'
-        ]
-        if category_name.lower().strip() in hot_variations:
-            category_name = "🍖 ГОРЯЧИЕ БЛЮДА"
-            logger.info(f"🔄 Переопределение категории: '{original_name}' -> '{category_name}'")
-        
         category_name = category_name.replace('🍕', '').replace('🥗', '').replace('🍳', '').replace('🧀', '').replace('🍖', '').replace('🥩', '').replace('🍗', '').replace('🥙', '').replace('🌮', '').replace('🌯', '').replace('🥪', '').replace('🍔', '').replace('🍟', '').replace('🍝', '').replace('🍜', '').replace('🍛', '').replace('🍱', '').replace('🍣', '').replace('🍤', '').replace('🍙', '').replace('🍚', '').replace('🍘', '').replace('🍥', '').replace('🥟', '').replace('🥠', '').replace('🥡', '').replace('🦀', '').replace('🦞', '').replace('🦐', '').replace('🦑', '').replace('🍦', '').replace('🍧', '').replace('🍨', '').replace('🍩', '').replace('🍪', '').replace('🎂', '').replace('🍰', '').replace('🧁', '').replace('🥧', '').replace('🍫', '').replace('🍬', '').replace('🍭', '').replace('🍮', '').replace('🍯', '').replace('🍼', '').replace('🥛', '').replace('☕', '').replace('🍵', '').replace('🍶', '').replace('🍾', '').replace('🍷', '').replace('🍸', '').replace('🍹', '').replace('🍺', '').replace('🍻', '').replace('🥂', '').replace('🥃', '').strip()
         category_name = category_name.replace('_', ' ').strip()
         logger.info(f"Показываю краткий список категории: '{category_name}'")
@@ -296,8 +283,26 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
 
                 for item in unique_items.values():
                     text += f"• {item['name']} — {item['price']}₽"
+                    
+                    details = []
                     if item.get('weight'):
-                        text += f" (⚖️ {item['weight']}г)"
+                        details.append(f"⚖️ {item['weight']}г")
+                    
+                    if item.get('calories'):
+                         try:
+                             val = int(float(item['calories']))
+                             details.append(f"{val} ккал")
+                         except: pass
+
+                    if item.get('calories_per_100'):
+                         try:
+                             val = int(float(item['calories_per_100']))
+                             details.append(f"{val} ккал/100г")
+                         except: pass
+                    
+                    if details:
+                        text += f" ({', '.join(details)})"
+                    
                     text += "\n"
 
                 text += f"\n💡 <i>Спросите про конкретное блюдо, чтобы увидеть фото и подробное описание!</i>"
@@ -404,7 +409,28 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                     
                     # Добавляем блюда в список
                     for item in unique_items.values():
-                        text += f"• {item['name']} — {item['price']}₽\n"
+                        text += f"• {item['name']} — {item['price']}₽"
+                        
+                        details = []
+                        if item.get('weight'):
+                            details.append(f"⚖️ {item['weight']}г")
+                        
+                        if item.get('calories'):
+                             try:
+                                 val = int(float(item['calories']))
+                                 details.append(f"{val} ккал")
+                             except: pass
+
+                        if item.get('calories_per_100'):
+                             try:
+                                 val = int(float(item['calories_per_100']))
+                                 details.append(f"{val} ккал/100г")
+                             except: pass
+                        
+                        if details:
+                            text += f" ({', '.join(details)})"
+                        
+                        text += "\n"
                     
                     text += f"\n💡 <i>Спросите про конкретное блюдо, чтобы увидеть фото и подробное описание!</i>"
                     
@@ -518,18 +544,6 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
             await safe_send_message(bot, user_id, "Пожалуйста, уточните запрос. Введите название блюда.", parse_mode="HTML")
             return
 
-        # 🟢 ПРЯМОЕ СОПОСТАВЛЕНИЕ (ПО ЗАПРОСУ)
-        hot_variations = [
-            'горячее', 'горячие', 'горячие блюда', 
-            'что у вас из горячего', 'покажи горячее',
-            'что у вас горячего', 'что есть из горячего',
-            'меню горячее', 'горячее меню', 'горячего',
-            'из горячего', 'по горячему'
-        ]
-        if category_name.lower().strip() in hot_variations:
-            category_name = "🍖 ГОРЯЧИЕ БЛЮДА"
-            logger.info(f"🔄 Переопределение категории (подробно): '{original_name}' -> '{category_name}'")
-
         category_name = category_name.replace('🍕', '').replace('🥗', '').replace('🍳', '').replace('🧀', '').replace('🍖', '').replace('🥩', '').replace('🍗', '').replace('🥙', '').replace('🌮', '').replace('🌯', '').replace('🥪', '').replace('🍔', '').replace('🍟', '').replace('🍝', '').replace('🍜', '').replace('🍛', '').replace('🍱', '').replace('🍣', '').replace('🍤', '').replace('🍙', '').replace('🍚', '').replace('🍘', '').replace('🍥', '').replace('🥟', '').replace('🥠', '').replace('🥡', '').replace('🦀', '').replace('🦞', '').replace('🦐', '').replace('🦑', '').replace('🍦', '').replace('🍧', '').replace('🍨', '').replace('🍩', '').replace('🍪', '').replace('🎂', '').replace('🍰', '').replace('🧁', '').replace('🥧', '').replace('🍫', '').replace('🍬', '').replace('🍭', '').replace('🍮', '').replace('🍯', '').replace('🍼', '').replace('🥛', '').replace('☕', '').replace('🍵', '').replace('🍶', '').replace('🍾', '').replace('🍷', '').replace('🍸', '').replace('🍹', '').replace('🍺', '').replace('🍻', '').replace('🥂', '').replace('🥃', '').strip()
         category_name = category_name.replace('_', ' ').strip()
         logger.info(f"Показываю категорию (подробно): '{category_name}'")
@@ -539,6 +553,74 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
         # 🟢 ОБРАБОТКА ЗАВТРАКОВ (МЕНЮ 90)
         # Ранее общий запрос завтраков перенаправлялся на краткий список.
         # По требованию — всегда показываем полную категорию (без перенаправления).
+        
+        # Список общих запросов завтраков
+        breakfast_generics = [
+            'завтрак', 'завтраки', 'меню завтраков', 'меню завтрак', 'breakfast', 'breakfasts',
+            'с утра', 'поесть с утра', 'утреннее', 'утреннее меню', 'на завтрак'
+        ]
+        
+        # Проверяем, является ли запрос общим
+        is_generic_breakfast = lower_name in breakfast_generics or \
+                             'завтрак' in lower_name or \
+                             'с утра' in lower_name or \
+                             (lower_name.endswith('завтрак') and len(lower_name.split()) < 3) or \
+                             (lower_name.endswith('завтраки') and len(lower_name.split()) < 3)
+
+        if is_generic_breakfast:
+            # Пытаемся получить меню 90 напрямую, игнорируя временные ограничения доставки
+            menu = menu_cache.all_menus_cache.get("90") or menu_cache.all_menus_cache.get(90)
+            if menu:
+                items = []
+                for category in menu.get('categories', {}).values():
+                    items.extend(category.get('items', []))
+
+                if not items:
+                    await safe_send_message(bot, user_id, "В меню завтраков пока нет блюд.", parse_mode="HTML")
+                    return
+
+                menu_title = "Завтраки (пн-пт до 13:00, сб-вс до 16:00)"
+                emoji = '🍳'
+                
+                text = f"{emoji} <b>{menu_title}</b>\n\n"
+
+                unique_items = {}
+                for item in items:
+                    item_id = item.get('id')
+                    if item_id not in unique_items:
+                        unique_items[item_id] = item
+
+                for item in unique_items.values():
+                    text += f"• {item['name']} — {item['price']}₽"
+                    
+                    details = []
+                    if item.get('weight'):
+                        details.append(f"⚖️ {item['weight']}г")
+                    
+                    if item.get('calories'):
+                         try:
+                             val = int(float(item['calories']))
+                             details.append(f"{val} ккал")
+                         except: pass
+
+                    if item.get('calories_per_100'):
+                         try:
+                             val = int(float(item['calories_per_100']))
+                             details.append(f"{val} ккал/100г")
+                         except: pass
+                    
+                    if details:
+                        text += f" ({', '.join(details)})"
+                    
+                    text += "\n"
+
+                text += f"\n💡 <i>Спросите про конкретное блюдо, чтобы увидеть фото и подробное описание!</i>"
+
+                await safe_send_message(bot, user_id, text, parse_mode="HTML")
+                
+                # Логируем
+                logger.info(f"Показал меню завтраков (полный список, {len(unique_items)} блюд)")
+                return
 
         found = False
         
@@ -573,19 +655,9 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                 cat_display_name = category.get('display_name', cat_name).lower().strip()
                 search_name = category_name.lower().strip()
 
-                # Нормализация для "горячие блюда" <-> "горячее"
-                # Явная проверка ID 4822
-                if str(cat_id) == '4822' and search_name in ['горячее', 'горячие', 'горячие блюда']:
-                    is_match = True
-                # Проверка по имени с учетом эмодзи
-                elif search_name in ['горячее', 'горячие блюда'] and \
-                     (cat_name in ['горячее', 'горячие блюда'] or \
-                      any(x in cat_display_name for x in ['горячее', 'горячие блюда'])):
-                    is_match = True
-                else:
-                    # Проверяем точное совпадение или вхождение
-                    is_match = (search_name in cat_name or cat_name in search_name or
-                                search_name in cat_display_name or cat_display_name in search_name)
+                # Проверяем точное совпадение или вхождение
+                is_match = (search_name in cat_name or cat_name in search_name or
+                            search_name in cat_display_name or cat_display_name in search_name)
                 
                 # Если нет точного совпадения, пробуем нечеткое
                 if not is_match:
