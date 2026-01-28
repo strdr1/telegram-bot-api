@@ -658,9 +658,9 @@ async def get_ai_response(message: str, user_id: int) -> dict:
         # Если сообщение начинается с обращения к Маку
         is_mac_greeting = any(message_lower.startswith(greeting) for greeting in mac_greetings) or message_lower in mac_greetings
 
-        faq_answer_fast = search_in_faq(message)
-        if faq_answer_fast:
-            return {'type': 'text', 'text': faq_answer_fast}
+        # faq_answer_fast = search_in_faq(message)
+        # if faq_answer_fast:
+        #    return {'type': 'text', 'text': faq_answer_fast}
 
         recommendation_keywords = ['посоветуй', 'рекомендуй', 'что-то с', 'какое-нибудь', 'хочу', 'подскажи', 'есть ли', 'а есть', 'что есть', 'что взять', 'выбери', 'предложи']
         is_recommendation = any(keyword in message_lower for keyword in recommendation_keywords)
@@ -668,185 +668,185 @@ async def get_ai_response(message: str, user_id: int) -> dict:
         # Отключено: запросы завтраков обрабатываются полностью через AI (без моментального списка)
 
         # Проверка запроса списка салатов (более расширенная)
-        salad_queries = [
-            'салат', 'салаты', 'меню салатов', 'меню салат', 'салаты меню',
-            'какие салаты', 'какие салаты?', 'какие салаты есть', 'какие салаты есть?',
-            'какие салаты у вас есть', 'какие салаты у вас есть?', 'какие у вас салаты',
-            'что за салаты', 'что за салаты?', 'какие есть салаты', 'какие есть салаты?',
-            'список салатов', 'покажи салаты', 'есть салаты', 'есть салаты?'
-        ]
+        # salad_queries = [
+        #    'салат', 'салаты', 'меню салатов', 'меню салат', 'салаты меню',
+        #    'какие салаты', 'какие салаты?', 'какие салаты есть', 'какие салаты есть?',
+        #    'какие салаты у вас есть', 'какие салаты у вас есть?', 'какие у вас салаты',
+        #    'что за салаты', 'что за салаты?', 'какие есть салаты', 'какие есть салаты?',
+        #    'список салатов', 'покажи салаты', 'есть салаты', 'есть салаты?'
+        # ]
         
-        salad_clean = [re.sub(r'[^\w\s]', '', q).strip() for q in salad_queries]
+        # salad_clean = [re.sub(r'[^\w\s]', '', q).strip() for q in salad_queries]
         
-        if clean_message in salad_clean or message_lower in salad_queries:
-            return {
-                'type': 'text',
-                'text': '🥗 У нас есть отличные салаты!',
-                'show_category_brief': 'салаты'
-            }
+        # if clean_message in salad_clean or message_lower in salad_queries:
+        #    return {
+        #        'type': 'text',
+        #        'text': '🥗 У нас есть отличные салаты!',
+        #        'show_category_brief': 'салаты'
+        #    }
 
-        breakfast_queries = [
-            'завтрак', 'завтраки', 'меню завтраков', 'меню завтрак', 'завтраки меню',
-            'какие завтраки', 'какие завтраки?', 'какие завтраки есть', 'какие завтраки есть?',
-            'какие завтраки у вас есть', 'какие завтраки у вас есть?', 'какие у вас завтраки',
-            'что на завтрак', 'что на завтрак?', 'какие есть завтраки', 'какие есть завтраки?',
-            'список завтраков', 'покажи завтраки', 'есть завтраки', 'есть завтраки?',
-            'на завтрак'
-        ]
+        # breakfast_queries = [
+        #    'завтрак', 'завтраки', 'меню завтраков', 'меню завтрак', 'завтраки меню',
+        #    'какие завтраки', 'какие завтраки?', 'какие завтраки есть', 'какие завтраки есть?',
+        #    'какие завтраки у вас есть', 'какие завтраки у вас есть?', 'какие у вас завтраки',
+        #    'что на завтрак', 'что на завтрак?', 'какие есть завтраки', 'какие есть завтраки?',
+        #    'список завтраков', 'покажи завтраки', 'есть завтраки', 'есть завтраки?',
+        #    'на завтрак'
+        # ]
         
-        breakfast_clean = [re.sub(r'[^\w\s]', '', q).strip() for q in breakfast_queries]
+        # breakfast_clean = [re.sub(r'[^\w\s]', '', q).strip() for q in breakfast_queries]
         
-        if clean_message in breakfast_clean or message_lower in breakfast_queries:
-            return {
-                'type': 'text',
-                'text': '🍳 Показываю категорию завтраков!',
-                'show_category': 'завтраки'
-            }
+        # if clean_message in breakfast_clean or message_lower in breakfast_queries:
+        #    return {
+        #        'type': 'text',
+        #        'text': '🍳 Показываю категорию завтраков!',
+        #        'show_category': 'завтраки'
+        #    }
 
         # Проверка запроса списка горячих блюд
-        hot_dishes_queries = [
-            'горячее', 'горячие', 'горячие блюда', 'горячие блюжа',
-            'меню горячего', 'меню горячих', 'меню горячих блюд',
-            'какие горячие', 'какие горячие?', 'какие горячие блюда', 'какие горячие блюда?',
-            'какие горячие блюда у вас есть', 'какие горячие блюда у вас есть?', 'какие у вас горячие блюда',
-            'что на горячее', 'что на горячее?', 'какие есть горячие', 'какие есть горячие блюда?',
-            'список горячего', 'покажи горячее', 'есть горячее', 'есть горячее?',
-            'что у вас из горячего', 'что у вас из горячего?'
-        ]
+        # hot_dishes_queries = [
+        #    'горячее', 'горячие', 'горячие блюда', 'горячие блюжа',
+        #    'меню горячего', 'меню горячих', 'меню горячих блюд',
+        #    'какие горячие', 'какие горячие?', 'какие горячие блюда', 'какие горячие блюда?',
+        #    'какие горячие блюда у вас есть', 'какие горячие блюда у вас есть?', 'какие у вас горячие блюда',
+        #    'что на горячее', 'что на горячее?', 'какие есть горячие', 'какие есть горячие блюда?',
+        #    'список горячего', 'покажи горячее', 'есть горячее', 'есть горячее?',
+        #    'что у вас из горячего', 'что у вас из горячего?'
+        # ]
         
-        hot_dishes_clean = [re.sub(r'[^\w\s]', '', q).strip() for q in hot_dishes_queries]
+        # hot_dishes_clean = [re.sub(r'[^\w\s]', '', q).strip() for q in hot_dishes_queries]
         
-        if clean_message in hot_dishes_clean or message_lower in hot_dishes_queries:
-            return {
-                'type': 'text',
-                'text': '🍲 У нас есть отличные горячие блюда!',
-                'show_category_brief': 'горячие блюда'
-            }
+        # if clean_message in hot_dishes_clean or message_lower in hot_dishes_queries:
+        #    return {
+        #        'type': 'text',
+        #        'text': '🍲 У нас есть отличные горячие блюда!',
+        #        'show_category_brief': 'горячие блюда'
+        #    }
 
         # Проверка запроса списка категорий
-        categories_queries = [
-            'какие категории', 'какие категории?', 'какие есть категории', 'какие есть категории?',
-            'список категорий', 'категории меню', 'категории', 'покажи категории',
-            'какие разделы', 'разделы меню', 'что есть поесть', 'что есть поесть?'
-        ]
+        # categories_queries = [
+        #    'какие категории', 'какие категории?', 'какие есть категории', 'какие есть категории?',
+        #    'список категорий', 'категории меню', 'категории', 'покажи категории',
+        #    'какие разделы', 'разделы меню', 'что есть поесть', 'что есть поесть?'
+        # ]
         
-        if any(q in message_lower for q in categories_queries):
-             return {
-                'type': 'text',
-                'text': '🍽️ Вот какие категории блюд у нас есть:',
-                'show_all_categories': True
-            }
+        # if any(q in message_lower for q in categories_queries):
+        #     return {
+        #        'type': 'text',
+        #        'text': '🍽️ Вот какие категории блюд у нас есть:',
+        #        'show_all_categories': True
+        #    }
 
         # Проверка запроса меню (точное совпадение, без ложных срабатываний на 'детское меню')
-        menu_queries = [
-            'покажи меню', 'меню', 'хочу меню', 'список меню', 'какое меню',
-            'посмотреть меню', 'глянуть меню', 'меню ресторана', 'основное меню'
-        ]
-        menu_clean = [re.sub(r'[^\w\s]', '', q).strip() for q in menu_queries]
-        if clean_message in menu_clean or message_lower in menu_queries:
-            return {
-                'type': 'text',
-                'text': '🍽️ Вот наше меню! Выберите, что вас интересует:',
-                'show_restaurant_menu': True
-            }
+        # menu_queries = [
+        #    'покажи меню', 'меню', 'хочу меню', 'список меню', 'какое меню',
+        #    'посмотреть меню', 'глянуть меню', 'меню ресторана', 'основное меню'
+        # ]
+        # menu_clean = [re.sub(r'[^\w\s]', '', q).strip() for q in menu_queries]
+        # if clean_message in menu_clean or message_lower in menu_queries:
+        #    return {
+        #        'type': 'text',
+        #        'text': '🍽️ Вот наше меню! Выберите, что вас интересует:',
+        #        'show_restaurant_menu': True
+        #    }
 
         # Проверка запроса банкета
-        banquet_queries = ['банкет', 'банкеты', 'свадьба', 'корпоратив', 'день рождения', 'праздник', 'юбилей']
-        if any(q in message_lower for q in banquet_queries):
-            return {
-                'type': 'text',
-                'text': '🎉 Да, мы проводим банкеты! У нас отличные условия для вашего праздника.',
-                'show_banquet_options': True
-            }
+        # banquet_queries = ['банкет', 'банкеты', 'свадьба', 'корпоратив', 'день рождения', 'праздник', 'юбилей']
+        # if any(q in message_lower for q in banquet_queries):
+        #    return {
+        #        'type': 'text',
+        #        'text': '🎉 Да, мы проводим банкеты! У нас отличные условия для вашего праздника.',
+        #        'show_banquet_options': True
+        #    }
 
-        second_phrases = ['а вторую', 'вторую', 'и вторую', 'а второе', 'второй', 'второе', 'а другая', 'другая', 'а другую', 'другую', 'еще одну', 'ещё одну', 'еще', 'ещё', 'другие', 'а другие', 'других', 'а других']
-        if any(phrase in message_lower for phrase in second_phrases) and len(message_lower.split()) <= 5:
-            base_query = None
-            if user_id in user_history:
-                for msg in reversed(user_history[user_id]):
-                    if msg.get('role') == 'user':
-                        prev_text = msg.get('content', '').strip()
-                        if not prev_text:
-                            continue
-                        prev_lower = prev_text.lower().strip()
-                        if any(p == prev_lower or p in prev_lower for p in second_phrases):
-                            continue
-                        # Очищаем служебные слова из предыдущего запроса
-                        base_query = re.sub(r'^(покажи|покажите|хочу|расскажи|покажи фото|а покажи)\s+', '', prev_lower).strip()
-                        base_query = re.sub(r'[!?.,:;]+$', '', base_query)
-                        break
-            if base_query:
-                menu_data = load_menu_cache()
-                candidates = find_similar_dishes(menu_data, base_query)
-                if len(candidates) < 2:
-                    tokens = base_query.split()
-                    if tokens:
-                        base_token = tokens[0]
-                        candidates = find_similar_dishes(menu_data, base_token)
-                if len(candidates) >= 2 or len(candidates) == 1:
-                    idx = 1 if len(candidates) >= 2 else 0
-                    dish = candidates[idx]
-                    caption = f"🍽️ <b>{dish['name']}</b>\n\n"
-                    caption += f"💰 Цена: {dish['price']}₽\n"
-                    if dish.get('weight'):
-                        caption += f"⚖️ Вес: {dish['weight']}\n"
-                    if dish.get('calories') or dish.get('calories_per_100'):
-                        calories = dish.get('calories') or dish.get('calories_per_100')
-                        try:
-                            cal_val = float(calories)
-                            caption += f"📊 На 100г: {cal_val:.1f} ккал\n"
-                            
-                            if dish.get('weight'):
-                                weight_str = str(dish['weight']).replace('г', '').replace('мл', '').strip()
-                                if weight_str.replace('.', '').isdigit():
-                                    weight = float(weight_str)
-                                    total_cal = (cal_val * weight) / 100
-                                    caption += f"🔥 Порция: {total_cal:.1f} ккал\n"
-                        except ValueError:
-                             caption += f"🔥 Калории: {calories}\n"
-                    if dish.get('protein') or dish.get('fat') or dish.get('carbohydrate') or dish.get('proteins') or dish.get('fats') or dish.get('carbs'):
-                        caption += f"\n🧃 БЖУ:\n"
-                        if dish.get('protein') is not None:
-                            caption += f"• Белки: {dish['protein']}г\n"
-                        elif dish.get('proteins'):
-                            caption += f"• Белки: {dish['proteins']}г\n"
-                        if dish.get('fat') is not None:
-                            caption += f"• Жиры: {dish['fat']}г\n"
-                        elif dish.get('fats'):
-                            caption += f"• Жиры: {dish['fats']}г\n"
-                        if dish.get('carbohydrate') is not None:
-                            caption += f"• Углеводы: {dish['carbohydrate']}г\n"
-                        elif dish.get('carbs'):
-                            caption += f"• Углеводы: {dish['carbs']}г\n"
-                    if dish.get('description'):
-                        caption += f"\n{dish['description']}"
-                    if dish.get('image_url'):
-                        return {
-                            'type': 'photo_with_text',
-                            'photo_url': dish['image_url'],
-                            'text': caption,
-                            'show_delivery_button': True
-                        }
-                    else:
-                        local_path = dish.get('image_local_path')
-                        if not local_path and dish.get('image_filename'):
-                            try:
-                                local_path = os.path.join(config.MENU_IMAGES_DIR, dish['image_filename'])
-                            except Exception:
-                                local_path = None
-                        if local_path:
-                            return {
-                                'type': 'photo_with_text',
-                                'photo_path': local_path,
-                                'text': caption,
-                                'show_delivery_button': True
-                            }
-                        else:
-                            return {
-                                'type': 'text',
-                                'text': caption,
-                                'show_delivery_button': True
-                            }
+        # second_phrases = ['а вторую', 'вторую', 'и вторую', 'а второе', 'второй', 'второе', 'а другая', 'другая', 'а другую', 'другую', 'еще одну', 'ещё одну', 'еще', 'ещё', 'другие', 'а другие', 'других', 'а других']
+        # if any(phrase in message_lower for phrase in second_phrases) and len(message_lower.split()) <= 5:
+        #     base_query = None
+        #     if user_id in user_history:
+        #         for msg in reversed(user_history[user_id]):
+        #             if msg.get('role') == 'user':
+        #                 prev_text = msg.get('content', '').strip()
+        #                 if not prev_text:
+        #                     continue
+        #                 prev_lower = prev_text.lower().strip()
+        #                 if any(p == prev_lower or p in prev_lower for p in second_phrases):
+        #                     continue
+        #                 # Очищаем служебные слова из предыдущего запроса
+        #                 base_query = re.sub(r'^(покажи|покажите|хочу|расскажи|покажи фото|а покажи)\s+', '', prev_lower).strip()
+        #                 base_query = re.sub(r'[!?.,:;]+$', '', base_query)
+        #                 break
+        #     if base_query:
+        #         menu_data = load_menu_cache()
+        #         candidates = find_similar_dishes(menu_data, base_query)
+        #         if len(candidates) < 2:
+        #             tokens = base_query.split()
+        #             if tokens:
+        #                 base_token = tokens[0]
+        #                 candidates = find_similar_dishes(menu_data, base_token)
+        #         if len(candidates) >= 2 or len(candidates) == 1:
+        #             idx = 1 if len(candidates) >= 2 else 0
+        #             dish = candidates[idx]
+        #             caption = f"🍽️ <b>{dish['name']}</b>\n\n"
+        #             caption += f"💰 Цена: {dish['price']}₽\n"
+        #             if dish.get('weight'):
+        #                 caption += f"⚖️ Вес: {dish['weight']}\n"
+        #             if dish.get('calories') or dish.get('calories_per_100'):
+        #                 calories = dish.get('calories') or dish.get('calories_per_100')
+        #                 try:
+        #                     cal_val = float(calories)
+        #                     caption += f"📊 На 100г: {cal_val:.1f} ккал\n"
+        #                     
+        #                     if dish.get('weight'):
+        #                         weight_str = str(dish['weight']).replace('г', '').replace('мл', '').strip()
+        #                         if weight_str.replace('.', '').isdigit():
+        #                             weight = float(weight_str)
+        #                             total_cal = (cal_val * weight) / 100
+        #                             caption += f"🔥 Порция: {total_cal:.1f} ккал\n"
+        #                 except ValueError:
+        #                      caption += f"🔥 Калории: {calories}\n"
+        #             if dish.get('protein') or dish.get('fat') or dish.get('carbohydrate') or dish.get('proteins') or dish.get('fats') or dish.get('carbs'):
+        #                 caption += f"\n🧃 БЖУ:\n"
+        #                 if dish.get('protein') is not None:
+        #                     caption += f"• Белки: {dish['protein']}г\n"
+        #                 elif dish.get('proteins'):
+        #                     caption += f"• Белки: {dish['proteins']}г\n"
+        #                 if dish.get('fat') is not None:
+        #                     caption += f"• Жиры: {dish['fat']}г\n"
+        #                 elif dish.get('fats'):
+        #                     caption += f"• Жиры: {dish['fats']}г\n"
+        #                 if dish.get('carbohydrate') is not None:
+        #                     caption += f"• Углеводы: {dish['carbohydrate']}г\n"
+        #                 elif dish.get('carbs'):
+        #                     caption += f"• Углеводы: {dish['carbs']}г\n"
+        #             if dish.get('description'):
+        #                 caption += f"\n{dish['description']}"
+        #             if dish.get('image_url'):
+        #                 return {
+        #                     'type': 'photo_with_text',
+        #                     'photo_url': dish['image_url'],
+        #                     'text': caption,
+        #                     'show_delivery_button': True
+        #                 }
+        #             else:
+        #                 local_path = dish.get('image_local_path')
+        #                 if not local_path and dish.get('image_filename'):
+        #                     try:
+        #                         local_path = os.path.join(config.MENU_IMAGES_DIR, dish['image_filename'])
+        #                     except Exception:
+        #                         local_path = None
+        #                 if local_path:
+        #                     return {
+        #                         'type': 'photo_with_text',
+        #                         'photo_path': local_path,
+        #                         'text': caption,
+        #                         'show_delivery_button': True
+        #                     }
+        #                 else:
+        #                     return {
+        #                         'type': 'text',
+        #                         'text': caption,
+        #                         'show_delivery_button': True
+        #                     }
 
         # СПЕЦИАЛЬНАЯ ОБРАБОТКА ЗАПРОСОВ О КОНКРЕТНЫХ БЛЮДАХ (ДО AI)
         # Если сообщение похоже на запрос конкретного блюда - сразу показываем фото
@@ -862,253 +862,253 @@ async def get_ai_response(message: str, user_id: int) -> dict:
         # Рекомендации обрабатываются через AI; контекст завтраков применяется на уровне системного промпта и истории
 
         # Логика решения: искать напрямую или через AI
-        should_search = False
-        if is_dish_request:
-            should_search = True # Явный запрос характеристик
-        elif is_recommendation:
-            should_search = False # Запрос рекомендации/наличия -> AI
-        elif len(message.split()) <= 5 and not is_numeric:
-            should_search = False # Короткие сообщения идут в AI для учёта контекста
+        # should_search = False
+        # if is_dish_request:
+        #     should_search = True # Явный запрос характеристик
+        # elif is_recommendation:
+        #     should_search = False # Запрос рекомендации/наличия -> AI
+        # elif len(message.split()) <= 5 and not is_numeric:
+        #     should_search = False # Короткие сообщения идут в AI для учёта контекста
             
-        if should_search:
-            # Формируем запрос для поиска
-            dish_to_show = message.strip()
-            
-            # Очистка от вводных фраз для чистого поиска по названию (если вдруг попали сюда)
-            clean_prefixes = ['а есть ', 'есть ', 'а ', 'скажи ', 'покажи ']
-            lower_msg = message_lower
-            for prefix in clean_prefixes:
-                if lower_msg.startswith(prefix):
-                    candidate = message[len(prefix):].strip()
-                    if candidate:
-                        dish_to_show = candidate
-                    break
-
-            # Если это явный запрос с ключевыми словами, пробуем их убрать для чистоты
-            if is_dish_request:
-                clean_query = message_lower
-                # Сортируем ключевые слова по длине, чтобы сначала удалять длинные фразы
-                for kw in sorted(dish_keywords, key=len, reverse=True):
-                    clean_query = clean_query.replace(kw, '')
-                # Также удаляем вопросительные слова и предлоги, если они остались
-                clean_query = re.sub(r'\b(сколько|какой|какая|какие|где|почем|в|с|у|для|про)\b', '', clean_query)
-                if clean_query.strip():
-                    dish_to_show = clean_query.strip()
-
-            logger.info(f"Прямая обработка запроса блюда: '{dish_to_show}' (original: '{message}')")
-
-            # Ищем блюдо в меню
-            menu_data = load_menu_cache()
-            found_dish = None
-            best_score = 0
-            best_menu_id = None
-            best_category_id = None
-            search_results = []
-
-            for menu_id, menu in menu_data.items():
-                for category_id, category in menu.get('categories', {}).items():
-                    for item in category.get('items', []):
-                        item_name = item.get('name', '')
-                        item_norm = _normalize_text(item_name)
-                        search_norm = _normalize_text(dish_to_show)
-                        
-                        # Используем стемминг для нечеткого поиска
-                        item_stem = _stem_text(item_name)
-                        search_stem = _stem_text(dish_to_show)
-
-                        # 🛑 FIX: Защита от ложного срабатывания "Паста" -> "Антипасти"
-                        # Если искали "паст" (паста), но нашли "антипасти"
-                        if 'паст' in dish_to_show.lower() and 'антипаст' not in dish_to_show.lower():
-                            if 'антипаст' in item_name.lower():
-                                continue
-
-                        q_tokens = _specific_tokens(dish_to_show)
-                        n_tokens = _specific_tokens(item_name)
-
-                        score = 0
-                        # 1. Точное совпадение нормализованных строк
-                        if item_norm == search_norm:
-                            score = 1000
-                        # 2. Точное совпадение основ (стемминг)
-                        elif item_stem == search_stem:
-                            score = 950
-                        # 3. Вхождение одной строки в другую (нормализованных)
-                        elif search_norm and (item_norm.startswith(search_norm) or search_norm in item_norm or item_norm in search_norm):
-                            score = 900
-                        # 4. Вхождение основ (стемминг)
-                        elif search_stem and (item_stem.startswith(search_stem) or search_stem in item_stem or item_stem in search_stem):
-                            score = 850
-                        # 5. Пересечение смысловых токенов
-                        else:
-                            inter = set(q_tokens) & set(n_tokens)
-                            if inter:
-                                score = 100 + 50 * len(inter)
-                                # Бонус за совпадение основ токенов
-                                q_stem_tokens = set([_stem_word(t) for t in q_tokens])
-                                n_stem_tokens = set([_stem_word(t) for t in n_tokens])
-                                stem_inter = q_stem_tokens & n_stem_tokens
-                                if len(stem_inter) > len(inter):
-                                    score += 50 * (len(stem_inter) - len(inter))
-
-                        if score > 0:
-                            search_results.append({
-                                'name': item['name'],
-                                'score': score,
-                                'has_image': bool(item.get('image_url'))
-                            })
-
-                        if score > best_score:
-                            best_score = score
-                            found_dish = item
-                            best_menu_id = menu_id
-                            best_category_id = category_id
-
-            logger.info(f"Результаты поиска для '{dish_to_show}': найдено {len(search_results)} блюд, лучший score: {best_score}")
-            
-            # Показываем блюдо только если есть достаточная уверенность
-            # Для коротких сообщений без ключевых слов требуем более высокого совпадения
-            threshold = 150
-            if not is_dish_request:
-                threshold = 800 # Для простых слов требуем почти точного совпадения или вхождения
-
-            if found_dish and best_score >= threshold:
-                logger.info(f"Выбрано блюдо: {found_dish['name']} (score: {best_score})")
-
-                # Сохраняем сообщение пользователя в историю
-                if user_id not in user_history:
-                    user_history[user_id] = []
-                user_history[user_id].append({"role": "user", "content": message})
-                if len(user_history[user_id]) > 20:
-                    user_history[user_id] = user_history[user_id][-20:]
-                
-                # Используем новый тип ответа для полноценной карточки
-                return {
-                    'type': 'show_dish_card',
-                    'dish': found_dish,
-                    'menu_id': best_menu_id,
-                    'category_id': best_category_id,
-                    'text': f"🍽️ Вот карточка блюда {found_dish['name']}:" # Fallback text
-                }
-            else:
-                 logger.info(f"Блюдо не найдено или низкий score ({best_score} < {threshold}), передаем AI")
+        # if should_search:
+        #     # Формируем запрос для поиска
+        #     dish_to_show = message.strip()
+        #     
+        #     # Очистка от вводных фраз для чистого поиска по названию (если вдруг попали сюда)
+        #     clean_prefixes = ['а есть ', 'есть ', 'а ', 'скажи ', 'покажи ']
+        #     lower_msg = message_lower
+        #     for prefix in clean_prefixes:
+        #         if lower_msg.startswith(prefix):
+        #             candidate = message[len(prefix):].strip()
+        #             if candidate:
+        #                 dish_to_show = candidate
+        #             break
+        #
+        #     # Если это явный запрос с ключевыми словами, пробуем их убрать для чистоты
+        #     if is_dish_request:
+        #         clean_query = message_lower
+        #         # Сортируем ключевые слова по длине, чтобы сначала удалять длинные фразы
+        #         for kw in sorted(dish_keywords, key=len, reverse=True):
+        #             clean_query = clean_query.replace(kw, '')
+        #         # Также удаляем вопросительные слова и предлоги, если они остались
+        #         clean_query = re.sub(r'\b(сколько|какой|какая|какие|где|почем|в|с|у|для|про)\b', '', clean_query)
+        #         if clean_query.strip():
+        #             dish_to_show = clean_query.strip()
+        #
+        #     logger.info(f"Прямая обработка запроса блюда: '{dish_to_show}' (original: '{message}')")
+        #
+        #     # Ищем блюдо в меню
+        #     menu_data = load_menu_cache()
+        #     found_dish = None
+        #     best_score = 0
+        #     best_menu_id = None
+        #     best_category_id = None
+        #     search_results = []
+        #
+        #     for menu_id, menu in menu_data.items():
+        #         for category_id, category in menu.get('categories', {}).items():
+        #             for item in category.get('items', []):
+        #                 item_name = item.get('name', '')
+        #                 item_norm = _normalize_text(item_name)
+        #                 search_norm = _normalize_text(dish_to_show)
+        #                 
+        #                 # Используем стемминг для нечеткого поиска
+        #                 item_stem = _stem_text(item_name)
+        #                 search_stem = _stem_text(dish_to_show)
+        #
+        #                 # 🛑 FIX: Защита от ложного срабатывания "Паста" -> "Антипасти"
+        #                 # Если искали "паст" (паста), но нашли "антипасти"
+        #                 if 'паст' in dish_to_show.lower() and 'антипаст' not in dish_to_show.lower():
+        #                     if 'антипаст' in item_name.lower():
+        #                         continue
+        #
+        #                 q_tokens = _specific_tokens(dish_to_show)
+        #                 n_tokens = _specific_tokens(item_name)
+        #
+        #                 score = 0
+        #                 # 1. Точное совпадение нормализованных строк
+        #                 if item_norm == search_norm:
+        #                     score = 1000
+        #                 # 2. Точное совпадение основ (стемминг)
+        #                 elif item_stem == search_stem:
+        #                     score = 950
+        #                 # 3. Вхождение одной строки в другую (нормализованных)
+        #                 elif search_norm and (item_norm.startswith(search_norm) or search_norm in item_norm or item_norm in search_norm):
+        #                     score = 900
+        #                 # 4. Вхождение основ (стемминг)
+        #                 elif search_stem and (item_stem.startswith(search_stem) or search_stem in item_stem or item_stem in search_stem):
+        #                     score = 850
+        #                 # 5. Пересечение смысловых токенов
+        #                 else:
+        #                     inter = set(q_tokens) & set(n_tokens)
+        #                     if inter:
+        #                         score = 100 + 50 * len(inter)
+        #                         # Бонус за совпадение основ токенов
+        #                         q_stem_tokens = set([_stem_word(t) for t in q_tokens])
+        #                         n_stem_tokens = set([_stem_word(t) for t in n_tokens])
+        #                         stem_inter = q_stem_tokens & n_stem_tokens
+        #                         if len(stem_inter) > len(inter):
+        #                             score += 50 * (len(stem_inter) - len(inter))
+        #
+        #                 if score > 0:
+        #                     search_results.append({
+        #                         'name': item['name'],
+        #                         'score': score,
+        #                         'has_image': bool(item.get('image_url'))
+        #                     })
+        #
+        #                 if score > best_score:
+        #                     best_score = score
+        #                     found_dish = item
+        #                     best_menu_id = menu_id
+        #                     best_category_id = category_id
+        #
+        #     logger.info(f"Результаты поиска для '{dish_to_show}': найдено {len(search_results)} блюд, лучший score: {best_score}")
+        #     
+        #     # Показываем блюдо только если есть достаточная уверенность
+        #     # Для коротких сообщений без ключевых слов требуем более высокого совпадения
+        #     threshold = 150
+        #     if not is_dish_request:
+        #         threshold = 800 # Для простых слов требуем почти точного совпадения или вхождения
+        #
+        #     if found_dish and best_score >= threshold:
+        #         logger.info(f"Выбрано блюдо: {found_dish['name']} (score: {best_score})")
+        #
+        #         # Сохраняем сообщение пользователя в историю
+        #         if user_id not in user_history:
+        #             user_history[user_id] = []
+        #         user_history[user_id].append({"role": "user", "content": message})
+        #         if len(user_history[user_id]) > 20:
+        #             user_history[user_id] = user_history[user_id][-20:]
+        #         
+        #         # Используем новый тип ответа для полноценной карточки
+        #         return {
+        #             'type': 'show_dish_card',
+        #             'dish': found_dish,
+        #             'menu_id': best_menu_id,
+        #             'category_id': best_category_id,
+        #             'text': f"🍽️ Вот карточка блюда {found_dish['name']}:" # Fallback text
+        #         }
+        #     else:
+        #          logger.info(f"Блюдо не найдено или низкий score ({best_score} < {threshold}), передаем AI")
 
         # Специальная обработка вопросов про калории и легкие блюда (до обращения к AI)
-        if any(word in message_lower for word in ['калори', 'ккал', 'калорийность']):
-            specific_dishes = ['борщ', 'маргарита', '4 сыра', 'пепперони', 'инфаркт', 'том ям', 'цезарь']
-            is_specific_dish = any(dish in message_lower for dish in specific_dishes)
-
-            if not is_specific_dish:
-                # Это вопрос про калории в категории - показываем КРАТКИЙ список с вопросом
-                if any(word in message_lower for word in ['пицц', 'пиза']):
-                    logger.info(f"🔍 Обнаружен вопрос про калории в пицце - показываем краткий список")
-                    return {
-                        'type': 'text',
-                        'text': '🍕 У нас есть отличные пиццы! Смотря в какой именно вас интересуют калории:',
-                        'show_category_brief': 'пицца'
-                    }
-                elif any(word in message_lower for word in ['суп', 'супа', 'супов']):
-                    logger.info(f"🔍 Обнаружен вопрос про калории в супах - показываем краткий список")
-                    return {
-                        'type': 'text',
-                        'text': '🍲 У нас есть отличные супы! Смотря в каком именно вас интересует калорийность:',
-                        'show_category_brief': 'суп'
-                    }
-                elif any(word in message_lower for word in ['десерт', 'десерта', 'десертов']):
-                    logger.info(f"🔍 Обнаружен вопрос про калории в десертах - показываем краткий список")
-                    return {
-                        'type': 'text',
-                        'text': '🍰 У нас есть отличные десерты! Смотря в каком именно вас интересует калорийность:',
-                        'show_category_brief': 'десерт'
-                    }
-                elif any(word in message_lower for word in ['салат', 'салата', 'салатов']):
-                    logger.info(f"🔍 Обнаружен вопрос про калории в салатах - показываем краткий список")
-                    return {
-                        'type': 'text',
-                        'text': '🥗 У нас есть отличные салаты! Смотря в каком именно вас интересуют калории:',
-                        'show_category_brief': 'салаты'
-                    }
+        # if any(word in message_lower for word in ['калори', 'ккал', 'калорийность']):
+        #     specific_dishes = ['борщ', 'маргарита', '4 сыра', 'пепперони', 'инфаркт', 'том ям', 'цезарь']
+        #     is_specific_dish = any(dish in message_lower for dish in specific_dishes)
+        #
+        #     if not is_specific_dish:
+        #         # Это вопрос про калории в категории - показываем КРАТКИЙ список с вопросом
+        #         if any(word in message_lower for word in ['пицц', 'пиза']):
+        #             logger.info(f"🔍 Обнаружен вопрос про калории в пицце - показываем краткий список")
+        #             return {
+        #                 'type': 'text',
+        #                 'text': '🍕 У нас есть отличные пиццы! Смотря в какой именно вас интересуют калории:',
+        #                 'show_category_brief': 'пицца'
+        #             }
+        #         elif any(word in message_lower for word in ['суп', 'супа', 'супов']):
+        #             logger.info(f"🔍 Обнаружен вопрос про калории в супах - показываем краткий список")
+        #             return {
+        #                 'type': 'text',
+        #                 'text': '🍲 У нас есть отличные супы! Смотря в каком именно вас интересует калорийность:',
+        #                 'show_category_brief': 'суп'
+        #             }
+        #         elif any(word in message_lower for word in ['десерт', 'десерта', 'десертов']):
+        #             logger.info(f"🔍 Обнаружен вопрос про калории в десертах - показываем краткий список")
+        #             return {
+        #                 'type': 'text',
+        #                 'text': '🍰 У нас есть отличные десерты! Смотря в каком именно вас интересует калорийность:',
+        #                 'show_category_brief': 'десерт'
+        #             }
+        #         elif any(word in message_lower for word in ['салат', 'салата', 'салатов']):
+        #             logger.info(f"🔍 Обнаружен вопрос про калории в салатах - показываем краткий список")
+        #             return {
+        #                 'type': 'text',
+        #                 'text': '🥗 У нас есть отличные салаты! Смотря в каком именно вас интересуют калории:',
+        #                 'show_category_brief': 'салаты'
+        #             }
 
         # Вопросы-контекст "что есть" и запросы легких блюд
-        context_questions = ['какие есть', 'что есть', 'а какие', 'какие у вас', 'а какие есть', 'что у вас есть']
-        if any(phrase in message_lower for phrase in context_questions):
-            explicit_keywords = [
-                'пицц', 'суп', 'супы', 'супов',
-                'салат', 'салаты', 'салатов',
-                'десерт', 'десерты', 'десертов',
-                'напит', 'пив', 'вин', 'завтрак', 'мясо'
-            ]
-            if not any(keyword in message_lower for keyword in explicit_keywords):
-                if user_id in user_history:
-                    recent_messages = user_history[user_id][-10:]
-                    for msg in reversed(recent_messages):
-                        content = msg.get('content', '').lower()
-                        if 'пицц' in content or 'калори' in content and 'пицц' in content:
-                            logger.info(f"🔍 Обнаружен контекст пиццы в истории для вопроса '{message}', показываем пиццы")
-                            return {
-                                'type': 'text',
-                                'text': '🍕 У нас есть отличные пиццы!',
-                                'show_category_brief': 'пицца'
-                            }
-                        elif 'суп' in content or 'калори' in content and 'суп' in content:
-                            logger.info(f"🔍 Обнаружен контекст супов в истории для вопроса '{message}', показываем супы")
-                            return {
-                                'type': 'text',
-                                'text': '🍲 У нас есть отличные супы!',
-                                'show_category_brief': 'суп'
-                            }
-                        elif 'десерт' in content or 'калори' in content and 'десерт' in content:
-                            logger.info(f"🔍 Обнаружен контекст десертов в истории для вопроса '{message}', показываем десерты")
-                            return {
-                                'type': 'text',
-                                'text': '🍰 У нас есть отличные десерты!',
-                                'show_category_brief': 'десерт'
-                            }
-                        elif 'салат' in content or 'калори' in content and 'салат' in content:
-                            logger.info(f"🔍 Обнаружен контекст салатов в истории для вопроса '{message}', показываем салаты")
-                            return {
-                                'type': 'text',
-                                'text': '🥗 У нас есть отличные салаты!',
-                                'show_category_brief': 'салаты'
-                            }
-                        elif 'пив' in content:
-                            logger.info(f"🔍 Обнаружен контекст пива в истории для вопроса '{message}', показываем пиво")
-                            return {
-                                'type': 'text',
-                                'text': '🍺 У нас есть отличное пиво!',
-                                'show_category_brief': 'пиво'
-                            }
-                        elif 'вин' in content:
-                            logger.info(f"🔍 Обнаружен контекст вина в истории для вопроса '{message}', показываем вино")
-                            return {
-                                'type': 'text',
-                                'text': '🍷 У нас есть отличное вино!',
-                                'show_category_brief': 'вино'
-                            }
+        # context_questions = ['какие есть', 'что есть', 'а какие', 'какие у вас', 'а какие есть', 'что у вас есть']
+        # if any(phrase in message_lower for phrase in context_questions):
+        #     explicit_keywords = [
+        #         'пицц', 'суп', 'супы', 'супов',
+        #         'салат', 'салаты', 'салатов',
+        #         'десерт', 'десерты', 'десертов',
+        #         'напит', 'пив', 'вин', 'завтрак', 'мясо'
+        #     ]
+        #     if not any(keyword in message_lower for keyword in explicit_keywords):
+        #         if user_id in user_history:
+        #             recent_messages = user_history[user_id][-10:]
+        #             for msg in reversed(recent_messages):
+        #                 content = msg.get('content', '').lower()
+        #                 if 'пицц' in content or 'калори' in content and 'пицц' in content:
+        #                     logger.info(f"🔍 Обнаружен контекст пиццы в истории для вопроса '{message}', показываем пиццы")
+        #                     return {
+        #                         'type': 'text',
+        #                         'text': '🍕 У нас есть отличные пиццы!',
+        #                         'show_category_brief': 'пицца'
+        #                     }
+        #                 elif 'суп' in content or 'калори' in content and 'суп' in content:
+        #                     logger.info(f"🔍 Обнаружен контекст супов в истории для вопроса '{message}', показываем супы")
+        #                     return {
+        #                         'type': 'text',
+        #                         'text': '🍲 У нас есть отличные супы!',
+        #                         'show_category_brief': 'суп'
+        #                     }
+        #                 elif 'десерт' in content or 'калори' in content and 'десерт' in content:
+        #                     logger.info(f"🔍 Обнаружен контекст десертов в истории для вопроса '{message}', показываем десерты")
+        #                     return {
+        #                         'type': 'text',
+        #                         'text': '🍰 У нас есть отличные десерты!',
+        #                         'show_category_brief': 'десерт'
+        #                     }
+        #                 elif 'салат' in content or 'калори' in content and 'салат' in content:
+        #                     logger.info(f"🔍 Обнаружен контекст салатов в истории для вопроса '{message}', показываем салаты")
+        #                     return {
+        #                         'type': 'text',
+        #                         'text': '🥗 У нас есть отличные салаты!',
+        #                         'show_category_brief': 'салаты'
+        #                     }
+        #                 elif 'пив' in content:
+        #                     logger.info(f"🔍 Обнаружен контекст пива в истории для вопроса '{message}', показываем пиво")
+        #                     return {
+        #                         'type': 'text',
+        #                         'text': '🍺 У нас есть отличное пиво!',
+        #                         'show_category_brief': 'пиво'
+        #                     }
+        #                 elif 'вин' in content:
+        #                     logger.info(f"🔍 Обнаружен контекст вина в истории для вопроса '{message}', показываем вино")
+        #                     return {
+        #                         'type': 'text',
+        #                         'text': '🍷 У нас есть отличное вино!',
+        #                         'show_category_brief': 'вино'
+        #                     }
 
         # Запросы легких / низкокалорийных блюд после супов или салатов
-        light_keywords = ['легк', 'низкокалор', 'мало калор', 'полегче']
-        if any(kw in message_lower for kw in light_keywords):
-            if user_id in user_history:
-                recent_messages = user_history[user_id][-10:]
-                last_bot_text = ''
-                for msg in reversed(recent_messages):
-                    if msg.get('role') == 'assistant':
-                        last_bot_text = msg.get('content', '').lower()
-                        break
-
-                # Если до этого показывали супы или салаты - сразу ищем по калориям
-                if '🍲 у нас есть отличные супы' in last_bot_text or '🍲 у нас есть отличные супы' in message_lower:
-                    return {
-                        'type': 'text',
-                        'text': '🍲 Среди супов самые легкие обычно бульоны и прозрачные супы. Могу предложить куриный супчик или том ям, если любите поострее. Спросите про любое из них, и я покажу карточку с калориями!',
-                        'show_category_brief': 'суп'
-                    }
-                if '🥗 у нас есть отличные салаты' in last_bot_text or '🥗 у нас есть отличные салаты' in message_lower:
-                    return {
-                        'type': 'text',
-                        'text': '🥗 Из легких вариантов чаще всего подходят овощные салаты без майонеза. Спросите про конкретный салат, и я покажу карточку с калориями!',
-                        'show_category_brief': 'салаты'
-                    }
+        # light_keywords = ['легк', 'низкокалор', 'мало калор', 'полегче']
+        # if any(kw in message_lower for kw in light_keywords):
+        #     if user_id in user_history:
+        #         recent_messages = user_history[user_id][-10:]
+        #         last_bot_text = ''
+        #         for msg in reversed(recent_messages):
+        #             if msg.get('role') == 'assistant':
+        #                 last_bot_text = msg.get('content', '').lower()
+        #                 break
+        #
+        #         # Если до этого показывали супы или салаты - сразу ищем по калориям
+        #         if '🍲 у нас есть отличные супы' in last_bot_text or '🍲 у нас есть отличные супы' in message_lower:
+        #             return {
+        #                 'type': 'text',
+        #                 'text': '🍲 Среди супов самые легкие обычно бульоны и прозрачные супы. Могу предложить куриный супчик или том ям, если любите поострее. Спросите про любое из них, и я покажу карточку с калориями!',
+        #                 'show_category_brief': 'суп'
+        #             }
+        #         if '🥗 у нас есть отличные салаты' in last_bot_text or '🥗 у нас есть отличные салаты' in message_lower:
+        #             return {
+        #                 'type': 'text',
+        #                 'text': '🥗 Из легких вариантов чаще всего подходят овощные салаты без майонеза. Спросите про конкретный салат, и я покажу карточку с калориями!',
+        #                 'show_category_brief': 'салаты'
+        #             }
 
 
         if is_mac_greeting:
@@ -1127,10 +1127,11 @@ async def get_ai_response(message: str, user_id: int) -> dict:
                 mac_greeting_prefix = "Привет! Да, это я — Мак, ваш помощник от ресторана Машков! 😊\n\n"
             else:
                 # Если только обращение без вопроса
-                return {
-                    'type': 'text',
-                    'text': '👋 Привет! Да, это я — Мак, ваш персональный помощник от ресторана Машков! 😊\n\nЧем могу помочь? Расскажу о меню, помогу забронировать столик или отвечу на любые вопросы о ресторане! 🍽️'
-                }
+                # return {
+                #     'type': 'text',
+                #     'text': '👋 Привет! Да, это я — Мак, ваш персональный помощник от ресторана Машков! 😊\n\nЧем могу помочь? Расскажу о меню, помогу забронировать столик или отвечу на любые вопросы о ресторане! 🍽️'
+                # }
+                mac_greeting_prefix = "" # Пусть отвечает ИИ
         else:
             mac_greeting_prefix = ""
 
@@ -1145,6 +1146,15 @@ async def get_ai_response(message: str, user_id: int) -> dict:
         # 2. Загружаем меню и примечания
         menu_data = load_menu_cache()
         ai_notes = get_ai_notes()
+
+        # Загружаем FAQ для контекста
+        faq_list = database.get_faq()
+        faq_context = "FAQ KNOWLEDGE BASE (PRIORITY INFORMATION):\n"
+        if faq_list:
+            for _, question, answer in faq_list:
+                faq_context += f"Q: {question}\nA: {answer}\n---\n"
+        else:
+             faq_context += "No FAQ available.\n"
 
         # 3. Формируем структуру меню (JSON)
         menu_knowledge_base = []
@@ -1261,6 +1271,7 @@ async def get_ai_response(message: str, user_id: int) -> dict:
         system_prompt = (
             f"Ты Мак — русский AI-помощник бота ресторана Mashkov. Твое имя «Мак» — это сокращение от «Машков».\n"
             f"{context_dish_info}\n\n"
+            f"{faq_context}\n\n"
             f"Ты знаешь русскую культуру, сказки, историю, традиции.\n"
             f"Отвечай как живой русский человек - тепло, дружелюбно, с юмором. Используй русские поговорки, фразеологизмы.\n"
             f"Твоя цель - помогать гостям ресторана: выбирать блюда, бронировать столики, рассказывать о мероприятиях.\n"

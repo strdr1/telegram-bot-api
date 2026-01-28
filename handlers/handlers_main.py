@@ -2526,68 +2526,68 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
 
     # Команды доставки
     # Убрали общие слова 'еда', 'блюда', 'заказать', чтобы не перехватывать запросы меню и бронирования
-    delivery_keywords = ['доставка', 'доставить', 'привезти еду', 'заказ домой', 'оформить доставку']
-    if any(keyword in text for keyword in delivery_keywords):
-        text = """🚚 <b>Заказать доставку</b>
-
-📱 Мы запустили новое мини-приложение для заказа доставки!
-
-<b>Преимущества нового приложения:</b>
-• 🍽️ Полное меню с фотографиями
-• 🛒 Удобная корзина
-• 💳 Онлайн оплата
-• 📍 Точное определение адреса
-• ⏱️ Отслеживание заказа
-
-Нажмите кнопку ниже, чтобы открыть приложение доставки:"""
-        
-        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-            [types.InlineKeyboardButton(text="🚚 Открыть мини-приложение", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))],
-            [types.InlineKeyboardButton(text="🍎 App Store", url=config.APP_IOS)],
-            [types.InlineKeyboardButton(text="🤖 Google Play", url=config.APP_ANDROID)],
-            [types.InlineKeyboardButton(text="🟦 RuStore", url=config.APP_RUSTORE)],
-            [types.InlineKeyboardButton(text="📞 Заказать по телефону", callback_data="call_us")],
-            [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
-        ])
-        
-        await safe_send_message(message.bot, user.id, text,
-                               reply_markup=keyboard, parse_mode="HTML")
-        return
+    # delivery_keywords = ['доставка', 'доставить', 'привезти еду', 'заказ домой', 'оформить доставку']
+    # if any(keyword in text for keyword in delivery_keywords):
+    #     text = """🚚 <b>Заказать доставку</b>
+    #
+    # 📱 Мы запустили новое мини-приложение для заказа доставки!
+    #
+    # <b>Преимущества нового приложения:</b>
+    # • 🍽️ Полное меню с фотографиями
+    # • 🛒 Удобная корзина
+    # • 💳 Онлайн оплата
+    # • 📍 Точное определение адреса
+    # • ⏱️ Отслеживание заказа
+    #
+    # Нажмите кнопку ниже, чтобы открыть приложение доставки:"""
+    #     
+    #     keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+    #         [types.InlineKeyboardButton(text="🚚 Открыть мини-приложение", web_app=types.WebAppInfo(url="https://strdr1.github.io/mashkov-telegram-app/"))],
+    #         [types.InlineKeyboardButton(text="🍎 App Store", url=config.APP_IOS)],
+    #         [types.InlineKeyboardButton(text="🤖 Google Play", url=config.APP_ANDROID)],
+    #         [types.InlineKeyboardButton(text="🟦 RuStore", url=config.APP_RUSTORE)],
+    #         [types.InlineKeyboardButton(text="📞 Заказать по телефону", callback_data="call_us")],
+    #         [types.InlineKeyboardButton(text="⬅️ Назад в главное меню", callback_data="back_main")]
+    #     ])
+    #     
+    #     await safe_send_message(message.bot, user.id, text,
+    #                            reply_markup=keyboard, parse_mode="HTML")
+    #     return
 
     # Команды главного меню
-    main_menu_keywords = ['главное меню', 'меню бота', 'основное меню', 'начало', 'старт']
-    if any(keyword in text for keyword in main_menu_keywords):
-        await show_main_menu(user.id, message.bot)
-        return
+    # main_menu_keywords = ['главное меню', 'меню бота', 'основное меню', 'начало', 'старт']
+    # if any(keyword in text for keyword in main_menu_keywords):
+    #     await show_main_menu(user.id, message.bot)
+    #     return
 
     # Команды личного кабинета
-    cabinet_keywords = ['личный кабинет', 'мой профиль', 'мои данные', 'кабинет']
-    if any(keyword in text for keyword in cabinet_keywords):
-        await personal_cabinet_handler(user.id, message.bot, state)
-        return
+    # cabinet_keywords = ['личный кабинет', 'мой профиль', 'мои данные', 'кабинет']
+    # if any(keyword in text for keyword in cabinet_keywords):
+    #     await personal_cabinet_handler(user.id, message.bot, state)
+    #     return
 
     # Команды контактов
-    contact_keywords = ['контакты', 'телефон', 'адрес', 'связаться']
-    if any(keyword in text for keyword in contact_keywords):
-        restaurant_phone = database.get_setting('restaurant_phone', config.RESTAURANT_PHONE)
-        restaurant_address = database.get_setting('restaurant_address', config.RESTAURANT_ADDRESS)
-        clean_phone = clean_phone_for_link(restaurant_phone)
-        
-        contact_text = f"""📞 <b>Наши контакты</b>
-
-📍 <b>Адрес:</b> {restaurant_address}
-📞 <b>Телефон:</b> <a href="tel:{clean_phone}">{restaurant_phone}</a>
-
-💬 Или напишите нам прямо здесь!"""
-        
-        keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
-            [types.InlineKeyboardButton(text="💬 Написать оператору", callback_data="chat_operator")],
-            [types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back_main")]
-        ])
-        
-        await safe_send_message(message.bot, user.id, contact_text,
-                               reply_markup=keyboard, parse_mode="HTML")
-        return
+    # contact_keywords = ['контакты', 'телефон', 'адрес', 'связаться']
+    # if any(keyword in text for keyword in contact_keywords):
+    #     restaurant_phone = database.get_setting('restaurant_phone', config.RESTAURANT_PHONE)
+    #     restaurant_address = database.get_setting('restaurant_address', config.RESTAURANT_ADDRESS)
+    #     clean_phone = clean_phone_for_link(restaurant_phone)
+    #     
+    #     contact_text = f"""📞 <b>Наши контакты</b>
+    #
+    # 📍 <b>Адрес:</b> {restaurant_address}
+    # 📞 <b>Телефон:</b> <a href="tel:{clean_phone}">{restaurant_phone}</a>
+    #
+    # 💬 Или напишите нам прямо здесь!"""
+    #     
+    #     keyboard = types.InlineKeyboardMarkup(inline_keyboard=[
+    #         [types.InlineKeyboardButton(text="💬 Написать оператору", callback_data="chat_operator")],
+    #         [types.InlineKeyboardButton(text="⬅️ Главное меню", callback_data="back_main")]
+    #     ])
+    #     
+    #     await safe_send_message(message.bot, user.id, contact_text,
+    #                            reply_markup=keyboard, parse_mode="HTML")
+    #     return
 
     # Проверяем на прямые команды бронирования ПЕРЕД отправкой в AI
     # Сначала проверяем на горячее (ПРЯМОЙ ПЕРЕХВАТ)
