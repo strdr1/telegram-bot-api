@@ -1270,6 +1270,9 @@ async def get_ai_response(message: str, user_id: int) -> dict:
         # 6. Формируем системный промпт
         system_prompt = (
             f"Ты Мак — русский AI-помощник бота ресторана Mashkov. Твое имя «Мак» — это сокращение от «Машков».\n"
+            f"У тебя есть два основных меню:\n"
+            f"1. МЕНЮ РЕСТОРАНА (еда, бар, банкеты) — это то, что нужно, когда просят «меню», «поесть», «заказать». Для этого используй маркер SHOW_RESTAURANT_MENU.\n"
+            f"2. ГЛАВНОЕ МЕНЮ БОТА (контакты, режим работы, профиль) — это техническое меню. Если просят «меню бота» или «главное меню», используй маркер SHOW_BOT_MENU.\n"
             f"{context_dish_info}\n\n"
             f"{faq_context}\n\n"
             f"Ты знаешь русскую культуру, сказки, историю, традиции.\n"
@@ -2701,6 +2704,7 @@ async def get_ai_response(message: str, user_id: int) -> dict:
         show_kassa_photos = 'SHOW_KASSA_PHOTOS' in ai_text
         show_wc_photos = 'SHOW_WC_PHOTOS' in ai_text
         show_restaurant_menu = 'SHOW_RESTAURANT_MENU' in ai_text
+        show_bot_menu = 'SHOW_BOT_MENU' in ai_text
         call_human = 'CALL_HUMAN' in ai_text
         
         # Fallback: если маркер не найден, но есть ключевая фраза из промпта или похожие вариации
@@ -2756,6 +2760,7 @@ async def get_ai_response(message: str, user_id: int) -> dict:
         ai_text = re.sub(r'SHOW_KASSA_PHOTOS\s*', '', ai_text).strip()
         ai_text = re.sub(r'SHOW_WC_PHOTOS\s*', '', ai_text).strip()
         ai_text = re.sub(r'SHOW_RESTAURANT_MENU\s*', '', ai_text).strip()
+        ai_text = re.sub(r'SHOW_BOT_MENU\s*', '', ai_text).strip()
         ai_text = re.sub(r'SHOW_CATEGORY:.+', '', ai_text).strip()
         ai_text = re.sub(r'PARSE_BOOKING:.+', '', ai_text).strip()
         ai_text = re.sub(r'DISH_PHOTO:.*', '', ai_text).strip()
@@ -2780,10 +2785,17 @@ async def get_ai_response(message: str, user_id: int) -> dict:
                 show_booking_options = show_booking_options or any(keyword in message_lower for keyword in booking_keywords)
 
                 # Если пользователь просит "меню" без доставки/заказа — показываем ресторанное меню
-                asks_menu = 'меню' in message_lower
-                mentions_delivery = any(keyword in message_lower for keyword in ['доставк', 'заказ', 'заказать', 'приложени', 'скачать'])
-                if asks_menu and not mentions_delivery:
-                    show_restaurant_menu = True
+                # asks_menu = 'меню' in message_lower
+                # mentions_delivery = any(keyword in message_lower for keyword in ['доставк', 'заказ', 'заказать', 'приложени', 'скачать'])
+                
+                # Проверка на запрос "меню бота" или "главное меню"
+                # asks_bot_menu = 'меню бота' in message_lower or 'главное меню' in message_lower
+                
+                # if asks_bot_menu:
+                #    show_bot_menu = True
+                #    show_restaurant_menu = False # Приоритет меню бота
+                # elif asks_menu and not mentions_delivery:
+                #    show_restaurant_menu = True
         # Проверяем на подтверждение возраста
         confirm_age_verification = 'CONFIRM_AGE_VERIFICATION' in ai_text
         ai_text = re.sub(r'CONFIRM_AGE_VERIFICATION', '', ai_text).strip()
@@ -2817,6 +2829,7 @@ async def get_ai_response(message: str, user_id: int) -> dict:
             'show_kassa_photos': show_kassa_photos,
             'show_wc_photos': show_wc_photos,
             'show_restaurant_menu': show_restaurant_menu,
+            'show_bot_menu': show_bot_menu,
             'show_category': show_category,
             'search_query': search_query_result,
             'dish_photo_query': dish_photo_query,
