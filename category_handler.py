@@ -34,6 +34,35 @@ def is_category_blocked(category_name: str) -> bool:
             return True
     return False
 
+def _to_float(val):
+    try:
+        return float(str(val).replace(',', '.'))
+    except:
+        return None
+
+def _extract_weight_value(item: dict):
+    m = re.search(r'[\d\\.]+', str(item.get('weight', '')))
+    if m:
+        try:
+            return float(m.group(0))
+        except:
+            return None
+    return None
+
+def get_calorie_info(item: dict):
+    total_cal = _to_float(item.get('calories'))
+    if total_cal is None:
+        weight_val = _extract_weight_value(item)
+        cp100_val = _to_float(item.get('calories_per_100'))
+        if weight_val is not None and cp100_val is not None:
+            total_cal = cp100_val * weight_val / 100.0
+    total_int = int(round(total_cal)) if total_cal is not None else None
+    cp100_int = None
+    cp100_val = _to_float(item.get('calories_per_100'))
+    if cp100_val is not None:
+        cp100_int = int(round(cp100_val))
+    return total_int, cp100_int
+
 def find_dishes_by_name(raw_search: str, limit: int = 20) -> list:
     """
     Ищет блюда по названию (нечеткий поиск).
@@ -287,41 +316,11 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                     details = []
                     if item.get('weight'):
                         details.append(f"⚖️ {item['weight']}г")
-                    
-                    total_cal = None
-                    try:
-                        if item.get('calories') is not None:
-                            total_cal = float(str(item['calories']).replace(',', '.'))
-                    except:
-                        total_cal = None
-                    if total_cal is None:
-                        weight_val = None
-                        try:
-                            import re
-                            m = re.search(r'[\d\\.]+', str(item.get('weight', '')))
-                            if m:
-                                weight_val = float(m.group(0))
-                        except:
-                            weight_val = None
-                        cp100_val = None
-                        try:
-                            if item.get('calories_per_100') is not None:
-                                cp100_val = float(str(item['calories_per_100']).replace(',', '.'))
-                        except:
-                            cp100_val = None
-                        if weight_val and cp100_val:
-                            total_cal = cp100_val * weight_val / 100.0
-                    if total_cal is not None:
-                        try:
-                            details.append(f"{int(round(total_cal))} ккал")
-                        except:
-                            details.append(f"{total_cal} ккал")
-                    if item.get('calories_per_100') is not None:
-                        try:
-                            val = int(float(str(item['calories_per_100']).replace(',', '.')))
-                            details.append(f"{val} ккал/100г")
-                        except:
-                            details.append(f"{item['calories_per_100']} ккал/100г")
+                    total_int, cp100_int = get_calorie_info(item)
+                    if total_int is not None:
+                        details.append(f"{total_int} ккал")
+                    if cp100_int is not None:
+                        details.append(f"{cp100_int} ккал/100г")
                     
                     if details:
                         text += f" ({', '.join(details)})"
@@ -437,41 +436,11 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                         details = []
                         if item.get('weight'):
                             details.append(f"⚖️ {item['weight']}г")
-                        
-                        total_cal = None
-                        try:
-                            if item.get('calories') is not None:
-                                total_cal = float(str(item['calories']).replace(',', '.'))
-                        except:
-                            total_cal = None
-                        if total_cal is None:
-                            weight_val = None
-                            try:
-                                import re
-                                m = re.search(r'[\d\\.]+', str(item.get('weight', '')))
-                                if m:
-                                    weight_val = float(m.group(0))
-                            except:
-                                weight_val = None
-                            cp100_val = None
-                            try:
-                                if item.get('calories_per_100') is not None:
-                                    cp100_val = float(str(item['calories_per_100']).replace(',', '.'))
-                            except:
-                                cp100_val = None
-                            if weight_val and cp100_val:
-                                total_cal = cp100_val * weight_val / 100.0
-                        if total_cal is not None:
-                            try:
-                                details.append(f"{int(round(total_cal))} ккал")
-                            except:
-                                details.append(f"{total_cal} ккал")
-                        if item.get('calories_per_100') is not None:
-                            try:
-                                val = int(float(str(item['calories_per_100']).replace(',', '.')))
-                                details.append(f"{val} ккал/100г")
-                            except:
-                                details.append(f"{item['calories_per_100']} ккал/100г")
+                        total_int, cp100_int = get_calorie_info(item)
+                        if total_int is not None:
+                            details.append(f"{total_int} ккал")
+                        if cp100_int is not None:
+                            details.append(f"{cp100_int} ккал/100г")
                         
                         if details:
                             text += f" ({', '.join(details)})"
@@ -642,41 +611,11 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                     details = []
                     if item.get('weight'):
                         details.append(f"⚖️ {item['weight']}г")
-                    
-                    total_cal = None
-                    try:
-                        if item.get('calories') is not None:
-                            total_cal = float(str(item['calories']).replace(',', '.'))
-                    except:
-                        total_cal = None
-                    if total_cal is None:
-                        weight_val = None
-                        try:
-                            import re
-                            m = re.search(r'[\d\\.]+', str(item.get('weight', '')))
-                            if m:
-                                weight_val = float(m.group(0))
-                        except:
-                            weight_val = None
-                        cp100_val = None
-                        try:
-                            if item.get('calories_per_100') is not None:
-                                cp100_val = float(str(item['calories_per_100']).replace(',', '.'))
-                        except:
-                            cp100_val = None
-                        if weight_val and cp100_val:
-                            total_cal = cp100_val * weight_val / 100.0
-                    if total_cal is not None:
-                        try:
-                            details.append(f"{int(round(total_cal))} ккал")
-                        except:
-                            details.append(f"{total_cal} ккал")
-                    if item.get('calories_per_100') is not None:
-                        try:
-                            val = int(float(str(item['calories_per_100']).replace(',', '.')))
-                            details.append(f"{val} ккал/100г")
-                        except:
-                            details.append(f"{item['calories_per_100']} ккал/100г")
+                    total_int, cp100_int = get_calorie_info(item)
+                    if total_int is not None:
+                        details.append(f"{total_int} ккал")
+                    if cp100_int is not None:
+                        details.append(f"{cp100_int} ккал/100г")
                     
                     if details:
                         text += f" ({', '.join(details)})"
@@ -794,39 +733,11 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                                 caption += f"💰 Цена: {item['price']}₽\n"
                                 if item.get('weight'):
                                     caption += f"⚖️ Вес: {item['weight']}г\n"
-                                total_cal = None
-                                try:
-                                    if item.get('calories') is not None:
-                                        total_cal = float(str(item['calories']).replace(',', '.'))
-                                except:
-                                    total_cal = None
-                                if total_cal is None:
-                                    weight_val = None
-                                    try:
-                                        import re
-                                        m = re.search(r'[\d\\.]+', str(item.get('weight', '')))
-                                        if m:
-                                            weight_val = float(m.group(0))
-                                    except:
-                                        weight_val = None
-                                    cp100_val = None
-                                    try:
-                                        if item.get('calories_per_100') is not None:
-                                            cp100_val = float(str(item['calories_per_100']).replace(',', '.'))
-                                    except:
-                                        cp100_val = None
-                                    if weight_val and cp100_val:
-                                        total_cal = cp100_val * weight_val / 100.0
-                                if total_cal is not None:
-                                    try:
-                                        caption += f"🔥 Калории (блюдо): {int(round(total_cal))} ккал\n"
-                                    except:
-                                        caption += f"🔥 Калории (блюдо): {total_cal} ккал\n"
-                                if item.get('calories_per_100') is not None:
-                                    try:
-                                        caption += f"🔥 Калории (100г): {int(float(str(item['calories_per_100']).replace(',', '.')))} ккал/100г\n"
-                                    except:
-                                        caption += f"🔥 Калории (100г): {item['calories_per_100']} ккал/100г\n"
+                                total_int, cp100_int = get_calorie_info(item)
+                                if total_int is not None:
+                                    caption += f"🔥 Калории (блюдо): {total_int} ккал\n"
+                                if cp100_int is not None:
+                                    caption += f"🔥 Калории (100г): {cp100_int} ккал/100г\n"
                                 
                                 # БЖУ
                                 if item.get('proteins') or item.get('fats') or item.get('carbs'):
@@ -926,40 +837,11 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                     details = []
                     if item.get('weight'):
                         details.append(f"⚖️ {item['weight']}г")
-                    
-                    total_cal = None
-                    try:
-                        if item.get('calories') is not None:
-                            total_cal = float(str(item['calories']).replace(',', '.'))
-                    except:
-                        total_cal = None
-                    if total_cal is None:
-                        weight_val = None
-                        try:
-                            import re
-                            m = re.search(r'[\d\\.]+', str(item.get('weight', '')))
-                            if m:
-                                weight_val = float(m.group(0))
-                        except:
-                            weight_val = None
-                        cp100_val = None
-                        try:
-                            if item.get('calories_per_100') is not None:
-                                cp100_val = float(str(item['calories_per_100']).replace(',', '.'))
-                        except:
-                            cp100_val = None
-                        if weight_val and cp100_val:
-                            total_cal = cp100_val * weight_val / 100.0
-                    if total_cal is not None:
-                        try:
-                            details.append(f"{int(round(total_cal))} ккал")
-                        except:
-                            details.append(f"{total_cal} ккал")
-                    if item.get('calories_per_100') is not None:
-                        try:
-                            details.append(f"{int(float(str(item['calories_per_100']).replace(',', '.')))} ккал/100г")
-                        except:
-                            details.append(f"{item['calories_per_100']} ккал/100г")
+                    total_int, cp100_int = get_calorie_info(item)
+                    if total_int is not None:
+                        details.append(f"{total_int} ккал")
+                    if cp100_int is not None:
+                        details.append(f"{cp100_int} ккал/100г")
 
                     if details:
                         text += f" ({', '.join(details)})"
