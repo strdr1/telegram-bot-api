@@ -650,6 +650,9 @@ async def get_ai_response(message: str, user_id: int) -> dict:
     search_query_result = None
     try:
         message_lower = message.lower().strip()
+        # Очищаем сообщение от знаков препинания для проверки
+        clean_message = re.sub(r'[^\w\s]', '', message_lower).strip()
+
         mac_greetings = ['мак', 'макс', 'привет мак', 'привет макс', 'мак,', 'макс,', 'мак!', 'макс!']
 
         # Если сообщение начинается с обращения к Маку
@@ -680,6 +683,24 @@ async def get_ai_response(message: str, user_id: int) -> dict:
                 'type': 'text',
                 'text': '🥗 У нас есть отличные салаты!',
                 'show_category_brief': 'салаты'
+            }
+
+        breakfast_queries = [
+            'завтрак', 'завтраки', 'меню завтраков', 'меню завтрак', 'завтраки меню',
+            'какие завтраки', 'какие завтраки?', 'какие завтраки есть', 'какие завтраки есть?',
+            'какие завтраки у вас есть', 'какие завтраки у вас есть?', 'какие у вас завтраки',
+            'что на завтрак', 'что на завтрак?', 'какие есть завтраки', 'какие есть завтраки?',
+            'список завтраков', 'покажи завтраки', 'есть завтраки', 'есть завтраки?',
+            'на завтрак'
+        ]
+        
+        breakfast_clean = [re.sub(r'[^\w\s]', '', q).strip() for q in breakfast_queries]
+        
+        if clean_message in breakfast_clean or message_lower in breakfast_queries:
+            return {
+                'type': 'text',
+                'text': '🍳 Вот наши завтраки!',
+                'show_category_brief': 'завтраки'
             }
 
         # Проверка запроса списка горячих блюд
@@ -769,8 +790,20 @@ async def get_ai_response(message: str, user_id: int) -> dict:
                     caption += f"💰 Цена: {dish['price']}₽\n"
                     if dish.get('weight'):
                         caption += f"⚖️ Вес: {dish['weight']}\n"
-                    if dish.get('calories'):
-                        caption += f"🔥 Калории: {dish['calories']} ккал/100г\n"
+                    if dish.get('calories') or dish.get('calories_per_100'):
+                        calories = dish.get('calories') or dish.get('calories_per_100')
+                        try:
+                            cal_val = float(calories)
+                            caption += f"📊 На 100г: {cal_val:.1f} ккал\n"
+                            
+                            if dish.get('weight'):
+                                weight_str = str(dish['weight']).replace('г', '').replace('мл', '').strip()
+                                if weight_str.replace('.', '').isdigit():
+                                    weight = float(weight_str)
+                                    total_cal = (cal_val * weight) / 100
+                                    caption += f"🔥 Порция: {total_cal:.1f} ккал\n"
+                        except ValueError:
+                             caption += f"🔥 Калории: {calories}\n"
                     if dish.get('protein') or dish.get('fat') or dish.get('carbohydrate') or dish.get('proteins') or dish.get('fats') or dish.get('carbs'):
                         caption += f"\n🧃 БЖУ:\n"
                         if dish.get('protein') is not None:
