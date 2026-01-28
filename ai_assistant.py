@@ -13,6 +13,8 @@ import logging
 import database
 import cache_manager
 import config
+# Импорт ALLOWED_MENU_IDS из menu_cache для фильтрации
+from menu_cache import ALLOWED_MENU_IDS
 
 # Импорт requests
 import requests
@@ -138,9 +140,15 @@ def load_menu_cache() -> Dict:
                     all_data = json.load(f)
                     other_menus = all_data.get('all_menus', {})
                     
-                    # Добавляем только те меню, которых еще нет (или обновляем существующие, если в общем кэше полнее? 
-                    # Нет, пользователь просил приоритет menu_cache.json, значит не перезаписываем)
+                    # Добавляем только те меню, которых еще нет, И КОТОРЫЕ РАЗРЕШЕНЫ
                     for m_id, m_data in other_menus.items():
+                        try:
+                            # 🛑 STRICT FILTER: Skip menus not in whitelist
+                            if int(m_id) not in ALLOWED_MENU_IDS:
+                                continue
+                        except:
+                            continue
+                            
                         if m_id not in all_menus:
                             all_menus[m_id] = m_data
                             
@@ -2899,4 +2907,5 @@ def get_random_delivery_dish(menu_data: Dict) -> Optional[Dict]:
         logger.error(f"❌ Ошибка при выборе случайного блюда: {e}")
         return None
 
+print("✅ AI Assistant загружен!")
 print("✅ AI Assistant загружен!")
