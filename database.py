@@ -2196,18 +2196,17 @@ def ensure_all_chats_exist() -> None:
     """Гарантирует, что для каждого пользователя создан чат (для миниаппа)"""
     try:
         with get_cursor() as cursor:
-            cursor.execute('SELECT user_id, full_name FROM users')
-            users = cursor.fetchall() or []
-            for row in users:
-                user_id = row[0]
-                full_name = row[1] if len(row) > 1 else None
-                cursor.execute('SELECT id FROM chats WHERE user_id = ?', (user_id,))
-                exists = cursor.fetchone()
-                if not exists:
-                    cursor.execute('''
-                    INSERT INTO chats (user_id, user_name, chat_status)
-                    VALUES (?, ?, 'active')
-                    ''', (user_id, full_name or f'User {user_id}'))
+            # Оптимизированный запрос: вставляем только отсутствующие чаты одним запросом
+            cursor.execute('''
+            INSERT INTO chats (user_id, user_name, chat_status)
+            SELECT user_id, COALESCE(full_name, 'User ' || user_id), 'active'
+            FROM users u
+            WHERE NOT EXISTS (SELECT 1 FROM chats c WHERE c.user_id = u.user_id)
+            ''')
+            
+            if cursor.rowcount > 0:
+                logger.info(f"Создано новых чатов: {cursor.rowcount}")
+                
     except Exception as e:
         logger.error(f"Ошибка при создании чатов для всех пользователей: {e}")
 
@@ -2241,44 +2240,39 @@ def get_all_chats_for_admin() -> List[Dict[str, Any]]:
     try:
         # Перед выборкой гарантируем наличие записей чатов для всех пользователей
         ensure_all_chats_exist()
+        
         with get_cursor() as cursor:
-            # Простой запрос без JOIN
+            # Оптимизированный запрос с JOIN и агрегацией
             cursor.execute('''
-            SELECT id, user_id, user_name, chat_status,
-                   last_message, last_message_time, created_at
-            FROM chats
-            ORDER BY id DESC
+            SELECT 
+                c.id, 
+                c.user_id, 
+                COALESCE(u.full_name, c.user_name, 'User ' || c.user_id) as display_name, 
+                c.chat_status,
+                c.last_message, 
+                c.last_message_time, 
+                c.created_at,
+                COUNT(cm.id) as message_count
+            FROM chats c
+            LEFT JOIN users u ON c.user_id = u.user_id
+            LEFT JOIN chat_messages cm ON c.id = cm.chat_id
+            GROUP BY c.id
+            ORDER BY c.last_message_time DESC, c.id DESC
             ''')
 
             chats = cursor.fetchall() or []
             result = []
             
             for chat in chats:
-                chat_id = chat[0]
-                
-                # Получаем количество сообщений
-                cursor.execute('SELECT COUNT(*) FROM chat_messages WHERE chat_id = ?', (chat_id,))
-                message_count_row = cursor.fetchone()
-                message_count = message_count_row[0] if message_count_row else 0
-                
-                # Получаем реальное имя пользователя
-                real_name = None
-                try:
-                    cursor.execute('SELECT full_name FROM users WHERE user_id = ?', (chat[1],))
-                    user_row = cursor.fetchone()
-                    real_name = user_row[0] if user_row else None
-                except:
-                    pass
-                
                 result.append({
                     'id': chat[0],
                     'user_id': chat[1],
-                    'user_name': real_name or chat[2] or f'User {chat[1]}',
+                    'user_name': chat[2],
                     'chat_status': chat[3] or 'active',
                     'last_message': chat[4] or '',
                     'last_message_time': chat[5],
                     'created_at': chat[6],
-                    'message_count': message_count
+                    'message_count': chat[7]
                 })
             
             logger.info(f"Найдено чатов для админки: {len(result)}")
