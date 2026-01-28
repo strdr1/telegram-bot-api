@@ -113,8 +113,19 @@ def find_dishes_by_name(raw_search: str, limit: int = 20) -> list:
     # 2. Добавляем остальные меню из общего кэша
     if menu_cache.all_menus_cache:
         for m_id, m_data in menu_cache.all_menus_cache.items():
-            if str(m_id) not in processed_ids:
-                menus_to_process.append((m_id, m_data))
+            # Пропускаем, если уже обработали
+            if str(m_id) in processed_ids:
+                continue
+                
+            # 🛑 ФИЛЬТРАЦИЯ ПО РАЗРЕШЕННЫМ ID
+            # Гарантируем, что не ищем в мусорных меню
+            try:
+                if int(m_id) not in ALLOWED_MENU_IDS:
+                    continue
+            except:
+                continue
+                
+            menus_to_process.append((m_id, m_data))
 
     # Список корней слов, указывающих на мясные/рыбные ингредиенты
     forbidden_meat_roots = [

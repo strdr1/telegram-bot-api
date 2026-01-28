@@ -17,6 +17,11 @@ from presto_api import presto_api
 
 logger = logging.getLogger(__name__)
 
+# 🛑 РАЗРЕШЕННЫЕ ID МЕНЮ (White List)
+# 90: Завтраки, 92: Основное меню, 141: Доставка
+# 32: Алкоголь, 29: Бар
+ALLOWED_MENU_IDS = {90, 92, 141, 32, 29}
+
 class MenuCache:
     """Класс для кэширования меню"""
 
@@ -119,8 +124,19 @@ class MenuCache:
 
                     # Проверяем не устарел ли кэш
                     if (datetime.now() - cache_time).total_seconds() < self.cache_ttl:
-                        self.all_menus_cache = cache_data.get('all_menus') or {}
-                        logger.info(f"✅ Все меню загружены из кэша ({len(self.all_menus_cache)} меню)")
+                        loaded_cache = cache_data.get('all_menus') or {}
+                        
+                        # 🛑 ФИЛЬТРАЦИЯ ПРИ ЗАГРУЗКЕ
+                        # Оставляем только разрешенные ID, чтобы исключить мусор
+                        self.all_menus_cache = {}
+                        for k, v in loaded_cache.items():
+                            try:
+                                if int(k) in ALLOWED_MENU_IDS:
+                                    self.all_menus_cache[k] = v
+                            except:
+                                continue
+                                
+                        logger.info(f"✅ Все меню загружены из кэша и отфильтрованы ({len(self.all_menus_cache)} меню)")
                         return True
                     else:
                         logger.info("🔄 Кэш всех меню устарел, требуется обновление")
