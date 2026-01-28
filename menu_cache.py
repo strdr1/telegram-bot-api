@@ -296,11 +296,7 @@ class MenuCache:
 
             menu_name = menu_data.get('name', '')
 
-            # Проверяем время для завтраков (ID 90)
-            if m_id_int == 90:
-                from datetime import time
-                if current_time > time(16, 0):  # После 16:00
-                    continue  # Пропускаем завтраки
+            # Завтраки (ID 90) оставляем в списке всегда, независимо от времени
 
             available_menus.append({
                 'id': m_id_int,

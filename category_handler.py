@@ -726,7 +726,15 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                                 if item.get('weight'):
                                     caption += f"⚖️ Вес: {item['weight']}г\n"
                                 if item.get('calories'):
-                                    caption += f"🔥 Калории: {item['calories']} ккал/100г\n"
+                                    try:
+                                        caption += f"🔥 Калории (блюдо): {int(float(item['calories']))} ккал\n"
+                                    except:
+                                        caption += f"🔥 Калории (блюдо): {item['calories']} ккал\n"
+                                if item.get('calories_per_100'):
+                                    try:
+                                        caption += f"🔥 Калории (100г): {int(float(item['calories_per_100']))} ккал/100г\n"
+                                    except:
+                                        caption += f"🔥 Калории (100г): {item['calories_per_100']} ккал/100г\n"
                                 
                                 # БЖУ
                                 if item.get('proteins') or item.get('fats') or item.get('carbs'):

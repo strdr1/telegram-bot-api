@@ -203,6 +203,34 @@ async def process_message_queue(bot):
             logger.error(f"Ошибка в process_message_queue: {e}")
             await asyncio.sleep(10)  # В случае ошибки ждем дольше
 
+async def schedule_daily_menu_update():
+    """Ежедневное обновление меню ровно в 09:00 по Москве"""
+    tz = menu_cache.moscow_tz
+    while True:
+        try:
+            now = datetime.now(tz)
+            # Следующее обновление в 09:00
+            target = now.replace(hour=9, minute=0, second=0, microsecond=0)
+            if target <= now:
+                # Если уже прошло — берем завтра
+                from datetime import timedelta
+                target = target + timedelta(days=1)
+            # Сколько ждать до 09:00
+            wait_seconds = (target - now).total_seconds()
+            logger.info(f"Планируем обновление меню на {target.strftime('%Y-%m-%d %H:%M:%S %Z')}, подождем {int(wait_seconds)} сек.")
+            await asyncio.sleep(wait_seconds)
+            # Обновляем меню
+            try:
+                logger.info("🕘 09:00 МСК — выполняем обновление меню (force_update=True)")
+                await menu_cache.load_all_menus(force_update=True)
+                logger.info("✅ Меню обновлено успешно")
+            except Exception as e:
+                logger.error(f"Ошибка обновления меню в 09:00: {e}")
+            # После обновления — планируем следующее через сутки
+            await asyncio.sleep(24 * 60 * 60)
+        except Exception as e:
+            logger.error(f"Ошибка в планировщике ежедневного обновления меню: {e}")
+            await asyncio.sleep(60)
 async def load_presto_menus():
     """Загрузка всех меню и изображений из Presto API"""
     print("🔄 Загружаем меню и изображения из Presto API...")
@@ -361,6 +389,9 @@ async def main():
     # Запускаем фоновую задачу для обработки сообщений из миниаппа
     message_queue_task = asyncio.create_task(process_message_queue(bot))
     print("📨 Фоновая задача обработки сообщений миниаппа запущена")
+    # Запускаем ежедневное обновление меню в 09:00
+    daily_update_task = asyncio.create_task(schedule_daily_menu_update())
+    print("🕘 Фоновая задача ежедневного обновления меню запущена")
 
     print("\n" + "=" * 50)
     print("✅ Все обработчики зарегистрированы")
