@@ -1170,6 +1170,13 @@ def add_or_update_user(user_id: int, username: Optional[str] = None, full_name: 
             # Очищаем кэш регистрации для этого пользователя
             if user_id in _user_reg_cache:
                 del _user_reg_cache[user_id]
+        
+        # Гарантируем создание чата сразу при добавлении пользователя
+        # Это важно для отображения в админ-панели
+        try:
+            get_or_create_chat(user_id, full_name or username)
+        except Exception as e:
+            logger.error(f"Не удалось создать чат при добавлении пользователя {user_id}: {e}")
             
         return True
     except Exception as e:
@@ -1207,6 +1214,13 @@ def update_user_name(user_id: int, name: str, accept_agreement: bool = True) -> 
                 last_updated = CURRENT_TIMESTAMP
             WHERE user_id = ?
             ''', (name, 1 if accept_agreement else 0, user_id))
+            
+            # Также обновляем имя в чате, чтобы админ видел актуальное
+            cursor.execute('''
+            UPDATE chats
+            SET user_name = ?
+            WHERE user_id = ?
+            ''', (name, user_id))
             
             # Очищаем кэш регистрации
             if user_id in _user_reg_cache:
