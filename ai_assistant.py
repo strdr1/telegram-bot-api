@@ -2055,6 +2055,10 @@ async def get_ai_response(message: str, user_id: int) -> dict:
                     'hot dishes': 'горячие блюда',
                     'main dish': 'основные блюда',
                     'main dishes': 'основные блюда',
+                    'main course': 'основные блюда',
+                    'main courses': 'основные блюда',
+                    'second course': 'основные блюда',
+                    'second courses': 'основные блюда',
                     'breakfast': 'завтраки',
                     'breakfasts': 'завтраки',
                     'burger': 'бургеры',
@@ -2063,6 +2067,8 @@ async def get_ai_response(message: str, user_id: int) -> dict:
                     'pastas': 'паста',
                     'seafood': 'морепродукты',
                     'seafoods': 'морепродукты',
+                    'snack': 'закуски',
+                    'snacks': 'закуски',
                     'vegetarian': 'вегетарианское',
                     'grilled': 'жареное',
                     'fried': 'жареное'
@@ -2071,7 +2077,14 @@ async def get_ai_response(message: str, user_id: int) -> dict:
                     category_name = category_translations[category_name]
                     logger.info(f"Перевели категорию '{match.group(1).strip()}' в '{category_name}'")
                 else:
-                    logger.info(f"Оставили категорию без перевода: '{category_name}'")
+                    # Попытка частичного совпадения для перевода
+                    for eng, rus in category_translations.items():
+                        if eng in category_name and len(eng) > 3:
+                             category_name = rus
+                             logger.info(f"Перевели категорию (частично) '{match.group(1).strip()}' в '{category_name}'")
+                             break
+                    
+                    logger.info(f"Оставили категорию без перевода (или уже переведена): '{category_name}'")
                 logger.info(f"Парсим категорию: '{category_name}'")
                 category_parsed = True
         elif 'Парсе категорию:' in ai_text or 'парсе категорию:' in ai_text:
@@ -2106,290 +2119,23 @@ async def get_ai_response(message: str, user_id: int) -> dict:
             category_parsed = True
 
         if category_parsed:
-                # Специальная обработка для супов
-                if 'суп' in category_name or category_name in ['суп', 'супы', 'супов']:
-                    # Ищем ВСЕ категории, которые могут содержать супы
-                    found_items = []
-                    found_category_names = []
+            # Очищаем текст от маркера
+            clean_text = re.sub(r'PARSE_CATEGORY:.+', '', ai_text, flags=re.DOTALL | re.IGNORECASE).strip()
+            clean_text = re.sub(r'[Пп]арсе категорию:.+', '', clean_text, flags=re.DOTALL | re.IGNORECASE).strip()
+            
+            # Если текст слишком короткий или общий, не показываем его
+            if len(clean_text) < 5 or clean_text.lower().startswith('вот') or clean_text.lower().startswith('пожалуйста'):
+                 clean_text = None
+            
+            logger.info(f"AI запросил категорию: '{category_name}'. Делегируем в unified handler.")
+            return {
+                'type': 'show_category_brief',
+                'show_category_brief': category_name,
+                'text': clean_text if clean_text else ""
+            }
 
-                    for menu_id, menu in menu_data.items():
-                        for cat_id, category in menu.get('categories', {}).items():
-                            cat_name = category.get('name', '').lower().strip()
-                            cat_display = category.get('display_name', '').lower().strip()
+            if False: # DISABLED_MANUAL_PARSING
 
-                            # 🛑 ИСКЛЮЧАЕМ ЗАПРЕЩЕННЫЕ КАТЕГОРИИ
-                            if is_category_blocked(cat_name):
-                                continue
-
-                            # Более широкие условия поиска супов, но исключаем явные салаты
-                            is_soup_category = (
-                                ('суп' in cat_name or 'суп' in cat_display or
-                                 cat_name in ['супы', 'супы и салаты', 'первые блюда', 'горячие супы'] or
-                                 cat_display in ['🍲 супы', '🍲 первые блюда'] or
-                                 cat_id in ['4819', '4722', '4818', '4721'])  # Расширенные ID категорий супов
-                                and ('салат' not in cat_name and 'салат' not in cat_display)
-                            )
-
-                            if is_soup_category:
-                                items = category.get('items', [])
-                                if items:
-                                    # Дополнительная фильтрация: включаем только супы
-                                    soup_items = []
-                                    for item in items:
-                                        item_name_lower = item.get('name', '').lower()
-                                        # Включаем блюда, которые явно являются супами и исключаем салаты
-                                        if (any(soup_word in item_name_lower for soup_word in [
-                                            'суп', 'борщ', 'солянка', 'уха', 'щи', 'харчо', 'лагман', 'лапша',
-                                            'бульон', 'окрошка', 'гаспачо', 'минестроне', 'том ям', 'рассольник'
-                                        ]) and 'салат' not in item_name_lower):
-                                            soup_items.append(item)
-
-                                    found_items.extend(soup_items)
-                                    cat_display_name = category.get('display_name') or category.get('name', cat_name)
-                                    if cat_display_name not in found_category_names:
-                                        found_category_names.append(cat_display_name)
-
-                    # Если не нашли специальных супов, ищем любые супы в меню
-                    if not found_items:
-                        for menu_id, menu in menu_data.items():
-                            for cat_id, category in menu.get('categories', {}).items():
-                                items = category.get('items', [])
-                                for item in items:
-                                    item_name_lower = item.get('name', '').lower()
-                                    if 'суп' in item_name_lower:
-                                        found_items.append(item)
-
-                    # Формируем специальный ответ для супов
-                    if found_items:
-                        text = f"🍲 У нас есть отличные супы!\n\n"
-
-                        # Убираем дубликаты по ID блюда
-                        unique_items = {}
-                        for item in found_items:
-                            item_id = item.get('id')
-                            if item_id not in unique_items:
-                                unique_items[item_id] = item
-
-                        for item in unique_items.values():
-                            text += f"• {item['name']} — {item['price']}₽\n"
-
-                        text += "\nСпросите про конкретный суп, чтобы увидеть фото и подробное описание!"
-
-                        logger.info(f"Парсили супы: найдено {len(unique_items)} уникальных позиций из {len(found_items)} общих")
-                        return {'type': 'text', 'text': text}
-
-                # Специальная обработка для пиццы
-                if 'пицц' in category_name or category_name in ['пицца', 'пиццы', 'пиццей']:
-                    # Ищем все пиццы
-                    found_items = []
-                    found_category_names = []
-
-                    for menu_id, menu in menu_data.items():
-                        for cat_id, category in menu.get('categories', {}).items():
-                            cat_name = category.get('name', '').lower().strip()
-                            cat_display = category.get('display_name', '').lower().strip()
-                            
-                            # 🛑 ИСКЛЮЧАЕМ ЗАПРЕЩЕННЫЕ КАТЕГОРИИ
-                            if is_category_blocked(cat_name):
-                                continue
-
-                            # Проверяем, является ли категория пиццей
-                            is_pizza_category = (
-                                'пицц' in cat_name or 
-                                'пицц' in cat_display or
-                                cat_name == 'пицца'
-                            )
-                            
-                            if is_pizza_category:
-                                items = category.get('items', [])
-                                if items:
-                                    found_items.extend(items)
-                                    cat_display = category.get('display_name') or category.get('name', cat_name)
-                                    if cat_display not in found_category_names:
-                                        found_category_names.append(cat_display)
-
-                    # Формируем специальный ответ для пицц
-                    if found_items:
-                        text = f"🍕 У нас есть отличные пиццы!\n\n"
-
-                        # Убираем дубликаты по ID блюда
-                        unique_items = {}
-                        for item in found_items:
-                            item_id = item.get('id')
-                            if item_id not in unique_items:
-                                unique_items[item_id] = item
-
-                        for item in unique_items.values():
-                            text += f"• {item['name']} — {item['price']}₽\n"
-
-                        text += "\nСпросите про конкретную пиццу, чтобы увидеть фото и подробное описание!"
-
-                        logger.info(f"Парсили пиццы: найдено {len(unique_items)} уникальных позиций из {len(found_items)} общих")
-                        return {'type': 'text', 'text': text}
-
-                # Специальная обработка для пива
-                if 'пив' in category_name or category_name in ['пиво', 'пива', 'пивом']:
-                    # Ищем все категории пива
-                    found_items = []
-                    found_category_names = []
-
-                    for menu_id, menu in menu_data.items():
-                        for cat_id, category in menu.get('categories', {}).items():
-                            cat_name = category.get('name', '').lower().strip()
-                            cat_display = category.get('display_name', '').lower().strip()
-
-                            # 🛑 ИСКЛЮЧАЕМ ЗАПРЕЩЕННЫЕ КАТЕГОРИИ
-                            if is_category_blocked(cat_name):
-                                continue
-
-                            # Проверяем, является ли категория пивной
-                            is_beer_category = (
-                                'пив' in cat_name or 
-                                'пив' in cat_display or
-                                'beer' in cat_name.lower()
-                            )
-                            
-                            if is_beer_category:
-                                items = category.get('items', [])
-                                if items:
-                                    found_items.extend(items)
-                                    cat_display = category.get('display_name') or category.get('name', cat_name)
-                                    if cat_display not in found_category_names:
-                                        found_category_names.append(cat_display)
-
-                    # Формируем специальный ответ для пива
-                    if found_items:
-                        text = f"У нас есть отличное пиво! 🍺\n\n"
-
-                        # Убираем дубликаты по ID блюда
-                        unique_items = {}
-                        for item in found_items:
-                            item_id = item.get('id')
-                            if item_id not in unique_items:
-                                unique_items[item_id] = item
-
-                        # Группируем пиво по типам (светлое, темное, нефильтрованное и т.д.)
-                        beer_types = {}
-                        for item in unique_items.values():
-                            item_name_lower = item['name'].lower()
-                            if 'светлое' in item_name_lower or 'helles' in item_name_lower or 'lager' in item_name_lower:
-                                beer_type = '🍺 Светлое пиво'
-                            elif 'темное' in item_name_lower or 'dark' in item_name_lower or 'porter' in item_name_lower:
-                                beer_type = '🍺 Темное пиво'
-                            elif 'нефильтрованное' in item_name_lower or 'wheat' in item_name_lower or 'weizen' in item_name_lower:
-                                beer_type = '🍺 Нефильтрованное пиво'
-                            elif 'ipa' in item_name_lower or 'ale' in item_name_lower:
-                                beer_type = '🍺 Крафтовое пиво'
-                            else:
-                                beer_type = '🍺 Другое пиво'
-
-                            if beer_type not in beer_types:
-                                beer_types[beer_type] = []
-                            beer_types[beer_type].append(item)
-
-                        # Выводим по группам по 2 позиции для каждой подкатегории
-                        for beer_type, items in beer_types.items():
-                            text += f"{beer_type}:\n"
-                            for item in items[:2]:  # Ограничиваем до 2 позиций на подкатегорию
-                                text += f"• {item['name']} — {item['price']}₽\n"
-                            if len(items) > 2:
-                                text += f"• ... и ещё {len(items) - 2} позиций\n"
-                            text += "\n"
-
-                        text += "Спросите про конкретное пиво, чтобы увидеть фото и подробное описание!"
-
-                        logger.info(f"Парсили пиво: найдено {len(unique_items)} уникальных позиций из {len(found_items)} общих")
-                        return {'type': 'text', 'text': text}
-                if 'вин' in category_name or category_name in ['вино', 'вина', 'вином']:
-                    # Ищем все категории вин
-                    wine_categories = ['белое', 'красное', 'розовое', 'игристое', 'вино', 'вина']
-                    found_items = []
-                    found_category_names = []
-
-                    for menu_id, menu in menu_data.items():
-                        for cat_id, category in menu.get('categories', {}).items():
-                            cat_name = category.get('name', '').lower().strip()
-                            cat_display = category.get('display_name', '').lower().strip()
-
-                            # 🛑 ИСКЛЮЧАЕМ ЗАПРЕЩЕННЫЕ КАТЕГОРИИ
-                            if is_category_blocked(cat_name):
-                                continue
-
-                            # Проверяем, является ли категория винной
-                            is_wine_category = (
-                                any(wine_type in cat_name for wine_type in wine_categories) or
-                                any(wine_type in cat_display for wine_type in wine_categories) or
-                                'вин' in cat_name
-                            )
-                            
-                            if is_wine_category:
-                                items = category.get('items', [])
-                                if items:
-                                    # Дополнительная фильтрация: только вина
-                                    wine_items = []
-                                    for item in items:
-                                        item_name_lower = item.get('name', '').lower()
-                                        # Включаем только вина
-                                        if 'вино' in item_name_lower or 'игристое' in item_name_lower:
-                                            wine_items.append(item)
-                                    
-                                    found_items.extend(wine_items)
-                                    cat_display = category.get('display_name') or category.get('name', cat_name)
-                                    if cat_display not in found_category_names:
-                                        found_category_names.append(cat_display)
-
-                    # Формируем специальный ответ для вин
-                    if found_items:
-                        text = f"У нас есть отличное вино! 🍷\n\n"
-
-                        # Убираем дубликаты по ID блюда
-                        unique_items = {}
-                        for item in found_items:
-                            item_id = item.get('id')
-                            if item_id not in unique_items:
-                                unique_items[item_id] = item
-
-                        # Группируем по типам
-                        wine_types = {}
-                        for item in unique_items.values():
-                            item_name_lower = item['name'].lower()
-                            if 'белое' in item_name_lower or 'белый' in item_name_lower:
-                                wine_type = '🥂 Белые вина'
-                            elif 'красное' in item_name_lower or 'красный' in item_name_lower:
-                                wine_type = '🍷 Красные вина'
-                            elif 'розовое' in item_name_lower or 'розов' in item_name_lower:
-                                wine_type = '🌸 Розовые вина'
-                            elif 'игрист' in item_name_lower or 'шампан' in item_name_lower:
-                                wine_type = '🍾 Игристые вина'
-                            else:
-                                wine_type = '🍷 Другие вина'
-
-                            if wine_type not in wine_types:
-                                wine_types[wine_type] = []
-                            wine_types[wine_type].append(item)
-
-                        # Выводим по группам по 3 позиции для каждой подкатегории
-                        for wine_type, items in wine_types.items():
-                            text += f"{wine_type}:\n"
-                            for item in items[:3]:  # Ограничиваем до 3 позиций на подкатегорию
-                                text += f"• {item['name']} — {item['price']}₽\n"
-                            if len(items) > 3:
-                                text += f"• ... и ещё {len(items) - 3} позиций\n"
-                            text += "\n"
-
-                        text += "Спросите про конкретное вино, чтобы увидеть фото и подробное описание!"
-
-                        logger.info(f"Парсили вино: найдено {len(unique_items)} уникальных позиций из {len(found_items)} общих")
-                        
-                        # Если это короткий ответ, возвращаем специальный маркер для краткого отображения
-                        if brief_category:
-                            return {
-                                'type': 'text',
-                                'text': '',  # Пустой текст, так как категория будет показана отдельно
-                                'show_category_brief': category_name
-                            }
-                        else:
-                            return {'type': 'text', 'text': text}
 
                 # Находим все позиции из категории (улучшенная логика)
                 found_items = []
