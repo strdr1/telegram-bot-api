@@ -2833,7 +2833,7 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                         await message.bot.send_photo(
                             chat_id=user.id,
                             photo=types.FSInputFile(rest_photo_path),
-                            caption="🏛️ <b>Ресторан Mashkov</b>\n📍 ул. Машкова, 13",
+                            caption="🏛️ <b>Ресторан Mashkov</b>\n📍 бул. Академика Ландау, 1",
                             parse_mode="HTML"
                         )
                     else:
@@ -2882,7 +2882,7 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
                     await message.bot.send_photo(
                         chat_id=user.id,
                         photo=types.FSInputFile(rest_photo_path),
-                        caption="🏛️ <b>Ресторан Mashkov</b>\n📍 ул. Машкова, 13",
+                        caption="🏛️ <b>Ресторан Mashkov</b>\n📍 бул. Академика Ландау, 1",
                         parse_mode="HTML"
                     )
                 else:
