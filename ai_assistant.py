@@ -699,8 +699,8 @@ async def get_ai_response(message: str, user_id: int) -> dict:
         if clean_message in breakfast_clean or message_lower in breakfast_queries:
             return {
                 'type': 'text',
-                'text': '🍳 Вот наши завтраки!',
-                'show_category_brief': 'завтраки'
+                'text': '🍳 Показываю категорию завтраков!',
+                'show_category': 'завтраки'
             }
 
         # Проверка запроса списка горячих блюд
