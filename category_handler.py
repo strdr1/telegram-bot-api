@@ -626,7 +626,10 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                             unique_items[item_id] = item
                     
                     # 🟢 ЗАЩИТА ОТ СПАМА: Если блюд слишком много (> 5), показываем краткий список
-                    if len(unique_items) > 5:
+                    # ИСКЛЮЧЕНИЕ: Завтраки всегда показываем полностью (по просьбе пользователя)
+                    is_breakfast = any(x in category_name.lower() for x in ['завтрак', 'breakfast'])
+                    
+                    if len(unique_items) > 5 and not is_breakfast:
                         logger.info(f"Слишком много блюд в категории '{category_title}' ({len(unique_items)}). Переключаюсь на краткий список.")
                         return await handle_show_category_brief(category_name, user_id, bot, intro_message)
 
