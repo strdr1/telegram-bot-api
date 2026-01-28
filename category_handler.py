@@ -750,8 +750,24 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                 
                 for item in items_list:
                     text += f"• {item['name']} — {item['price']}₽"
+                    
+                    details = []
                     if item.get('weight'):
-                        text += f" (⚖️ {item['weight']}г)"
+                        details.append(f"⚖️ {item['weight']}г")
+                    
+                    if item.get('calories'):
+                         try:
+                             details.append(f"{int(float(item['calories']))} ккал")
+                         except: pass
+
+                    if item.get('calories_per_100'):
+                         try:
+                             details.append(f"{int(float(item['calories_per_100']))} ккал/100г")
+                         except: pass
+
+                    if details:
+                        text += f" ({', '.join(details)})"
+                    
                     text += "\n"
                 
                 text += f"\n💡 <i>Спросите про конкретное блюдо, чтобы увидеть фото и подробное описание!</i>"
