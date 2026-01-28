@@ -850,6 +850,55 @@ async def get_ai_response(message: str, user_id: int) -> dict:
         is_dish_request = any(keyword in message_lower for keyword in dish_keywords)
         is_numeric = message.strip().isdigit()
 
+        if is_recommendation:
+            recent_messages = user_history.get(user_id, [])[-10:]
+            has_breakfast_context = any(('завтрак' in (m.get('content', '').lower())) or ('завтраки' in (m.get('content', '').lower())) for m in recent_messages) or any(w in message_lower for w in ['завтрак', 'завтраки'])
+            if has_breakfast_context:
+                menu_data = load_menu_cache()
+                breakfast_menu = menu_data.get('90') or menu_data.get(90)
+                if breakfast_menu:
+                    items = []
+                    for category in breakfast_menu.get('categories', {}).values():
+                        items.extend(category.get('items', []))
+                    candidates = []
+                    for item in items:
+                        name_l = str(item.get('name', '')).lower()
+                        if any(kw in name_l for kw in ['омлет', 'американ', 'сырник', 'круассан', 'каша', 'драник', 'блин']):
+                            candidates.append(item)
+                    with_image = [i for i in candidates if i.get('image_url') or i.get('image_local_path') or i.get('image_filename')]
+                    pool = with_image if with_image else (candidates if candidates else items)
+                    selected = []
+                    seen_names = set()
+                    for it in pool:
+                        nm = it.get('name')
+                        if nm and nm not in seen_names:
+                            selected.append(it)
+                            seen_names.add(nm)
+                        if len(selected) >= 3:
+                            break
+                    if selected:
+                        text_lines = ["🍳 Рекомендую на завтрак:\n"]
+                        for it in selected:
+                            line = f"• {it.get('name')}"
+                            price = it.get('price')
+                            weight = it.get('weight')
+                            if price is not None:
+                                line += f" — {price}₽"
+                            if weight:
+                                line += f" (⚖️ {weight})"
+                            text_lines.append(line)
+                        text_lines.append("\nСпросите про конкретное блюдо, чтобы увидеть фото и подробное описание!")
+                        return {
+                            'type': 'text',
+                            'text': "\n".join(text_lines),
+                            'show_category_brief': 'завтраки'
+                        }
+                return {
+                    'type': 'text',
+                    'text': '🍳 У нас есть отличные завтраки! Что вам ближе: что-то с яйцами, сладкое или легкое?',
+                    'show_category_brief': 'завтраки'
+                }
+
         # Логика решения: искать напрямую или через AI
         should_search = False
         if is_dish_request:
