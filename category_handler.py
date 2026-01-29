@@ -874,71 +874,83 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                 # Нашли блюда. Если результат один - покажем карточку, иначе - список.
                 category_title = category_name.capitalize()
                 
-                # Убираем дубликаты по ID блюда (find_dishes_by_name уже возвращает уникальные, но на всякий случай)
+                # Убираем дубликаты
                 unique_items = {}
                 for item in virtual_items:
+                    # Используем ID как первичный ключ, если нет - fallback на название
                     item_id = item.get('id')
-                    if item_id not in unique_items:
-                        unique_items[item_id] = item
+                    item_name = item.get('name')
+                    
+                    key = item_id if item_id is not None else item_name
+                    
+                    if key is not None and key not in unique_items:
+                        unique_items[key] = item
                 
-                # Ограничиваем количество результатов (например, 20), чтобы не спамить
-                limit = 20
                 items_list = list(unique_items.values())
-                
-                # Если найдено ровно одно блюдо - показываем его карточку сразу
-                # Это улучшает UX для точных поисковых запросов
-                if len(items_list) == 1:
-                    item = items_list[0]
-                    try:
-                        from handlers.handlers_delivery import send_dish_photo
-                        
-                        # Если есть вступительное сообщение, отправляем его отдельно
-                        if intro_message:
-                            await safe_send_message(bot, user_id, intro_message, parse_mode="HTML")
-                        
-                        # Отправляем карточку блюда
-                        await send_dish_photo(user_id, item, item.get('menu_id'), item.get('category_id'), bot)
-                        
-                        logger.info(f"Автоматически показана карточка блюда: {item['name']}")
-                        return f"Показана карточка блюда: {item['name']}"
-                    except Exception as e:
-                        logger.error(f"Не удалось отправить карточку блюда автоматически: {e}")
-                        # Если ошибка, продолжаем выполнение и показываем список
 
-                text = ""
-                if intro_message:
-                    text += f"{intro_message}\n\n"
-
-                if len(items_list) > limit:
-                    text += f"🍽️ <b>{category_title}</b> (найдено по названию, показаны первые {limit}):\n\n"
-                    items_list = items_list[:limit]
+                if not items_list:
+                    logger.warning(f"После фильтрации дубликатов список блюд пуст (исходно: {len(virtual_items)})")
+                    # Если вдруг пусто, проваливаемся в "не найдено"
+                    found = False
                 else:
-                    text += f"🍽️ <b>{category_title}</b> (найдено по названию):\n\n"
-                
-                for item in items_list:
-                    text += f"• {item['name']} — {item['price']}₽"
+                    # Ограничиваем количество результатов (например, 20), чтобы не спамить
+                    limit = 20
                     
-                    details = []
-                    if item.get('weight'):
-                        details.append(f"⚖️ {item['weight']}г")
-                    total_int, cp100_int = get_calorie_info(item)
-                    if total_int is not None:
-                        details.append(f"{total_int} ккал")
-                    if cp100_int is not None:
-                        details.append(f"{cp100_int} ккал/100г")
+                    # Если найдено ровно одно блюдо - показываем его карточку сразу
+                    # Это улучшает UX для точных поисковых запросов
+                    if len(items_list) == 1:
+                        item = items_list[0]
+                        try:
+                            from handlers.handlers_delivery import send_dish_photo
+                            
+                            # Если есть вступительное сообщение, отправляем его отдельно
+                            if intro_message:
+                                await safe_send_message(bot, user_id, intro_message, parse_mode="HTML")
+                            
+                            # Отправляем карточку блюда
+                            await send_dish_photo(user_id, item, item.get('menu_id'), item.get('category_id'), bot)
+                            
+                            logger.info(f"Автоматически показана карточка блюда: {item['name']}")
+                            return f"Показана карточка блюда: {item['name']}"
+                        except Exception as e:
+                            logger.error(f"Не удалось отправить карточку блюда автоматически: {e}")
+                            # Если ошибка, продолжаем выполнение и показываем список
 
-                    if details:
-                        text += f" ({', '.join(details)})"
+                    text = ""
+                    if intro_message:
+                        text += f"{intro_message}\n\n"
+
+                    if len(items_list) > limit:
+                        text += f"🍽️ <b>{category_title}</b> (найдено по названию, показаны первые {limit}):\n\n"
+                        items_list = items_list[:limit]
+                    else:
+                        text += f"🍽️ <b>{category_title}</b> (найдено по названию):\n\n"
                     
-                    text += "\n"
-                
-                text += f"\n💡 <i>Спросите про конкретное блюдо, чтобы увидеть фото и подробное описание!</i>"
+                    for item in items_list:
+                        price = item.get('price', 0)
+                        text += f"• {item['name']} — {price}₽"
+                        
+                        details = []
+                        if item.get('weight'):
+                            details.append(f"⚖️ {item['weight']}г")
+                        total_int, cp100_int = get_calorie_info(item)
+                        if total_int is not None:
+                            details.append(f"{total_int} ккал")
+                        if cp100_int is not None:
+                            details.append(f"{cp100_int} ккал/100г")
 
-                await safe_send_message(bot, user_id, text, parse_mode="HTML")
-                
-                found = True
-                logger.info(f"Показал виртуальную категорию (кратко): {category_title} с {len(unique_items)} блюдами")
-                return text
+                        if details:
+                            text += f" ({', '.join(details)})"
+                        
+                        text += "\n"
+                    
+                    text += f"\n💡 <i>Спросите про конкретное блюдо, чтобы увидеть фото и подробное описание!</i>"
+
+                    await safe_send_message(bot, user_id, text, parse_mode="HTML")
+                    
+                    found = True
+                    logger.info(f"Показал виртуальную категорию (кратко): {category_title} с {len(items_list)} блюдами")
+                    return text
 
         if not found:
             if is_search or ',' in category_name:

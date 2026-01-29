@@ -1783,7 +1783,44 @@ async def get_ai_response(message: str, user_id: int) -> dict:
                 faq_context = "\n\n".join(parts)
         except Exception as e:
             logger.warning(f"Ошибка получения FAQ для контекста: {e}")
+
+        # Проверка на вопросы об обновлениях меню
+        menu_update_keywords = ['что нового', 'новинки', 'новое', 'обновления', 'изменения', 'new']
+        is_menu_update_query = any(k in message.lower() for k in menu_update_keywords)
+        
+        menu_updates_context = ""
+        if is_menu_update_query:
+            try:
+                # Получаем изменения за последние 30 дней
+                changes = database.get_significant_menu_changes(days=30)
+                # Получаем порог из настроек (по умолчанию 15%)
+                threshold = database.get_setting('menu_change_threshold') or '15'
+                
+                if changes:
+                    latest = changes[0] # Самое свежее значимое изменение
+                    menu_updates_context = (
+                        f"КОНТЕКСТ ИЗМЕНЕНИЙ МЕНЮ:\n"
+                        f"Пользователь спрашивает о новинках. В базе зафиксировано значимое обновление меню от {latest['version_date']}.\n"
+                        f"Процент изменений: {latest['change_percent']}% (Порог значимости: {threshold}%).\n"
+                        f"ИНСТРУКЦИЯ: Сообщи пользователю, что меню недавно обновилось ({latest['version_date']}). "
+                        f"Скажи, что появились новые блюда и предложи ознакомиться с категориями. "
+                        f"Используй маркер SHOW_RESTAURANT_MENU для показа кнопок меню."
+                    )
+                else:
+                    menu_updates_context = (
+                        f"КОНТЕКСТ ИЗМЕНЕНИЙ МЕНЮ:\n"
+                        f"Пользователь спрашивает о новинках. За последние 30 дней значимых изменений (более {threshold}%) НЕ зафиксировано.\n"
+                        f"ИНСТРУКЦИЯ: Ответь, что за последнее время особых обновлений меню не было. "
+                        f"Предложи ознакомиться с текущим меню. Используй маркер SHOW_RESTAURANT_MENU."
+                    )
+            except Exception as e:
+                logger.error(f"Error checking menu updates: {e}")
+
         base_messages = [{"role": "system", "content": system_prompt}]
+        
+        if menu_updates_context:
+            base_messages.append({"role": "system", "content": menu_updates_context})
+
         
         # Добавляем контекст меню как отдельное системное сообщение (как просил пользователь: "как faq отдельно место в json")
         if menu_context_json:

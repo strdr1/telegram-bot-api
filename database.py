@@ -513,7 +513,8 @@ def init_database():
             ('free_delivery_min', '1500'),
             ('delivery_time', '45–60 минут'),
             ('agreement_url', 'https://mashkov.rest/orders/'),
-            ('privacy_url', 'https://mashkov.rest/about/')
+            ('privacy_url', 'https://mashkov.rest/about/'),
+            ('menu_change_threshold', '15')
         ]
         
         for key, value in default_settings:
@@ -2195,16 +2196,81 @@ def get_or_create_chat(user_id: int, user_name: str = None) -> int:
 
             # Создаем новый чат
             cursor.execute('''
-            INSERT INTO chats (user_id, user_name, chat_status)
-            VALUES (?, ?, 'active')
-            ''', (user_id, user_name or f'User {user_id}'))
+                    INSERT INTO chats (user_id, user_name, chat_status)
+                    VALUES (?, ?, 'active')
+                    ''', (user_id, user_name or f'User {user_id}'))
 
-            chat_id = cursor.lastrowid
-            return chat_id
+                    chat_id = cursor.lastrowid
+                    return chat_id
 
+            except Exception as e:
+                logger.error(f"Ошибка создания/получения чата для {user_id}: {e}")
+                return 0
+
+def save_menu_snapshot(menu_data_json: str, items_count: int, change_percent: float, is_significant: bool) -> bool:
+    """Сохранение снимка меню в БД"""
+    try:
+        with get_cursor() as cursor:
+            cursor.execute('''
+            INSERT INTO menu_snapshots (menu_data, items_count, change_percent, is_significant)
+            VALUES (?, ?, ?, ?)
+            ''', (menu_data_json, items_count, change_percent, 1 if is_significant else 0))
+            return True
     except Exception as e:
-        logger.error(f"Ошибка создания/получения чата для {user_id}: {e}")
-        return 0
+        logger.error(f"Ошибка сохранения снимка меню: {e}")
+        return False
+
+def get_last_menu_snapshot() -> Optional[Dict]:
+    """Получение последнего снимка меню"""
+    try:
+        with get_cursor() as cursor:
+            cursor.execute('''
+            SELECT id, version_date, items_count, menu_data, change_percent, is_significant
+            FROM menu_snapshots
+            ORDER BY id DESC
+            LIMIT 1
+            ''')
+            row = cursor.fetchone()
+            if row:
+                return {
+                    'id': row[0],
+                    'version_date': row[1],
+                    'items_count': row[2],
+                    'menu_data': row[3],
+                    'change_percent': row[4],
+                    'is_significant': bool(row[5])
+                }
+            return None
+    except Exception as e:
+        logger.error(f"Ошибка получения последнего снимка меню: {e}")
+        return None
+
+def get_significant_menu_changes(days: int = 30) -> List[Dict]:
+    """Получение значимых изменений меню за период"""
+    try:
+        # SQLite modifier for days
+        date_modifier = f'-{days} days'
+        with get_cursor() as cursor:
+            cursor.execute(f'''
+            SELECT id, version_date, items_count, change_percent
+            FROM menu_snapshots
+            WHERE is_significant = 1 AND version_date >= datetime('now', ?)
+            ORDER BY version_date DESC
+            ''', (date_modifier,))
+            
+            rows = cursor.fetchall()
+            return [
+                {
+                    'id': row[0],
+                    'version_date': row[1],
+                    'items_count': row[2],
+                    'change_percent': row[3]
+                }
+                for row in rows
+            ]
+    except Exception as e:
+        logger.error(f"Ошибка получения изменений меню: {e}")
+        return []
 
 def ensure_all_chats_exist() -> None:
     """Гарантирует, что для каждого пользователя создан чат (для миниаппа)"""
@@ -2327,8 +2393,11 @@ def get_chat_by_id(chat_id: int) -> Optional[Dict[str, Any]]:
         logger.error(f"Ошибка получения чата {chat_id}: {e}")
         return None
 
-def get_chat_messages(chat_id: int, limit: int = 50) -> List[Dict[str, Any]]:
-    """Получение сообщений чата"""
+def get_chat_messages(chat_id: int, limit: int = 50, filter_type: str = 'all') -> List[Dict[str, Any]]:
+    """
+    Получение сообщений чата
+    filter_type: 'all', 'messages' (exclude CMD:), 'actions' (only CMD:)
+    """
     try:
         with get_cursor() as cursor:
             # Проверяем, есть ли поле sent в таблице
@@ -2336,53 +2405,42 @@ def get_chat_messages(chat_id: int, limit: int = 50) -> List[Dict[str, Any]]:
             columns = cursor.fetchall()
             has_sent_column = any(col[1] == 'sent' for col in columns)
 
-            if has_sent_column:
-                cursor.execute('''
-                SELECT id, sender, message_text, message_time, sent
-                FROM chat_messages
-                WHERE chat_id = ?
-                ORDER BY message_time DESC
-                LIMIT ?
-                ''', (chat_id, limit))
+            query = '''
+            SELECT id, sender, message_text, message_time''' + (', sent' if has_sent_column else '') + '''
+            FROM chat_messages
+            WHERE chat_id = ?
+            '''
+            params = [chat_id]
 
-                results = cursor.fetchall() or []
-                # Reverse to show chronological order
-                results.reverse()
-                
-                return [
-                    {
-                        'id': row[0],
-                        'sender': row[1],
-                        'text': row[2],
-                        'time': row[3],
-                        'sent': bool(row[4]) if len(row) > 4 else False
-                    }
-                    for row in results
-                ]
-            else:
-                # Если поля sent нет, получаем без него
-                cursor.execute('''
-                SELECT id, sender, message_text, message_time
-                FROM chat_messages
-                WHERE chat_id = ?
-                ORDER BY message_time DESC
-                LIMIT ?
-                ''', (chat_id, limit))
+            if filter_type == 'messages':
+                query += " AND message_text NOT LIKE 'CMD:%'"
+            elif filter_type == 'actions':
+                query += " AND message_text LIKE 'CMD:%'"
 
-                results = cursor.fetchall() or []
-                # Reverse to show chronological order
-                results.reverse()
+            query += '''
+            ORDER BY message_time DESC
+            LIMIT ?
+            '''
+            params.append(limit)
 
-                return [
-                    {
-                        'id': row[0],
-                        'sender': row[1],
-                        'text': row[2],
-                        'time': row[3],
-                        'sent': False  # По умолчанию считаем не отправленным
-                    }
-                    for row in results
-                ]
+            cursor.execute(query, params)
+            results = cursor.fetchall() or []
+            # Reverse to show chronological order
+            results.reverse()
+            
+            return [
+                {
+                    'id': row[0],
+                    'sender': row[1],
+                    'text': row[2],
+                    'time': row[3],
+                    'sent': bool(row[4]) if has_sent_column and len(row) > 4 else False
+                }
+                for row in results
+            ]
+    except Exception as e:
+        logger.error(f"Ошибка получения сообщений чата {chat_id}: {e}")
+        return []
     except Exception as e:
         logger.error(f"Ошибка получения сообщений чата {chat_id}: {e}")
         return []

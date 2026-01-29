@@ -56,9 +56,10 @@ def get_chats():
 
 @app.route('/chats/<int:chat_id>', methods=['GET'])
 def get_chat_messages(chat_id):
-    """Get messages for a specific chat"""
+    """Get messages for a specific chat (excluding actions)"""
     try:
-        messages = database.get_chat_messages(chat_id, limit=100)
+        # Получаем только обычные сообщения, исключая действия (CMD:...)
+        messages = database.get_chat_messages(chat_id, limit=100, filter_type='messages')
         # Преобразуем формат для админ-панели
         formatted_messages = []
         for msg in messages:
@@ -66,7 +67,8 @@ def get_chat_messages(chat_id):
                 'id': msg.get('id'),
                 'is_from_user': msg.get('sender') == 'user',
                 'message_text': msg.get('text', ''),
-                'created_at': msg.get('time', '')
+                'created_at': msg.get('time', ''),
+                'sent': msg.get('sent', False)
             })
         
         response = jsonify(formatted_messages)
@@ -75,6 +77,51 @@ def get_chat_messages(chat_id):
     except Exception as e:
         print(f"Error getting chat messages: {e}")
         return jsonify({'error': 'Failed to get messages'}), 500
+
+@app.route('/chats/<int:chat_id>/actions', methods=['GET'])
+def get_chat_actions(chat_id):
+    """Get action history for a specific chat"""
+    try:
+        # Получаем только действия (CMD:...)
+        messages = database.get_chat_messages(chat_id, limit=100, filter_type='actions')
+        formatted_messages = []
+        for msg in messages:
+            text = msg.get('text', '')
+            if text.startswith('CMD:'):
+                text = text[4:] # Убираем префикс CMD:
+                
+            formatted_messages.append({
+                'id': msg.get('id'),
+                'action': text,
+                'created_at': msg.get('time', '')
+            })
+        
+        response = jsonify(formatted_messages)
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
+    except Exception as e:
+        print(f"Error getting chat actions: {e}")
+        return jsonify({'error': 'Failed to get actions'}), 500
+
+@app.route('/settings/menu-threshold', methods=['GET', 'POST'])
+def handle_menu_threshold():
+    """Get or set menu change threshold"""
+    try:
+        if request.method == 'GET':
+            value = database.get_setting('menu_change_threshold')
+            return jsonify({'value': value or '15'})
+            
+        elif request.method == 'POST':
+            data = request.json
+            value = data.get('value')
+            if value:
+                database.save_setting('menu_change_threshold', str(value))
+                return jsonify({'success': True})
+            return jsonify({'error': 'Value required'}), 400
+            
+    except Exception as e:
+        logger.error(f"Error handling menu threshold: {e}")
+        return jsonify({'error': 'Failed to handle setting'}), 500
 
 @app.route('/chats/<int:chat_id>/messages', methods=['POST'])
 def send_message(chat_id):

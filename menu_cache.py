@@ -253,6 +253,9 @@ class MenuCache:
                     # Сохраняем кэши (каждый метод сам возьмет что ему нужно из self.all_menus_cache)
                     self._save_delivery_cache()
                     self._save_all_menus_cache()
+                    
+                    # 📊 Сохраняем снимок в БД и анализируем изменения
+                    self._compare_and_save_snapshot(filtered_menus)
 
                     logger.info(f"✅ Загружено {len(filtered_menus)} меню (фильтр):")
                     for menu_id, menu_data in filtered_menus.items():
