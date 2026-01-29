@@ -2029,84 +2029,63 @@ async def get_ai_response(message: str, user_id: int) -> dict:
         category_name_for_calories = None
 
         
-        if 'parse_category:' in ai_text.lower():
-            match = re.search(r'PARSE_CATEGORY:(.+)', ai_text, re.DOTALL | re.IGNORECASE)
+        # Единый словарь переводов и нормализации категорий
+        category_translations = {
+            'salad': 'салаты', 'salads': 'салаты',
+            'soup': 'супы', 'soups': 'супы',
+            'pizza': 'пицца', 'pizzas': 'пицца',
+            'beer': 'пиво', 'beers': 'пиво',
+            'wine': 'вино', 'wines': 'вино',
+            'cocktail': 'коктейли', 'cocktails': 'коктейли',
+            'dessert': 'десерты', 'desserts': 'десерты',
+            'coffee': 'кофе', 'coffees': 'кофе',
+            'tea': 'чай', 'teas': 'чай',
+            'juice': 'соки', 'juices': 'соки',
+            'water': 'вода', 'waters': 'вода',
+            'drink': 'напитки', 'drinks': 'напитки',
+            'appetizer': 'стартеры и закуски', 'appetizers': 'стартеры и закуски',
+            'starter': 'стартеры и закуски', 'starters': 'стартеры и закуски',
+            'snack': 'стартеры и закуски', 'snacks': 'стартеры и закуски',
+            'hot dish': 'ГОРЯЧИЕ БЛЮДА', 'hot dishes': 'ГОРЯЧИЕ БЛЮДА',
+            'main dish': 'ГОРЯЧИЕ БЛЮДА', 'main dishes': 'ГОРЯЧИЕ БЛЮДА',
+            'main course': 'ГОРЯЧИЕ БЛЮДА', 'main courses': 'ГОРЯЧИЕ БЛЮДА',
+            'second course': 'ГОРЯЧИЕ БЛЮДА', 'second courses': 'ГОРЯЧИЕ БЛЮДА',
+            'breakfast': 'завтраки', 'breakfasts': 'завтраки',
+            'burger': 'бургеры', 'burgers': 'бургеры',
+            'pasta': 'паста', 'pastas': 'паста',
+            'seafood': 'морепродукты', 'seafoods': 'морепродукты',
+            'vegetarian': 'вегетарианское',
+            'grilled': 'жареное', 'fried': 'жареное',
+            # Русские варианты для нормализации к официальным названиям
+            'горячее': 'ГОРЯЧИЕ БЛЮДА',
+            'горячие': 'ГОРЯЧИЕ БЛЮДА',
+            'горячие блюда': 'ГОРЯЧИЕ БЛЮДА',
+            'горячим': 'ГОРЯЧИЕ БЛЮДА',
+            'горячему': 'ГОРЯЧИЕ БЛЮДА',
+            'основное': 'ГОРЯЧИЕ БЛЮДА',
+            'второе': 'ГОРЯЧИЕ БЛЮДА'
+        }
+
+        # Проверка обоих вариантов маркеров (ENG и RUS)
+        if 'parse_category:' in ai_text.lower() or 'парсе категорию:' in ai_text.lower():
+            match = re.search(r'(?:PARSE_CATEGORY|Парсе категорию):\s*(.+)', ai_text, re.DOTALL | re.IGNORECASE)
             if match:
-                category_name = match.group(1).strip().split('\n')[0].strip()
-                category_name = category_name.lower().strip()
-                # Преобразуем английские названия обратно в русские
-                category_translations = {
-                    'salad': 'салаты',
-                    'salads': 'салаты',
-                    'soup': 'супы',
-                    'soups': 'супы',
-                    'pizza': 'пицца',
-                    'pizzas': 'пицца',
-                    'beer': 'пиво',
-                    'beers': 'пиво',
-                    'wine': 'вино',
-                    'wines': 'вино',
-                    'cocktail': 'коктейли',
-                    'cocktails': 'коктейли',
-                    'dessert': 'десерты',
-                    'desserts': 'десерты',
-                    'coffee': 'кофе',
-                    'coffees': 'кофе',
-                    'tea': 'чай',
-                    'teas': 'чай',
-                    'juice': 'соки',
-                    'juices': 'соки',
-                    'water': 'вода',
-                    'waters': 'вода',
-                    'drink': 'напитки',
-                    'drinks': 'напитки',
-                    'appetizer': 'стартеры и закуски',
-                    'appetizers': 'стартеры и закуски',
-                    'starter': 'стартеры и закуски',
-                    'starters': 'стартеры и закуски',
-                    'hot dish': 'горячие блюда',
-                    'hot dishes': 'горячие блюда',
-                    'main dish': 'горячие блюда',
-                    'main dishes': 'горячие блюда',
-                    'main course': 'горячие блюда',
-                    'main courses': 'горячие блюда',
-                    'second course': 'горячие блюда',
-                    'second courses': 'горячие блюда',
-                    'breakfast': 'завтраки',
-                    'breakfasts': 'завтраки',
-                    'burger': 'бургеры',
-                    'burgers': 'бургеры',
-                    'pasta': 'паста',
-                    'pastas': 'паста',
-                    'seafood': 'морепродукты',
-                    'seafoods': 'морепродукты',
-                    'snack': 'стартеры и закуски',
-                    'snacks': 'стартеры и закуски',
-                    'vegetarian': 'вегетарианское',
-                    'grilled': 'жареное',
-                    'fried': 'жареное'
-                }
-                if category_name in category_translations:
-                    category_name = category_translations[category_name]
-                    logger.info(f"Перевели категорию '{match.group(1).strip()}' в '{category_name}'")
+                raw_cat = match.group(1).strip().split('\n')[0].strip()
+                cat_lower = raw_cat.lower()
+                
+                if cat_lower in category_translations:
+                    category_name = category_translations[cat_lower]
+                    logger.info(f"Перевели категорию '{raw_cat}' в '{category_name}'")
                 else:
-                    # Попытка частичного совпадения для перевода
+                    # Попытка частичного совпадения
+                    category_name = raw_cat
                     for eng, rus in category_translations.items():
-                        if eng in category_name and len(eng) > 3:
+                        if eng in cat_lower and len(eng) > 3:
                              category_name = rus
-                             logger.info(f"Перевели категорию (частично) '{match.group(1).strip()}' в '{category_name}'")
+                             logger.info(f"Перевели категорию (частично) '{raw_cat}' в '{category_name}'")
                              break
                     
-                    logger.info(f"Оставили категорию без перевода (или уже переведена): '{category_name}'")
                 logger.info(f"Парсим категорию: '{category_name}'")
-                category_parsed = True
-        elif 'Парсе категорию:' in ai_text or 'парсе категорию:' in ai_text:
-            # Обрабатываем русский вариант маркера (AI иногда переводит)
-            match = re.search(r'[Пп]арсе категорию:\s*(.+)', ai_text, re.DOTALL)
-            if match:
-                category_name = match.group(1).strip().split('\n')[0].strip()
-                category_name = category_name.lower().strip()
-                logger.info(f"Парсим категорию (русский маркер): '{category_name}'")
                 category_parsed = True
                     
         # Также проверяем на кастомные маркеры AI
