@@ -429,3 +429,6 @@ class PrestoAPI:
                 'change_percent': 0.0,
                 'is_significant': False
             }
+
+# Создаем глобальный экземпляр API
+presto_api = PrestoAPI()
