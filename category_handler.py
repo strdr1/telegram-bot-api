@@ -134,19 +134,15 @@ def find_dishes_by_name(raw_search: str, limit: int = 20) -> list:
         
         # Простой стемминг для русского языка
         # Убираем окончания падежей и множественного числа
+        endings = ['ами', 'ями', 'ов', 'ев', 'ей', 'ом', 'ем', 'ах', 'ях', 'ую', 'юю', 'ая', 'яя', 'ое', 'ее', 'ый', 'ий', 'ые', 'ие', 'ой', 'ей', 'ок', 'а', 'я', 'о', 'е', 'ы', 'и', 'у', 'ю']
+        # Сортируем по длине (сначала длинные)
+        endings.sort(key=len, reverse=True)
+        
         if len(k) > 4:
-            if k.endswith('ами'): k = k[:-3]
-            elif k.endswith('ями'): k = k[:-3]
-            elif k.endswith('ов'): k = k[:-2]
-            elif k.endswith('ев'): k = k[:-2]
-            elif k.endswith('ей'): k = k[:-2]
-            elif k.endswith('и'): k = k[:-1]
-            elif k.endswith('ы'): k = k[:-1]
-            elif k.endswith('а'): k = k[:-1]
-            elif k.endswith('я'): k = k[:-1]
-            elif k.endswith('е'): k = k[:-1]
-            elif k.endswith('у'): k = k[:-1]
-            elif k.endswith('ю'): k = k[:-1]
+            for end in endings:
+                if k.endswith(end):
+                    k = k[:-len(end)]
+                    break
         
         search_keywords.append(k)
 
