@@ -34,6 +34,51 @@ def is_category_blocked(category_name: str) -> bool:
             return True
     return False
 
+def check_category_match(text: str) -> str | None:
+    """
+    Проверяет, соответствует ли текст названию одной из категорий меню.
+    Возвращает название категории для поиска или None.
+    Используется для прямого перехвата запросов (Autoparser).
+    """
+    text = text.lower().strip()
+    
+    # Расширенный список префиксов
+    prefixes = [
+        'покажи', 'хочу', 'а', 'какие', 'есть', 'меню', 'список', 
+        'что по', 'насчет', 'как насчет', 'дай', 'мне', 'можно', 'буду'
+    ]
+    
+    # Повторяем очистку префиксов дважды, чтобы убрать комбинации типа "а покажи", "что по"
+    for _ in range(2):
+        for p in prefixes:
+            if text.startswith(p + ' '):
+                text = text[len(p):].strip()
+    
+    # Очистка от знаков препинания
+    text = text.replace('?', '').replace('.', '').replace('!', '').strip()
+
+    # Специфические перехваты
+    if text in ['салат', 'салаты', 'салатик', 'салатики', 'по салатам', 'салатам']:
+        return 'салаты'
+    if text in ['суп', 'супы', 'супчик', 'супчики', 'первое', 'по супам', 'супам']:
+        return 'супы'
+    if text in ['горячее', 'горячие', 'второе', 'основное', 'горячие блюда', 'основные блюда', 'по горячему', 'по горячим', 'горячему', 'горячим']:
+        return 'горячие блюда'
+    if text in ['пицца', 'пиццы', 'пиццу', 'по пицце', 'по пиццам', 'пицце', 'пиццам']:
+        return 'пицца'
+    if text in ['завтрак', 'завтраки', 'на завтрак', 'по завтракам', 'завтраков', 'завтракам']:
+        return 'завтраки'
+    if text in ['паста', 'пасты', 'макароны', 'по пасте', 'пасте']:
+        return 'паста'
+    if text in ['десерт', 'десерты', 'сладкое', 'по десертам', 'десертам']:
+        return 'десерты'
+    if text in ['напиток', 'напитки', 'попить', 'по напиткам', 'напиткам']:
+        return 'напитки'
+    if text in ['стартеры', 'закуски', 'стартер', 'закуска', 'по закускам', 'закускам']:
+        return 'стартеры и закуски'
+    
+    return None
+
 def _to_float(val):
     try:
         return float(str(val).replace(',', '.'))
@@ -382,6 +427,8 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                     is_hot_search = any(root in search_name for root in ['горяч', 'основн', 'втор'])
                     # Проверяем, является ли запрос поиском салатов
                     is_salad_search = 'салат' in search_name
+                    # Проверяем, является ли запрос поиском напитков
+                    is_drink_search = any(root in search_name for root in ['напит', 'лимонад', 'сок', 'вод', 'коктейл'])
 
                     if is_hot_search:
                         # Ищем совпадение с корнями слов в названии категории
@@ -391,6 +438,12 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                     elif is_salad_search:
                         # Для салатов ищем корень "салат"
                         if 'салат' in cat_name or 'салат' in cat_display_name:
+                             is_match = True
+                    elif is_drink_search:
+                        # Для напитков ищем совпадение с любым типом напитков
+                        drink_roots = ['напит', 'лимонад', 'сок', 'вод', 'коктейл', 'пиво', 'вин', 'чай', 'кофе']
+                        if any(root in cat_name for root in drink_roots) or \
+                           any(root in cat_display_name for root in drink_roots):
                              is_match = True
                     else:
                         # Проверяем точное совпадение или вхождение

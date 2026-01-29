@@ -2624,7 +2624,7 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
     # Если пользователь в режиме чата с оператором — пересылаем сообщение админам
     try:
         if is_operator_chat(user.id):
-
+            # ... (existing operator logic) ...
             from .utils import get_assigned_operator
             assigned = get_assigned_operator(user.id)
             if assigned:
@@ -2666,6 +2666,36 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
     except Exception as e:
         logger.debug(f"Ошибка в обработчике операторского чата: {e}")
 
+
+    # 🚀 AUTOPARSER: Прямой перехват категорий перед AI
+    # ОТКЛЮЧЕНО ПО ТРЕБОВАНИЮ: "Нет, всё должен вызывать ИИ! Только так!"
+    # Если нужно будет вернуть, раскомментируйте блок ниже.
+    
+    # from category_handler import check_category_match, handle_show_category_brief
+    
+    # # Проверяем на явный запрос категории
+    # direct_category = check_category_match(message.text)
+    
+    # # Исключаем, если это часть сложного предложения (более 3-4 слов), кроме "покажи мне пожалуйста салаты"
+    # is_simple_query = len(message.text.split()) <= 4
+    
+    # if direct_category and is_simple_query:
+    #     logger.info(f"🚀 Autoparser перехватил категорию: '{direct_category}' из запроса '{message.text}'")
+        
+    #     # Отправляем подтверждение (опционально, можно сразу список)
+    #     # await safe_send_message(message.bot, user.id, f"🔎 Открываю раздел {direct_category}...")
+        
+    #     # Вызываем показ категории
+    #     # await handle_show_category_brief(direct_category, user.id, message.bot)
+        
+    #     # Сохраняем в историю чата
+    #     try:
+    #         chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
+    #         database.save_chat_message(chat_id, 'bot', f'Autoparser показал категорию: {direct_category}')
+    #     except Exception:
+    #         pass
+            
+    #     return
 
 
     # Если ничего не найдено - используем AI
