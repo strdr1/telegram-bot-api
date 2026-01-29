@@ -2200,12 +2200,12 @@ def get_or_create_chat(user_id: int, user_name: str = None) -> int:
                     VALUES (?, ?, 'active')
                     ''', (user_id, user_name or f'User {user_id}'))
 
-                    chat_id = cursor.lastrowid
-                    return chat_id
+            chat_id = cursor.lastrowid
+            return chat_id
 
-            except Exception as e:
-                logger.error(f"Ошибка создания/получения чата для {user_id}: {e}")
-                return 0
+    except Exception as e:
+        logger.error(f"Ошибка создания/получения чата для {user_id}: {e}")
+        return 0
 
 def save_menu_snapshot(menu_data_json: str, items_count: int, change_percent: float, is_significant: bool) -> bool:
     """Сохранение снимка меню в БД"""
