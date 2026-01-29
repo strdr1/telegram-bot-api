@@ -871,8 +871,7 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                 virtual_items = []
 
             if virtual_items:
-                # Нашли блюда, показываем КРАТКИЙ СПИСОК (без фото).
-                # Даже если результат один — карточку блюда НЕ показываем автоматически.
+                # Нашли блюда. Если результат один - покажем карточку, иначе - список.
                 category_title = category_name.capitalize()
                 
                 # Убираем дубликаты по ID блюда (find_dishes_by_name уже возвращает уникальные, но на всякий случай)
@@ -886,6 +885,26 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                 limit = 20
                 items_list = list(unique_items.values())
                 
+                # Если найдено ровно одно блюдо - показываем его карточку сразу
+                # Это улучшает UX для точных поисковых запросов
+                if len(items_list) == 1:
+                    item = items_list[0]
+                    try:
+                        from handlers.handlers_delivery import send_dish_photo
+                        
+                        # Если есть вступительное сообщение, отправляем его отдельно
+                        if intro_message:
+                            await safe_send_message(bot, user_id, intro_message, parse_mode="HTML")
+                        
+                        # Отправляем карточку блюда
+                        await send_dish_photo(user_id, item, item.get('menu_id'), item.get('category_id'), bot)
+                        
+                        logger.info(f"Автоматически показана карточка блюда: {item['name']}")
+                        return f"Показана карточка блюда: {item['name']}"
+                    except Exception as e:
+                        logger.error(f"Не удалось отправить карточку блюда автоматически: {e}")
+                        # Если ошибка, продолжаем выполнение и показываем список
+
                 text = ""
                 if intro_message:
                     text += f"{intro_message}\n\n"
