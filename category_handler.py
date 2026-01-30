@@ -76,6 +76,8 @@ def check_category_match(text: str) -> str | None:
         return 'напитки'
     if text in ['стартеры', 'закуски', 'стартер', 'закуска', 'по закускам', 'закускам']:
         return 'стартеры и закуски'
+    if text in ['вино', 'вина', 'винчик', 'по вину', 'по винам', 'винная карта', 'алкоголь', 'красное', 'белое', 'игристое', 'розовое']:
+        return 'винная карта'
     
     return None
 
@@ -424,6 +426,9 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                     # Проверяем, является ли запрос поиском салатов
                     is_salad_search = 'салат' in search_name
                     # Проверяем, является ли запрос поиском напитков
+                    is_generic_drink = any(root in search_name for root in ['напит', 'бар', 'попить'])
+                    is_wine_search = any(root in search_name for root in ['вин', 'шампан', 'игрист'])
+                    is_beer_search = any(root in search_name for root in ['пив', 'пенн'])
                     is_drink_search = any(root in search_name for root in ['напит', 'лимонад', 'сок', 'вод', 'коктейл', 'пив', 'вин', 'чай', 'кофе', 'алко'])
 
                     if is_hot_search:
@@ -435,11 +440,29 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                         # Для салатов ищем корень "салат"
                         if 'салат' in cat_name or 'салат' in cat_display_name:
                              is_match = True
+                    elif is_generic_drink:
+                         # Если это ОБЩИЙ запрос (напитки, бар) - показываем все напитки
+                         drink_roots = ['напит', 'лимонад', 'сок', 'вод', 'коктейл', 'пиво', 'вин', 'чай', 'кофе']
+                         if any(root in cat_name for root in drink_roots) or \
+                            any(root in cat_display_name for root in drink_roots):
+                              is_match = True
+                    elif is_wine_search:
+                         # Если ищем ВИНО - строго фильтруем и ищем подкатегории (красное, белое и т.д.)
+                         wine_roots = ['вин', 'белое', 'красное', 'розовое', 'игрист', 'шампан', 'бокал', 'бутылк', 'брют', 'сухое', 'полусладкое']
+                         if any(root in cat_name for root in wine_roots) or \
+                            any(root in cat_display_name for root in wine_roots):
+                              is_match = True
+                         # Исключаем явные не-винные категории, если они случайно попали
+                         if any(x in cat_name for x in ['лимонад', 'коктейл', 'сок', 'вод', 'чай', 'кофе', 'пиво']):
+                              if not any(x in cat_name for x in ['вин']):
+                                   is_match = False
+                    elif is_beer_search:
+                         # Если ищем ПИВО
+                         if 'пив' in cat_name or 'пив' in cat_display_name or 'пенн' in cat_name:
+                              is_match = True
                     elif is_drink_search:
-                        # Для напитков ищем совпадение с любым типом напитков
-                        drink_roots = ['напит', 'лимонад', 'сок', 'вод', 'коктейл', 'пиво', 'вин', 'чай', 'кофе']
-                        if any(root in cat_name for root in drink_roots) or \
-                           any(root in cat_display_name for root in drink_roots):
+                        # Для остальных конкретных напитков - ищем совпадение по запросу
+                        if search_name in cat_name or search_name in cat_display_name:
                              is_match = True
                     else:
                         # Проверяем точное совпадение или вхождение
@@ -736,6 +759,9 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                 # Проверяем, является ли запрос поиском салатов
                 is_salad_search = 'салат' in search_name
                 # Проверяем, является ли запрос поиском напитков
+                is_generic_drink = any(root in search_name for root in ['напит', 'бар', 'попить'])
+                is_wine_search = any(root in search_name for root in ['вин', 'шампан', 'игрист'])
+                is_beer_search = any(root in search_name for root in ['пив', 'пенн'])
                 is_drink_search = any(root in search_name for root in ['напит', 'лимонад', 'сок', 'вод', 'коктейл', 'пив', 'вин', 'чай', 'кофе', 'алко'])
 
                 if is_hot_search:
@@ -747,11 +773,29 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                     # Для салатов ищем корень "салат"
                     if 'салат' in cat_name or 'салат' in cat_display_name:
                          is_match = True
+                elif is_generic_drink:
+                     # Если это ОБЩИЙ запрос (напитки, бар) - показываем все напитки
+                     drink_roots = ['напит', 'лимонад', 'сок', 'вод', 'коктейл', 'пиво', 'вин', 'чай', 'кофе']
+                     if any(root in cat_name for root in drink_roots) or \
+                        any(root in cat_display_name for root in drink_roots):
+                          is_match = True
+                elif is_wine_search:
+                     # Если ищем ВИНО - строго фильтруем и ищем подкатегории (красное, белое и т.д.)
+                     wine_roots = ['вин', 'белое', 'красное', 'розовое', 'игрист', 'шампан', 'бокал', 'бутылк', 'брют', 'сухое', 'полусладкое']
+                     if any(root in cat_name for root in wine_roots) or \
+                        any(root in cat_display_name for root in wine_roots):
+                          is_match = True
+                     # Исключаем явные не-винные категории, если они случайно попали
+                     if any(x in cat_name for x in ['лимонад', 'коктейл', 'сок', 'вод', 'чай', 'кофе', 'пиво']):
+                          if not any(x in cat_name for x in ['вин']):
+                               is_match = False
+                elif is_beer_search:
+                     # Если ищем ПИВО
+                     if 'пив' in cat_name or 'пив' in cat_display_name or 'пенн' in cat_name:
+                          is_match = True
                 elif is_drink_search:
-                    # Для напитков ищем совпадение с любым типом напитков
-                    drink_roots = ['напит', 'лимонад', 'сок', 'вод', 'коктейл', 'пив', 'вин', 'чай', 'кофе', 'алко']
-                    if any(root in cat_name for root in drink_roots) or \
-                       any(root in cat_display_name for root in drink_roots):
+                    # Для остальных конкретных напитков - ищем совпадение по запросу
+                    if search_name in cat_name or search_name in cat_display_name:
                          is_match = True
                 else:
                     # Проверяем точное совпадение или вхождение
