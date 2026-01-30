@@ -1223,14 +1223,16 @@ class PrestoAPI:
             # Fallback на известные меню
             price_lists = [{'id': menu_id, 'name': menu_name} for menu_id, menu_name in self.menus.items()]
 
-        # ФИЛЬТРУЕМ ТОЛЬКО НУЖНЫЕ МЕНЮ ДОСТАВКИ
-        delivery_menu_ids = {90, 92, 141}
+        # ФИЛЬТРУЕМ ТОЛЬКО НУЖНЫЕ МЕНЮ ДОСТАВКИ И БАРА
+        # 90: Завтраки, 92: Основное, 141: Сыр
+        # 32: Алкоголь, 29: Бар
+        target_menu_ids = {90, 92, 141, 32, 29}
 
         # Создаем словарь priceLists по ID для быстрого поиска
         price_lists_dict = {int(pl['id']): pl for pl in price_lists}
 
-        # Загружаем меню для каждого ID доставки, если он есть в прайс-листах
-        for menu_id in delivery_menu_ids:
+        # Загружаем меню для каждого ID, если он есть в прайс-листах
+        for menu_id in target_menu_ids:
             if menu_id not in price_lists_dict:
                 logger.info(f"⏭️ Пропускаем меню {menu_id} (не найден в прайс-листах)")
                 continue
