@@ -447,11 +447,37 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                             any(root in cat_display_name for root in drink_roots):
                               is_match = True
                     elif is_wine_search:
-                         # Если ищем ВИНО - строго фильтруем и ищем подкатегории (красное, белое и т.д.)
+                         # Если ищем ВИНО - строго фильтруем
                          wine_roots = ['вин', 'белое', 'красное', 'розовое', 'игрист', 'шампан', 'бокал', 'бутылк', 'брют', 'сухое', 'полусладкое']
-                         if any(root in cat_name for root in wine_roots) or \
-                            any(root in cat_display_name for root in wine_roots):
-                              is_match = True
+                         
+                         # 1. Сначала проверяем строгие совпадения для конкретных типов (белое, красное, игристое)
+                         # Если запрос содержит конкретный тип, мы должны показывать ТОЛЬКО его
+                         is_specific_wine = False
+                         
+                         if any(root in search_name for root in ['белое', 'бел']):
+                              is_specific_wine = True
+                              if 'белое' in cat_name or 'белое' in cat_display_name:
+                                   is_match = True
+                         elif any(root in search_name for root in ['красное', 'красн']):
+                              is_specific_wine = True
+                              if 'красное' in cat_name or 'красное' in cat_display_name:
+                                   is_match = True
+                         elif any(root in search_name for root in ['розовое', 'розов']):
+                              is_specific_wine = True
+                              if 'розовое' in cat_name or 'розовое' in cat_display_name:
+                                   is_match = True
+                         elif any(root in search_name for root in ['игрист', 'шампан', 'брют']):
+                              is_specific_wine = True
+                              if any(x in cat_name for x in ['игрист', 'шампан', 'брют']) or \
+                                 any(x in cat_display_name for x in ['игрист', 'шампан', 'брют']):
+                                   is_match = True
+                                   
+                         # 2. Если это не специфический поиск (просто "вино"), показываем всё винное
+                         if not is_specific_wine:
+                              if any(root in cat_name for root in wine_roots) or \
+                                 any(root in cat_display_name for root in wine_roots):
+                                   is_match = True
+
                          # Исключаем явные не-винные категории, если они случайно попали
                          if any(x in cat_name for x in ['лимонад', 'коктейл', 'сок', 'вод', 'чай', 'кофе', 'пиво']):
                               if not any(x in cat_name for x in ['вин']):
@@ -780,11 +806,37 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                         any(root in cat_display_name for root in drink_roots):
                           is_match = True
                 elif is_wine_search:
-                     # Если ищем ВИНО - строго фильтруем и ищем подкатегории (красное, белое и т.д.)
+                     # Если ищем ВИНО - строго фильтруем
                      wine_roots = ['вин', 'белое', 'красное', 'розовое', 'игрист', 'шампан', 'бокал', 'бутылк', 'брют', 'сухое', 'полусладкое']
-                     if any(root in cat_name for root in wine_roots) or \
-                        any(root in cat_display_name for root in wine_roots):
-                          is_match = True
+                     
+                     # 1. Сначала проверяем строгие совпадения для конкретных типов (белое, красное, игристое)
+                     # Если запрос содержит конкретный тип, мы должны показывать ТОЛЬКО его
+                     is_specific_wine = False
+                     
+                     if any(root in search_name for root in ['белое', 'бел']):
+                          is_specific_wine = True
+                          if 'белое' in cat_name or 'белое' in cat_display_name:
+                               is_match = True
+                     elif any(root in search_name for root in ['красное', 'красн']):
+                          is_specific_wine = True
+                          if 'красное' in cat_name or 'красное' in cat_display_name:
+                               is_match = True
+                     elif any(root in search_name for root in ['розовое', 'розов']):
+                          is_specific_wine = True
+                          if 'розовое' in cat_name or 'розовое' in cat_display_name:
+                               is_match = True
+                     elif any(root in search_name for root in ['игрист', 'шампан', 'брют']):
+                          is_specific_wine = True
+                          if any(x in cat_name for x in ['игрист', 'шампан', 'брют']) or \
+                             any(x in cat_display_name for x in ['игрист', 'шампан', 'брют']):
+                               is_match = True
+                               
+                     # 2. Если это не специфический поиск (просто "вино"), показываем всё винное
+                     if not is_specific_wine:
+                          if any(root in cat_name for root in wine_roots) or \
+                             any(root in cat_display_name for root in wine_roots):
+                               is_match = True
+
                      # Исключаем явные не-винные категории, если они случайно попали
                      if any(x in cat_name for x in ['лимонад', 'коктейл', 'сок', 'вод', 'чай', 'кофе', 'пиво']):
                           if not any(x in cat_name for x in ['вин']):
