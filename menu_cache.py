@@ -39,19 +39,6 @@ class MenuCache:
         os.makedirs(os.path.dirname(self.cache_file), exist_ok=True)
         os.makedirs(self.images_dir, exist_ok=True)
 
-        # ⚠️ УДАЛЯЕМ СТАРЫЕ КЭШИ ПРИ ЗАПУСКЕ (ПО ТРЕБОВАНИЮ)
-        # Это гарантирует, что мы не загрузим устаревшие данные
-        try:
-            if os.path.exists(self.cache_file):
-                os.remove(self.cache_file)
-                logger.info(f"🗑️ Удален старый кэш доставки: {self.cache_file}")
-            
-            if os.path.exists(self.all_menus_cache_file):
-                os.remove(self.all_menus_cache_file)
-                logger.info(f"🗑️ Удален старый общий кэш: {self.all_menus_cache_file}")
-        except Exception as e:
-            logger.error(f"❌ Ошибка удаления старых кэшей: {e}")
-
         # Загружаем точку продаж из БД если есть
         self._load_point_id_from_db()
 
@@ -212,6 +199,49 @@ class MenuCache:
         except Exception as e:
             logger.error(f"❌ Ошибка сохранения кэша всех меню: {e}")
             return False
+
+    def _compare_and_save_snapshot(self, new_menus: Dict):
+        """Сравнение с предыдущим снимком и сохранение нового"""
+        try:
+            # Получаем последний снимок
+            last_snapshot = database.get_last_menu_snapshot()
+            
+            current_items_count = sum(
+                sum(len(cat.get('items', [])) for cat in m.get('categories', {}).values())
+                for m in new_menus.values()
+            )
+            
+            change_percent = 0.0
+            is_significant = False
+            
+            if last_snapshot:
+                last_items_count = last_snapshot.get('items_count', 0)
+                if last_items_count > 0:
+                    diff = abs(current_items_count - last_items_count)
+                    change_percent = (diff / last_items_count) * 100
+                
+                # Считаем значительным, если изменение > 5%
+                is_significant = change_percent > 5.0
+            else:
+                # Первый снимок - всегда значительный
+                is_significant = True
+                change_percent = 100.0
+
+            # Сериализуем
+            current_menu_json = json.dumps(new_menus, ensure_ascii=False)
+            
+            # Сохраняем
+            database.save_menu_snapshot(
+                current_menu_json,
+                current_items_count,
+                change_percent,
+                is_significant
+            )
+            
+            logger.info(f"📊 Снимок меню сохранен: {current_items_count} позиций, изм. {change_percent:.2f}%")
+            
+        except Exception as e:
+            logger.error(f"❌ Ошибка сохранения снимка меню: {e}")
     
     async def load_all_menus(self, force_update: bool = False) -> Dict:
         """

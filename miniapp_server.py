@@ -210,7 +210,8 @@ def list_files():
         if folder not in allowed_dirs:
             return jsonify({'error': 'Access denied'}), 403
         
-        base_path = f'/opt/telegram-bot/{folder}'
+        # Use absolute path relative to current working directory
+        base_path = os.path.join(os.getcwd(), folder)
         if not os.path.exists(base_path):
             return jsonify({'files': [], 'folders': []})
         
@@ -304,7 +305,7 @@ def upload_file():
         filename = f"{int(time.time())}_{filename}"
         
         # Create directory if not exists
-        upload_dir = f'/opt/telegram-bot/{folder}'
+        upload_dir = os.path.join(os.getcwd(), folder)
         os.makedirs(upload_dir, exist_ok=True)
         
         file_path = os.path.join(upload_dir, filename)
@@ -375,7 +376,7 @@ def send_file_to_chat():
             logger.error(f"Invalid filename: {filename}")
             return jsonify({'error': 'Invalid filename'}), 400
         
-        file_path = f'/opt/telegram-bot/{folder}/{filename}'
+        file_path = os.path.join(os.getcwd(), folder, filename)
         logger.info(f"File path: {file_path}")
         
         if not os.path.exists(file_path) or not os.path.isfile(file_path):

@@ -21,6 +21,7 @@ async def auto_update_menu():
         from menu_cache import menu_cache
         import database
         from presto_api import PrestoAPI
+        from debug_context import generate_context
 
         # 1. Загружаем последнее сохраненное состояние (snapshot)
         last_snapshot = database.get_last_menu_snapshot()
@@ -54,6 +55,10 @@ async def auto_update_menu():
                 comparison['change_percent'], 
                 is_significant
             )
+            
+            # 6. Обновляем контекст AI
+            print("🧠 Обновляю контекст для AI...")
+            generate_context()
 
             success_message = (
                 f"✅ Меню успешно обновлено автоматически!\n\n"

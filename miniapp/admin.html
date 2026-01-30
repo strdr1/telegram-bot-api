@@ -1441,7 +1441,7 @@
     }
 
     // Compress image helper
-    async function compressImage(file, maxWidth = 1280, quality = 0.7) {
+    async function compressImage(file, maxWidth = 1024, quality = 0.6) {
         if (!file.type.startsWith('image/')) return file;
         
         return new Promise((resolve) => {
