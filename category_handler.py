@@ -711,9 +711,10 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                 
         # 2. Добавляем остальные меню из общего кэша, ТОЛЬКО если не нашли меню доставки
         if not menus_to_process and menu_cache.all_menus_cache:
-            delivery_ids_set = {90, 92, 141}
+            # Добавляем также барные меню (29, 32) для подробного просмотра
+            target_ids_set = {90, 92, 141, 29, 32}
             for m_id, m_data in menu_cache.all_menus_cache.items():
-                if str(m_id) not in processed_ids and int(m_id) in delivery_ids_set:
+                if str(m_id) not in processed_ids and int(m_id) in target_ids_set:
                     menus_to_process.append((m_id, m_data))
 
         for menu_id, menu in menus_to_process:
@@ -726,11 +727,36 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                     continue
 
                 cat_display_name = category.get('display_name', cat_name).lower().strip()
-                search_name = category_name.lower().strip()
+                search_name = str(category_name).lower().strip()
 
-                # Проверяем точное совпадение или вхождение
-                is_match = (search_name in cat_name or cat_name in search_name or
-                            search_name in cat_display_name or cat_display_name in search_name)
+                is_match = False
+
+                # Проверяем, является ли запрос поиском горячих блюд
+                is_hot_search = any(root in search_name for root in ['горяч', 'основн', 'втор'])
+                # Проверяем, является ли запрос поиском салатов
+                is_salad_search = 'салат' in search_name
+                # Проверяем, является ли запрос поиском напитков
+                is_drink_search = any(root in search_name for root in ['напит', 'лимонад', 'сок', 'вод', 'коктейл', 'пив', 'вин', 'чай', 'кофе', 'алко'])
+
+                if is_hot_search:
+                    # Ищем совпадение с корнями слов в названии категории
+                    if any(root in cat_name for root in ['горяч', 'основн', 'втор']) or \
+                       any(root in cat_display_name for root in ['горяч', 'основн', 'втор']):
+                        is_match = True
+                elif is_salad_search:
+                    # Для салатов ищем корень "салат"
+                    if 'салат' in cat_name or 'салат' in cat_display_name:
+                         is_match = True
+                elif is_drink_search:
+                    # Для напитков ищем совпадение с любым типом напитков
+                    drink_roots = ['напит', 'лимонад', 'сок', 'вод', 'коктейл', 'пив', 'вин', 'чай', 'кофе', 'алко']
+                    if any(root in cat_name for root in drink_roots) or \
+                       any(root in cat_display_name for root in drink_roots):
+                         is_match = True
+                else:
+                    # Проверяем точное совпадение или вхождение
+                    is_match = (search_name in cat_name or cat_name in search_name or
+                                search_name in cat_display_name or cat_display_name in search_name)
                 
                 # Если нет точного совпадения, пробуем нечеткое
                 if not is_match:
