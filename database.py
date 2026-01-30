@@ -1107,6 +1107,10 @@ def update_setting(key: str, value: str):
         _settings_cache = {}
         _settings_cache_time = 0
 
+def save_setting(key: str, value: str):
+    """Алиас для update_setting (для совместимости)"""
+    return update_setting(key, value)
+
 def delete_setting(key: str) -> bool:
     """Удаление настройки с инвалидацией кэша"""
     global _settings_cache, _settings_cache_time

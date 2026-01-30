@@ -229,23 +229,175 @@
             margin-left: 10px;
         }
 
+        /* НАСТОЯЩИЕ КНОПКИ */
+        button {
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: inherit;
+            transition: all 0.2s;
+            outline: none;
+        }
+
+        button:active {
+            transform: translateY(1px);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
         .back-btn {
             background: none;
-            border: none;
             font-size: 20px;
             color: var(--tg-theme-text-color, #000);
-            cursor: pointer;
             width: 40px;
             height: 40px;
             display: flex;
             align-items: center;
             justify-content: center;
             border-radius: 50%;
-            transition: background 0.2s;
         }
 
         .back-btn:hover {
             background: rgba(0,0,0,0.1);
+        }
+
+        .send-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, white);
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        .send-btn:hover {
+            background: #0077b3;
+        }
+
+        .actions-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--tg-theme-secondary-bg-color, #e9ecef);
+            color: var(--tg-theme-text-color, #000);
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        .actions-btn:hover {
+            background: #dee2e6;
+        }
+
+        /* Основные кнопки */
+        .btn {
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-align: center;
+            min-width: 120px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: none;
+        }
+
+        .btn-sm {
+            padding: 8px 12px;
+            font-size: 13px;
+            min-width: 100px;
+        }
+
+        .btn-lg {
+            padding: 16px 24px;
+            font-size: 16px;
+            min-width: 140px;
+        }
+
+        .btn-primary {
+            background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, white);
+        }
+
+        .btn-primary:hover {
+            background: #0077b3;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .btn-warning:hover {
+            background: #e0a800;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background: #138496;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .btn-light {
+            background: #f8f9fa;
+            color: #212529;
+            border: 1px solid #dee2e6;
+        }
+
+        .btn-light:hover {
+            background: #e2e6ea;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
 
         /* Сообщения */
@@ -338,202 +490,6 @@
             border-color: var(--tg-theme-button-color, #0088cc);
         }
 
-        /* НАСТОЯЩИЕ КНОПКИ */
-        .btn {
-            border: none;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            padding: 14px 16px;
-            text-align: center;
-            user-select: none;
-            -webkit-user-select: none;
-            touch-action: manipulation;
-            position: relative;
-            overflow: hidden;
-            outline: none;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .btn:active {
-            transform: translateY(2px);
-            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-        }
-
-        .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-
-        .btn::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 5px;
-            height: 5px;
-            background: rgba(255, 255, 255, 0.5);
-            opacity: 0;
-            border-radius: 100%;
-            transform: scale(1, 1) translate(-50%);
-            transform-origin: 50% 50%;
-        }
-
-        .btn:focus:not(:active)::after {
-            animation: ripple 1s ease-out;
-        }
-
-        @keyframes ripple {
-            0% {
-                transform: scale(0, 0);
-                opacity: 0.5;
-            }
-            100% {
-                transform: scale(40, 40);
-                opacity: 0;
-            }
-        }
-
-        .btn-primary {
-            background: var(--tg-theme-button-color, #0088cc);
-            color: var(--tg-theme-button-text-color, white);
-        }
-
-        .btn-primary:hover {
-            background: #0077b3;
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
-        }
-
-        .btn-success {
-            background: #28a745;
-            color: white;
-        }
-
-        .btn-success:hover {
-            background: #218838;
-        }
-
-        .btn-warning {
-            background: #ffc107;
-            color: #212529;
-        }
-
-        .btn-warning:hover {
-            background: #e0a800;
-        }
-
-        .btn-danger {
-            background: #dc3545;
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #c82333;
-        }
-
-        .btn-info {
-            background: #17a2b8;
-            color: white;
-        }
-
-        .btn-info:hover {
-            background: #138496;
-        }
-
-        .btn-light {
-            background: #f8f9fa;
-            color: #212529;
-            border: 1px solid #dee2e6;
-        }
-
-        .btn-light:hover {
-            background: #e2e6ea;
-        }
-
-        .btn-sm {
-            padding: 8px 12px;
-            font-size: 13px;
-            border-radius: 10px;
-        }
-
-        .btn-lg {
-            padding: 18px 24px;
-            font-size: 17px;
-            border-radius: 14px;
-        }
-
-        .btn-icon {
-            padding: 12px;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-        }
-
-        .btn-icon .icon {
-            font-size: 24px;
-        }
-
-        .btn-full {
-            width: 100%;
-        }
-
-        .send-btn {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            border: none;
-            background: var(--tg-theme-button-color, #0088cc);
-            color: var(--tg-theme-button-text-color, white);
-            font-size: 20px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            transition: all 0.2s;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        }
-
-        .send-btn:active {
-            transform: scale(0.95);
-        }
-
-        .actions-btn {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            border: none;
-            background: var(--tg-theme-secondary-bg-color, #e9ecef);
-            color: var(--tg-theme-text-color, #000);
-            font-size: 24px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            transition: all 0.2s;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        }
-
-        .actions-btn:active {
-            transform: scale(0.95);
-        }
-
         /* МЕНЮ ДЕЙСТВИЙ */
         .actions-menu {
             position: fixed;
@@ -564,43 +520,89 @@
             border-bottom: 1px solid var(--tg-theme-hint-color, #e0e0e0);
         }
 
-        .action-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
+        /* Кнопки в меню */
+        .menu-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
             margin-bottom: 20px;
         }
 
-        .action-grid .btn {
-            flex-direction: column;
-            height: 100px;
-            padding: 16px 12px;
+        .menu-button {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            text-align: left;
+            height: auto;
+            border: 1px solid rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            width: 100%;
+            background-color: var(--tg-theme-secondary-bg-color, #f5f5f5);
+            color: var(--tg-theme-text-color, #000);
         }
 
-        .action-grid .icon {
-            font-size: 28px;
-            margin-bottom: 8px;
+        .menu-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
 
-        .action-grid .text {
-            font-size: 13px;
+        .menu-button:active {
+            transform: translateY(0);
+            box-shadow: none;
+            background-color: var(--tg-theme-hint-color, #e0e0e0);
+        }
+
+        .menu-button .icon {
+            font-size: 20px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .menu-button .text {
+            font-size: 15px;
             font-weight: 500;
-            line-height: 1.2;
         }
 
-        .status-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
+        /* Кнопки статусов */
+        .status-buttons {
+            display: flex;
+            flex-direction: row;
             gap: 10px;
-            margin-top: 20px;
-            padding-top: 20px;
+            margin-top: 15px;
+            padding-top: 15px;
             border-top: 1px solid var(--tg-theme-hint-color, #e0e0e0);
         }
 
-        .status-grid .btn {
+        .status-button {
+            flex: 1;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 13px;
+            display: flex;
             flex-direction: column;
-            height: 80px;
-            padding: 12px 8px;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            border: 1px solid rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: all 0.2s;
+            height: auto;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+
+        .status-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .status-button:active {
+            transform: translateY(0);
         }
 
         /* История действий */
@@ -723,64 +725,60 @@
             }
 
             .send-btn, .actions-btn {
-                width: 44px;
-                height: 44px;
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
             }
 
-            .action-grid {
-                grid-template-columns: repeat(2, 1fr);
+            .menu-buttons {
+                /* Flex styles inherited from main css */
                 gap: 10px;
             }
 
-            .action-grid .btn {
-                height: 90px;
-                padding: 14px 10px;
+            .menu-button {
+                min-height: 60px;
+                padding: 12px 14px;
             }
 
-            .action-grid .icon {
-                font-size: 24px;
+            .menu-button .icon {
+                font-size: 22px;
             }
 
-            .status-grid {
-                grid-template-columns: repeat(3, 1fr);
+            .status-buttons {
+                /* Flex styles inherited from main css */
             }
 
-            .status-grid .btn {
-                height: 70px;
-                padding: 10px 6px;
-                font-size: 13px;
+            .status-button {
+                min-height: 60px;
+                padding: 10px 4px;
+                font-size: 12px;
             }
         }
 
         @media (max-width: 480px) {
-            .action-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .action-grid .btn {
-                flex-direction: row;
-                height: 60px;
-                justify-content: flex-start;
-                padding: 14px 16px;
-                text-align: left;
-            }
-
-            .action-grid .icon {
-                margin-bottom: 0;
-                margin-right: 12px;
-                font-size: 22px;
-            }
-
-            .status-grid {
-                grid-template-columns: 1fr;
+            .menu-buttons {
                 gap: 8px;
             }
 
-            .status-grid .btn {
-                flex-direction: row;
-                height: 50px;
-                justify-content: flex-start;
-                padding: 12px 16px;
+            .menu-button {
+                min-height: 50px;
+                padding: 10px 12px;
+                font-size: 14px;
+            }
+
+            .menu-button .icon {
+                margin-right: 10px;
+                font-size: 20px;
+            }
+
+            .status-buttons {
+                gap: 8px;
+            }
+
+            .status-button {
+                min-height: 50px;
+                padding: 8px 4px;
+                font-size: 11px;
             }
         }
 
@@ -875,40 +873,40 @@
     <div class="actions-menu" id="actions-menu">
         <div class="actions-header">Действия</div>
         
-        <div class="action-grid">
-            <button class="btn btn-primary" onclick="handleAction('send_photo')">
+        <div class="menu-buttons">
+            <button class="menu-button" onclick="handleAction('send_photo')" style="background: #e3f2fd; color: #1565c0;">
                 <span class="icon">🖼️</span>
                 <span class="text">Отправить фото</span>
             </button>
             
-            <button class="btn btn-info" onclick="handleAction('send_file')">
+            <button class="menu-button" onclick="handleAction('send_file')" style="background: #e8f5e9; color: #2e7d32;">
                 <span class="icon">📄</span>
                 <span class="text">Отправить файл</span>
             </button>
             
-            <button class="btn btn-success" onclick="handleAction('send_menu')">
+            <button class="menu-button" onclick="handleAction('send_menu')" style="background: #fff3e0; color: #ef6c00;">
                 <span class="icon">📋</span>
                 <span class="text">Предложить меню</span>
             </button>
             
-            <button class="btn btn-light" onclick="handleAction('history')">
+            <button class="menu-button" onclick="handleAction('history')" style="background: #f3e5f5; color: #7b1fa2;">
                 <span class="icon">🕒</span>
                 <span class="text">История действий</span>
             </button>
         </div>
 
-        <div class="status-grid">
-            <button class="btn btn-success" onclick="updateStatus('active')">
+        <div class="status-buttons">
+            <button class="status-button" onclick="updateStatus('active')" style="background: #d4edda; color: #155724;">
                 <span class="icon">▶️</span>
-                <span>Возобновить</span>
+                <span>Активировать</span>
             </button>
             
-            <button class="btn btn-warning" onclick="updateStatus('paused')">
+            <button class="status-button" onclick="updateStatus('paused')" style="background: #fff3cd; color: #856404;">
                 <span class="icon">⏸️</span>
                 <span>Пауза</span>
             </button>
             
-            <button class="btn btn-danger" onclick="updateStatus('help_needed')">
+            <button class="status-button" onclick="updateStatus('help_needed')" style="background: #f8d7da; color: #721c24;">
                 <span class="icon">❗</span>
                 <span>Помощь</span>
             </button>
@@ -930,8 +928,9 @@
         </div>
     </div>
 
-    <!-- File input -->
-    <input type="file" id="file-input" class="hidden" accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+    <!-- File inputs -->
+    <input type="file" id="file-input" class="hidden" accept="image/*">
+    <input type="file" id="file-input-doc" class="hidden" accept="*/*">
 </body>
 
 <script>
@@ -940,44 +939,6 @@
     let currentChatId = null;
     let currentMessages = [];
     let previousHelpNeededIds = new Set();
-    let audioCtx = null;
-    let audioEnabled = false;
-
-    // Initialize audio
-    function initAudio() {
-        if (audioCtx) return;
-        try {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            audioCtx.resume().then(() => {
-                audioEnabled = true;
-            }).catch((e) => {
-                console.error('Audio resume failed:', e);
-            });
-        } catch (e) {
-            console.error('Audio init failed:', e);
-        }
-    }
-
-    // Sound notification
-    function playBeep() {
-        if (!audioCtx || !audioEnabled) return;
-        try {
-            const oscillator = audioCtx.createOscillator();
-            const gainNode = audioCtx.createGain();
-
-            oscillator.connect(gainNode);
-            gainNode.connect(audioCtx.destination);
-
-            oscillator.type = 'sine';
-            oscillator.frequency.value = 800;
-            gainNode.gain.value = 0.1;
-
-            oscillator.start();
-            setTimeout(() => oscillator.stop(), 200);
-        } catch (e) {
-            console.error('Audio play failed:', e);
-        }
-    }
 
     // Telegram WebApp
     const tg = window.Telegram?.WebApp;
@@ -1010,9 +971,8 @@
             const currentHelpNeededIds = new Set(chats.filter(c => c.chat_status === 'help_needed').map(c => c.id));
             const hasNew = [...currentHelpNeededIds].some(id => !previousHelpNeededIds.has(id));
             
-            if (hasNew) {
-                playBeep();
-                if (tg) tg.HapticFeedback.notificationOccurred('error');
+            if (hasNew && tg) {
+                tg.HapticFeedback.notificationOccurred('error');
             }
             
             previousHelpNeededIds = currentHelpNeededIds;
@@ -1125,20 +1085,14 @@
                     <div class="chat-title">👤 ${chat.user_name || `ID: ${chat.user_id}`}</div>
                 </div>
                 <button class="actions-btn" onclick="openActionsMenu()">
-                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="1"></circle>
-                        <circle cx="12" cy="5" r="1"></circle>
-                        <circle cx="12" cy="19" r="1"></circle>
-                    </svg>
+                    ⋮
                 </button>
             </div>
             <div class="messages" id="messages"></div>
             <div class="message-input">
                 <input type="text" id="message-text" placeholder="Введите сообщение..." onkeypress="handleKeyPress(event)">
                 <button class="send-btn" onclick="sendMessage()">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
-                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"></path>
-                    </svg>
+                    →
                 </button>
             </div>
         `;
@@ -1252,7 +1206,6 @@
         document.getElementById('overlay').classList.add('active');
         document.body.style.overflow = 'hidden';
         
-        // Add haptic feedback
         if (tg && tg.HapticFeedback) {
             tg.HapticFeedback.selectionChanged();
         }
@@ -1273,8 +1226,10 @@
         
         switch(action) {
             case 'send_photo':
-            case 'send_file':
                 document.getElementById('file-input').click();
+                break;
+            case 'send_file':
+                document.getElementById('file-input-doc').click();
                 break;
             case 'send_menu':
                 await executeCustomCommand('/menu');
@@ -1399,8 +1354,8 @@
 
     // Get action text
     function getActionText(action) {
-        if (action.includes('status_active')) return 'Чат возобновлен';
-        if (action.includes('status_paused')) return 'Чат поставлен на паузу';
+        if (action.includes('status_active')) return 'Чат активирован';
+        if (action.includes('status_paused')) return 'Чат на паузе';
         if (action.includes('status_help')) return 'Запрошена помощь';
         if (action.includes('send_photo')) return 'Отправлено фото';
         if (action.includes('send_file')) return 'Отправлен файл';
@@ -1472,9 +1427,8 @@
         }
     }
 
-    // File upload
-    document.getElementById('file-input').addEventListener('change', async function(e) {
-        const file = e.target.files[0];
+    // Upload file helper
+    async function uploadFile(file) {
         if (!file || !currentChatId) return;
         
         try {
@@ -1502,15 +1456,21 @@
                 tg.HapticFeedback.notificationOccurred('error');
             }
         }
-        
+    }
+
+    // File inputs listeners
+    document.getElementById('file-input').addEventListener('change', async function(e) {
+        await uploadFile(e.target.files[0]);
+        e.target.value = '';
+    });
+
+    document.getElementById('file-input-doc').addEventListener('change', async function(e) {
+        await uploadFile(e.target.files[0]);
         e.target.value = '';
     });
 
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
-        document.addEventListener('click', initAudio, { once: true });
-        document.addEventListener('touchstart', initAudio, { once: true });
-        
         loadChats();
     });
 
