@@ -424,7 +424,7 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                     # Проверяем, является ли запрос поиском салатов
                     is_salad_search = 'салат' in search_name
                     # Проверяем, является ли запрос поиском напитков
-                    is_drink_search = any(root in search_name for root in ['напит', 'лимонад', 'сок', 'вод', 'коктейл'])
+                    is_drink_search = any(root in search_name for root in ['напит', 'лимонад', 'сок', 'вод', 'коктейл', 'пив', 'вин', 'чай', 'кофе', 'алко'])
 
                     if is_hot_search:
                         # Ищем совпадение с корнями слов в названии категории
