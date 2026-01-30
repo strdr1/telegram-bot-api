@@ -874,41 +874,39 @@
         <div class="actions-header">Действия</div>
         
         <div class="menu-buttons">
+            <button class="menu-button" onclick="handleAction('status_active')" style="background: #d4edda; color: #155724;">
+                <span class="icon">✅</span>
+                <span class="text">Активировать</span>
+            </button>
+
+            <button class="menu-button" onclick="handleAction('status_paused')" style="background: #fff3cd; color: #856404;">
+                <span class="icon">⏸️</span>
+                <span class="text">На паузу</span>
+            </button>
+
             <button class="menu-button" onclick="handleAction('send_photo')" style="background: #e3f2fd; color: #1565c0;">
-                <span class="icon">🖼️</span>
+                <span class="icon">�</span>
                 <span class="text">Отправить фото</span>
             </button>
             
             <button class="menu-button" onclick="handleAction('send_file')" style="background: #e8f5e9; color: #2e7d32;">
-                <span class="icon">📄</span>
+                <span class="icon">�</span>
                 <span class="text">Отправить файл</span>
             </button>
             
             <button class="menu-button" onclick="handleAction('send_menu')" style="background: #fff3e0; color: #ef6c00;">
-                <span class="icon">📋</span>
+                <span class="icon">🍽️</span>
                 <span class="text">Предложить меню</span>
             </button>
             
             <button class="menu-button" onclick="handleAction('history')" style="background: #f3e5f5; color: #7b1fa2;">
-                <span class="icon">🕒</span>
+                <span class="icon">📜</span>
                 <span class="text">История действий</span>
             </button>
-        </div>
 
-        <div class="status-buttons">
-            <button class="status-button" onclick="updateStatus('active')" style="background: #d4edda; color: #155724;">
-                <span class="icon">▶️</span>
-                <span>Активировать</span>
-            </button>
-            
-            <button class="status-button" onclick="updateStatus('paused')" style="background: #fff3cd; color: #856404;">
-                <span class="icon">⏸️</span>
-                <span>Пауза</span>
-            </button>
-            
-            <button class="status-button" onclick="updateStatus('help_needed')" style="background: #f8d7da; color: #721c24;">
+            <button class="menu-button" onclick="handleAction('status_help')" style="background: #f8d7da; color: #721c24;">
                 <span class="icon">❗</span>
-                <span>Помощь</span>
+                <span class="text">Помощь</span>
             </button>
         </div>
     </div>
@@ -1236,6 +1234,15 @@
                 break;
             case 'history':
                 toggleHistory();
+                break;
+            case 'status_active':
+                await updateStatus('active');
+                break;
+            case 'status_paused':
+                await updateStatus('paused');
+                break;
+            case 'status_help':
+                await updateStatus('help_needed');
                 break;
         }
     }
