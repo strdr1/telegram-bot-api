@@ -939,6 +939,31 @@ async def menu_food_callback(callback: types.CallbackQuery):
                             parse_mode="HTML",
                             bot=callback.bot)
 
+@router.callback_query(F.data.startswith("ai_category:"))
+async def ai_category_callback(callback: types.CallbackQuery):
+    """Обработчик выбора категории из AI-подсказок (или кнопок подкатегорий)"""
+    await callback.answer()
+    
+    category_name = callback.data.split(":", 1)[1]
+    user_id = callback.from_user.id
+    
+    import category_handler
+    
+    if category_name == "all_wine":
+        await category_handler.handle_show_category_brief(
+            "вино", 
+            user_id, 
+            callback.bot, 
+            intro_message="🍷 Полная винная карта:",
+            force_list=True
+        )
+    else:
+        await category_handler.handle_show_category_brief(
+            category_name, 
+            user_id, 
+            callback.bot
+        )
+
 @router.callback_query(F.data == "confirm_age_18_menu")
 async def confirm_age_18_menu_callback(callback: types.CallbackQuery):
     """Подтверждение возраста для меню"""

@@ -300,11 +300,34 @@ def find_dishes_by_name(raw_search: str, limit: int = 20) -> list:
             
     return list(unique_items.values())[:limit]
 
-async def handle_show_category_brief(category_name: str, user_id: int, bot, intro_message: str = None):
+async def handle_show_category_brief(category_name: str, user_id: int, bot, intro_message: str = None, force_list: bool = False):
     """
     Показывает краткий список категории блюд (только названия и цены)
     """
     try:
+        # 🍷 ВИННАЯ КАРТА: Если запрос "вино" (общий), предлагаем выбор подкатегории
+        # Если force_list=True, то показываем список (для кнопки "Показать всё")
+        is_generic_wine = category_name.lower().strip() in ['вино', 'вина', 'винная карта', 'wine']
+        
+        if is_generic_wine and not force_list:
+            text = (
+                f"{intro_message if intro_message else ''}\n"
+                "🍷 <b>Винная карта</b>\n\n"
+                "У нас большой выбор вин! Пожалуйста, уточните, какое вино вас интересует:"
+            )
+            
+            kb = types.InlineKeyboardMarkup(inline_keyboard=[
+                [types.InlineKeyboardButton(text="🔴 Красное", callback_data="ai_category:красное"),
+                 types.InlineKeyboardButton(text="⚪ Белое", callback_data="ai_category:белое")],
+                [types.InlineKeyboardButton(text="🌸 Розовое", callback_data="ai_category:розовое"),
+                 types.InlineKeyboardButton(text="🍾 Игристое", callback_data="ai_category:игристое")],
+                [types.InlineKeyboardButton(text="📜 Показать все вина списком", callback_data="ai_category:all_wine")]
+            ])
+            
+            await safe_send_message(bot, user_id, text, parse_mode="HTML", reply_markup=kb)
+            logger.info("Показал кнопки выбора вина")
+            return
+
         # Очищаем от эмодзи и лишних символов
         original_name = category_name  # Сохраняем оригинал для логирования
         
