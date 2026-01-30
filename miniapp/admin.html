@@ -505,10 +505,12 @@
             z-index: 1000;
             max-height: 80vh;
             overflow-y: auto;
+            display: none; /* Скрываем по умолчанию */
         }
 
         .actions-menu.active {
             transform: translateY(0);
+            display: block; /* Показываем при активации */
         }
 
         .actions-header {
