@@ -15,9 +15,12 @@ import cache_manager
 from datetime import datetime
 from functools import wraps
 from aiogram import BaseMiddleware
-from aiogram.types import TelegramObject
+from aiogram.types import TelegramObject, BufferedInputFile
 from typing import Callable, Dict, Any, Awaitable
 from contextlib import asynccontextmanager
+import io
+import os
+from PIL import Image
 
 # Функция для очистки номера телефона для tel: ссылки
 def clean_phone_for_link(phone):
@@ -117,8 +120,80 @@ async def safe_send_message(bot, chat_id: int, text: str, **kwargs) -> Optional[
             await asyncio.sleep(config.RETRY_DELAY)
     return None
 
+def resize_photo_if_needed(photo, max_size=5*1024*1024, max_dimension=1920):
+    """
+    Проверяет размер фото и сжимает его, если оно слишком большое.
+    Поддерживает пути к файлам (str), байты (bytes/BytesIO) и BufferedInputFile.
+    """
+    try:
+        image_data = None
+        filename = "photo.jpg"
+
+        # 1. Если это путь к файлу
+        if isinstance(photo, str):
+            if not os.path.exists(photo):
+                return photo # Если это URL или ID файла, возвращаем как есть
+            
+            if os.path.getsize(photo) <= max_size:
+                return photo # Размер в порядке
+            
+            with open(photo, 'rb') as f:
+                image_data = f.read()
+            filename = os.path.basename(photo)
+
+        # 2. Если это байты или BytesIO
+        elif isinstance(photo, (bytes, io.BytesIO)):
+            image_data = photo.getvalue() if isinstance(photo, io.BytesIO) else photo
+            if len(image_data) <= max_size:
+                return photo
+        
+        # 3. Если BufferedInputFile (aiogram)
+        elif isinstance(photo, BufferedInputFile):
+            image_data = photo.data
+            filename = photo.filename or "photo.jpg"
+            if len(image_data) <= max_size:
+                return photo
+        
+        # Если данных для обработки нет, возвращаем оригинал
+        if image_data is None:
+            return photo
+
+        # Сжатие
+        logger.info(f"📸 Сжимаем фото {filename} ({len(image_data) / 1024 / 1024:.2f} MB)...")
+        with Image.open(io.BytesIO(image_data)) as img:
+            # Конвертируем в RGB (убираем прозрачность для JPEG)
+            if img.mode in ('RGBA', 'P'):
+                img = img.convert('RGB')
+            
+            # Ресайз (сохраняем пропорции)
+            if max(img.size) > max_dimension:
+                img.thumbnail((max_dimension, max_dimension), Image.Resampling.LANCZOS)
+            
+            # Сохраняем в буфер
+            output = io.BytesIO()
+            img.save(output, format='JPEG', quality=85, optimize=True)
+            output.seek(0)
+            
+            # Если всё ещё большой - уменьшаем качество
+            if output.getbuffer().nbytes > max_size:
+                output = io.BytesIO()
+                img.save(output, format='JPEG', quality=70, optimize=True)
+                output.seek(0)
+            
+            new_size = output.getbuffer().nbytes
+            logger.info(f"✅ Фото сжато до {new_size / 1024 / 1024:.2f} MB")
+            return BufferedInputFile(output.read(), filename=filename)
+
+    except Exception as e:
+        logger.error(f"⚠️ Ошибка при сжатии фото: {e}")
+        return photo
+
 async def safe_send_photo(bot, chat_id: int, photo, **kwargs) -> Optional[types.Message]:
-    """Безопасная отправка фото с повторными попытками"""
+    """Безопасная отправка фото с повторными попытками и сжатием"""
+    
+    # Сжимаем фото перед отправкой
+    photo = resize_photo_if_needed(photo)
+
     for attempt in range(config.MAX_RETRIES):
         try:
             async with asyncio.timeout(config.MESSAGE_TIMEOUT * 2):  # Больше времени для файлов

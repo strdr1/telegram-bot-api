@@ -159,7 +159,9 @@ def find_dishes_by_name(raw_search: str, limit: int = 20, include_alcohol: bool 
         'мёд': ['мёд', 'мед', 'медов'],
         'мед': ['мёд', 'мед', 'медов'],
         'арахис': ['арахис', 'арахисов', 'арахисовая', 'землян', 'peanut'],
-        # Расширенные синонимы для рыбы
+        # Добавлены fish/nuts
+        'nuts': ['орех', 'арахис', 'фундук', 'миндал', 'кешью', 'фисташ', 'nuts'],
+        'fish': ['рыба', 'рыб', 'лосос', 'судак', 'форел', 'треск', 'семг', 'тунц', 'тунец', 'угор', 'угрь', 'дорад', 'сибас', 'камбал', 'щук'],
         'рыба': ['рыб', 'лосос', 'судак', 'форел', 'треск', 'семг', 'тунц', 'тунец', 'угор', 'угрь', 'дорад', 'сибас', 'камбал', 'щук'],
         'рыб': ['рыб', 'лосос', 'судак', 'форел', 'треск', 'семг', 'тунц', 'тунец', 'угор', 'угрь', 'дорад', 'сибас', 'камбал', 'щук'],
     }
@@ -168,10 +170,14 @@ def find_dishes_by_name(raw_search: str, limit: int = 20, include_alcohol: bool 
     expanded_keywords = [] # Плоский список сохраняем для совместимости (логи, seafood_search)
     
     for k in search_keywords:
+        if not isinstance(k, str): continue # Защита от типов
+        
         group = {k} # Используем set для уникальности
         for base, syns in synonyms_map.items():
             if base in k:
-                group.update(syns)
+                # ЗАЩИТА: Убеждаемся, что добавляем строки, а не списки
+                if isinstance(syns, list):
+                    group.update([s for s in syns if isinstance(s, str)])
         
         group_list = list(group)
         search_groups.append(group_list)
@@ -269,10 +275,14 @@ def find_dishes_by_name(raw_search: str, limit: int = 20, include_alcohol: bool 
                     # но внутри группы достаточно ОДНОГО совпадения (OR)
                     for group in search_groups:
                         group_match = False
-                        for keyword in group:
-                            if keyword in full_text:
-                                group_match = True
-                                break
+                        
+                        # ЗАЩИТА: Проверяем, что group это список
+                        if isinstance(group, list):
+                            for keyword in group:
+                                # ЗАЩИТА: Проверяем типы перед оператором in
+                                if isinstance(keyword, str) and keyword in full_text:
+                                    group_match = True
+                                    break
                         
                         if not group_match:
                             match = False
