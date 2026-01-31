@@ -2547,6 +2547,12 @@ async def get_ai_response(message: str, user_id: int) -> dict:
         if show_category or search_query_result or dish_photo_query:
             logger.info("Tool call detected (SEARCH/CATEGORY/PHOTO), suppressing AI text response.")
             final_text = None
+        elif final_text:
+             # Финальная очистка от "Показываю меню", если парсер НЕ сработал (show_category=False),
+             # но текст все равно содержит эту фразу
+            final_text = final_text.replace("🍽️ Показываю меню категории", "").strip()
+            if not final_text:
+                final_text = None
 
         logger.info(f"Returning call_human: {call_human}")
         try:
