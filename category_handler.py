@@ -969,7 +969,7 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                         'суп': '🍲', 'супы': '🍲', 'супов': '🍲',
                         'десерт': '🍰', 'десерты': '🍰', 'десертов': '🍰',
                         'коктейль': '🍸', 'коктейли': '🍸', 'коктейлей': '🍸',
-                        'пиво': '🍺', 'пива': '🍺',
+                        'пиво': '🍺', 'пива': '🍺', 'пиву': '🍺',
                         'вино': '🍷', 'вин': '🍷', 'вина': '🍷',
                         'салат': '🥗', 'салаты': '🥗', 'салатов': '🥗',
                         'завтрак': '🍳', 'завтраки': '🍳', 'завтраков': '🍳'
@@ -983,9 +983,13 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                             
                     # 🟢 ЗАЩИТА ОТ СПАМА: Если блюд слишком много (> 5), показываем краткий список
                     # ИСКЛЮЧЕНИЕ: Завтраки всегда показываем полностью (по просьбе пользователя)
-                    is_breakfast = any(x in category_name.lower() for x in ['завтрак', 'breakfast'])
+                    # ИСКЛЮЧЕНИЕ 2: "Что-то к пиву" тоже показываем полностью, так как там мало позиций (обычно 5)
+                    # и пользователь просит текст
                     
-                    if len(unique_items) > 5 and not is_breakfast:
+                    is_breakfast = any(x in category_name.lower() for x in ['завтрак', 'breakfast'])
+                    is_beer_snack = any(x in category_name.lower() for x in ['к пиву', 'закуски'])
+                    
+                    if len(unique_items) > 5 and not is_breakfast and not is_beer_snack:
                         logger.info(f"Слишком много блюд в категории '{category_title}' ({len(unique_items)}). Переключаюсь на краткий список.")
                         return await handle_show_category_brief(category_name, user_id, bot, intro_message)
 
@@ -1193,7 +1197,7 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                 await safe_send_message(bot, user_id, text, parse_mode="HTML")
 
     except Exception as e:
-        logger.error(f"Ошибка обработки категории '{category_name}': {e}")
+        logger.error(f"Ошибка обработки категории '{category_name}': {e}", exc_info=True)
         await safe_send_message(bot, user_id, "Произошла ошибка при показе категории. Попробуйте позже.", parse_mode="HTML")
 
 async def handle_show_all_categories(user_id: int, bot):
