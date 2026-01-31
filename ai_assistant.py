@@ -2165,10 +2165,11 @@ async def get_ai_response(message: str, user_id: int) -> dict:
                  clean_text = None
             
             logger.info(f"AI запросил категорию: '{category_name}'. Делегируем в unified handler.")
+            # 🛑 SUPPRESS AI TEXT: Возвращаем None в поле text, чтобы не было дублирования "Показываю меню..."
             return {
                 'type': 'show_category_brief',
                 'show_category_brief': category_name,
-                'text': clean_text if clean_text else ""
+                'text': None
             }
 
 
