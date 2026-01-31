@@ -2768,7 +2768,8 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
             
             # Ищем блюдо
             from category_handler import find_dishes_by_name
-            found_dishes = find_dishes_by_name(dish_query, limit=5)
+            # Разрешаем поиск в алкогольных меню (include_alcohol=True), так как AI уже определил, что пользователь ищет конкретное блюдо
+            found_dishes = find_dishes_by_name(dish_query, limit=5, include_alcohol=True)
             
             if found_dishes:
                 # Если блюдо найдено, отправляем текст AI (если он есть и не пустой)

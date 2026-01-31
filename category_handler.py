@@ -118,10 +118,11 @@ def get_calorie_info(item: dict):
         cp100_int = int(round(cp100_val))
     return total_int, cp100_int
 
-def find_dishes_by_name(raw_search: str, limit: int = 20) -> list:
+def find_dishes_by_name(raw_search: str, limit: int = 20, include_alcohol: bool = False) -> list:
     """
     Ищет блюда по названию (нечеткий поиск).
     Возвращает список найденных блюд (словарей с menu_id и category_id).
+    :param include_alcohol: Если True, поиск будет идти и в алкогольных меню, даже если ключевых слов нет.
     """
     virtual_items = []
     
@@ -223,8 +224,8 @@ def find_dishes_by_name(raw_search: str, limit: int = 20) -> list:
     is_alcohol_search = any(root in raw_search for root in alcohol_roots)
 
     for menu_id, menu in menus_to_process:
-        # 🛑 ИСКЛЮЧАЕМ АЛКОГОЛЬНЫЕ МЕНЮ (ID 29, 32 - Бар), если не ищем алкоголь явно
-        if not is_alcohol_search and str(menu_id) in ['29', '32']:
+        # 🛑 ИСКЛЮЧАЕМ АЛКОГОЛЬНЫЕ МЕНЮ (ID 29, 32 - Бар), если не ищем алкоголь явно И не разрешено принудительно
+        if not include_alcohol and not is_alcohol_search and str(menu_id) in ['29', '32']:
             continue
 
         for cat_id, category in menu.get('categories', {}).items():
@@ -235,7 +236,7 @@ def find_dishes_by_name(raw_search: str, limit: int = 20) -> list:
                 continue
 
             # 🛑 ИСКЛЮЧАЕМ АЛКОГОЛЬНЫЕ КАТЕГОРИИ по названию
-            if not is_alcohol_search and any(root in cat_name for root in alcohol_roots):
+            if not include_alcohol and not is_alcohol_search and any(root in cat_name for root in alcohol_roots):
                 continue
 
             for item in category.get('items', []):
