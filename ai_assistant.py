@@ -2539,6 +2539,14 @@ async def get_ai_response(message: str, user_id: int) -> dict:
         if 'mac_greeting_prefix' in locals() and mac_greeting_prefix:
             final_text = mac_greeting_prefix + ai_text
 
+        # 🛑 ВАЖНОЕ ИЗМЕНЕНИЕ: Если активирован поиск или показ категории, 
+        # ПОДАВЛЯЕМ текстовый ответ ИИ полностью.
+        # Это требование пользователя: "пусть ИИ только парсер вызывает! и не отвечает текстом"
+        # Это предотвращает дублирование (текст от ИИ + результат поиска) и галлюцинации списков.
+        if show_category or search_query_result or dish_photo_query:
+            logger.info("Tool call detected (SEARCH/CATEGORY/PHOTO), suppressing AI text response.")
+            final_text = None
+
         logger.info(f"Returning call_human: {call_human}")
         try:
             if show_category and 'завтрак' in str(show_category).lower():
