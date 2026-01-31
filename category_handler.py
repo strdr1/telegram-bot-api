@@ -281,7 +281,7 @@ def find_dishes_by_name(raw_search: str, limit: int = 20, include_alcohol: bool 
                 if match:
                 # 🛑 FIX: Защита от ложного срабатывания "Паста" -> "Антипасти"
                 # Если искали "паст" (паста), но нашли "антипасти" и не искали "антипаст" специально
-                # Ищем "паст" в плоском списке expanded_keywords (так как search_keywords теперь вложенный список)
+                # Ищем "паст" в плоском списке expanded_keywords
                 if 'паст' in expanded_keywords and 'антипаст' not in expanded_keywords:
                     if 'антипаст' in item_name.lower():
                         logger.info(f"🛑 Filtered out Antipasti for Pasta query: {item_name}")
