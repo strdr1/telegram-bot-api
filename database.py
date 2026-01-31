@@ -395,6 +395,19 @@ def init_database():
         )
         ''')
 
+        # Снимки меню (для отслеживания изменений)
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS menu_snapshots (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            menu_data TEXT,
+            items_count INTEGER,
+            change_percent REAL,
+            is_significant INTEGER,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            version_date TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+        ''')
+
         # Генерации персонажей
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS character_generations (

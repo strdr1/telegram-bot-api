@@ -76,8 +76,10 @@ def check_category_match(text: str) -> str | None:
         return 'напитки'
     if text in ['стартеры', 'закуски', 'стартер', 'закуска', 'по закускам', 'закускам']:
         return 'стартеры и закуски'
-    if text in ['вино', 'вина', 'винчик', 'по вину', 'по винам', 'винная карта', 'алкоголь', 'красное', 'белое', 'игристое', 'розовое']:
+    if text in ['вино', 'вина', 'винчик', 'по вину', 'по винам', 'винная карта', 'алкоголь', 'красное', 'белое', 'игристое', 'розовое', 'пузырки']:
         return 'винная карта'
+    if text in ['пиво', 'пива', 'пенное', 'разливное', 'бутылочное']:
+        return 'пиво'
     
     return None
 
@@ -320,12 +322,32 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                 [types.InlineKeyboardButton(text="🔴 Красное", callback_data="ai_category:красное"),
                  types.InlineKeyboardButton(text="⚪ Белое", callback_data="ai_category:белое")],
                 [types.InlineKeyboardButton(text="🌸 Розовое", callback_data="ai_category:розовое"),
-                 types.InlineKeyboardButton(text="🍾 Игристое", callback_data="ai_category:игристое")],
+                 types.InlineKeyboardButton(text="🍾 Пузырки", callback_data="ai_category:пузырки")],
                 [types.InlineKeyboardButton(text="📜 Показать все вина списком", callback_data="ai_category:all_wine")]
             ])
             
             await safe_send_message(bot, user_id, text, parse_mode="HTML", reply_markup=kb)
             logger.info("Показал кнопки выбора вина")
+            return
+
+        # 🍺 ПИВНАЯ КАРТА: Если запрос "пиво" (общий), предлагаем выбор подкатегории
+        is_generic_beer = category_name.lower().strip() in ['пиво', 'пива', 'пенное', 'beer']
+        
+        if is_generic_beer and not force_list:
+            text = (
+                f"{intro_message if intro_message else ''}\n"
+                "🍺 <b>Пивная карта</b>\n\n"
+                "Какое пиво вы предпочитаете?"
+            )
+            
+            kb = types.InlineKeyboardMarkup(inline_keyboard=[
+                [types.InlineKeyboardButton(text="🍺 Разливное на кранах", callback_data="ai_category:разливное"),
+                 types.InlineKeyboardButton(text="🍾 Бутылочное 500мл", callback_data="ai_category:бутылочное")],
+                [types.InlineKeyboardButton(text="📜 Показать все пиво", callback_data="ai_category:all_beer")]
+            ])
+            
+            await safe_send_message(bot, user_id, text, parse_mode="HTML", reply_markup=kb)
+            logger.info("Показал кнопки выбора пива")
             return
 
         # Очищаем от эмодзи и лишних символов
@@ -471,7 +493,7 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                               is_match = True
                     elif is_wine_search:
                          # Если ищем ВИНО - строго фильтруем
-                         wine_roots = ['вин', 'белое', 'красное', 'розовое', 'игрист', 'шампан', 'бокал', 'бутылк', 'брют', 'сухое', 'полусладкое']
+                         wine_roots = ['вин', 'белое', 'красное', 'розовое', 'игрист', 'шампан', 'бокал', 'бутылк', 'брют', 'сухое', 'полусладкое', 'пузыр']
                          
                          # 1. Сначала проверяем строгие совпадения для конкретных типов (белое, красное, игристое)
                          # Если запрос содержит конкретный тип, мы должны показывать ТОЛЬКО его
@@ -489,10 +511,10 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                               is_specific_wine = True
                               if 'розовое' in cat_name or 'розовое' in cat_display_name:
                                    is_match = True
-                         elif any(root in search_name for root in ['игрист', 'шампан', 'брют']):
+                         elif any(root in search_name for root in ['игрист', 'шампан', 'брют', 'пузыр']):
                               is_specific_wine = True
-                              if any(x in cat_name for x in ['игрист', 'шампан', 'брют']) or \
-                                 any(x in cat_display_name for x in ['игрист', 'шампан', 'брют']):
+                              if any(x in cat_name for x in ['игрист', 'шампан', 'брют', 'пузыр']) or \
+                                 any(x in cat_display_name for x in ['игрист', 'шампан', 'брют', 'пузыр']):
                                    is_match = True
                                    
                          # 2. Если это не специфический поиск (просто "вино"), показываем всё винное
@@ -507,8 +529,20 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                                    is_match = False
                     elif is_beer_search:
                          # Если ищем ПИВО
-                         if 'пив' in cat_name or 'пив' in cat_display_name or 'пенн' in cat_name:
-                              is_match = True
+                         is_specific_beer = False
+                         
+                         if any(root in search_name for root in ['разливн', 'кран']):
+                              is_specific_beer = True
+                              if any(x in cat_name for x in ['разливн', 'кран']):
+                                   is_match = True
+                         elif any(root in search_name for root in ['бутылочн', '500']):
+                              is_specific_beer = True
+                              if any(x in cat_name for x in ['бутылочн', '500']):
+                                   is_match = True
+                                   
+                         if not is_specific_beer:
+                              if 'пив' in cat_name or 'пив' in cat_display_name or 'пенн' in cat_name:
+                                   is_match = True
                     elif is_drink_search:
                         # Для остальных конкретных напитков - ищем совпадение по запросу
                         if search_name in cat_name or search_name in cat_display_name:

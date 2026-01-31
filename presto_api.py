@@ -22,9 +22,11 @@ class PrestoAPI:
         
         # Меню для загрузки
         self.menus = {
-            90: "🍳 ЗАВТРАКИ (до 16:00)",
-            92: "📋 ОСНОВНОЕ МЕНЮ",
-            141: "🧀 СЫРНАЯ КАРТА"
+            167: "🍳 ЗАВТРАКИ (до 16:00)",
+            166: "📋 МЕНЮ КУХНЯ",
+            141: "🧀 СЫРНАЯ КАРТА",
+            159: "🍷 БАРНАЯ КАРТА",
+            162: "🥤 НАПИТКИ"
         }
         
         # Кэш промокодов (id: code)
@@ -985,11 +987,37 @@ class PrestoAPI:
         result = {}
         category_order = []
 
+        # Identify categories that should be included (have items or are parents of included categories)
+        categories_with_items = set()
+        for cat_id, cat_data in structured_categories.items():
+            if cat_data['items']:
+                categories_with_items.add(cat_id)
+        
+        needed_categories = categories_with_items.copy()
+        
+        # Propagate need to parents (keep adding parents of needed categories until stable)
+        while True:
+            added_new = False
+            current_ids = list(needed_categories)
+            for cat_id in current_ids:
+                cat_data = structured_categories.get(cat_id)
+                if cat_data:
+                    parent_id = cat_data.get('parent_id')
+                    # Ensure parent_id is valid and not already added
+                    # Note: parent_id can be None or 0 or other values
+                    if parent_id and parent_id in structured_categories and parent_id not in needed_categories:
+                        needed_categories.add(parent_id)
+                        added_new = True
+            
+            if not added_new:
+                break
+
         for item in all_items:
             if item.get('isParent', False) and item.get('cost') is None:
                 category_id = item.get('hierarchicalId')
                 if category_id and category_id in structured_categories:
-                    if structured_categories[category_id]['items']:
+                    # Include if it has items OR is a parent of a category with items
+                    if category_id in needed_categories:
                         result[category_id] = structured_categories[category_id]
                         category_order.append(category_id)
 
@@ -1005,7 +1033,7 @@ class PrestoAPI:
             if not dish_id:
                 return None
             
-            attributes = item.get('attributes', {})
+            attributes = item.get('attributes') or {}
             
             # Пищевая ценность
             calories = attributes.get('calorie')
@@ -1040,7 +1068,7 @@ class PrestoAPI:
                 price = 0
             
             # Название
-            name = item.get('name', 'Без названия').strip()
+            name = (item.get('name') or 'Без названия').strip()
             
             # Создаем блюдо
             dish = {
@@ -1224,9 +1252,9 @@ class PrestoAPI:
             price_lists = [{'id': menu_id, 'name': menu_name} for menu_id, menu_name in self.menus.items()]
 
         # ФИЛЬТРУЕМ ТОЛЬКО НУЖНЫЕ МЕНЮ ДОСТАВКИ И БАРА
-        # 90: Завтраки, 92: Основное, 141: Сыр
-        # 32: Алкоголь, 29: Бар
-        target_menu_ids = {90, 92, 141, 32, 29}
+        # 167: Завтраки, 166: Кухня, 141: Сыр, 162: Напитки
+        # 159: Бар
+        target_menu_ids = {167, 166, 141, 162, 159}
 
         # Создаем словарь priceLists по ID для быстрого поиска
         price_lists_dict = {int(pl['id']): pl for pl in price_lists}

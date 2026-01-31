@@ -18,9 +18,9 @@ from presto_api import presto_api
 logger = logging.getLogger(__name__)
 
 # 🛑 РАЗРЕШЕННЫЕ ID МЕНЮ (White List)
-# 90: Завтраки, 92: Основное меню, 141: Доставка
-# 32: Алкоголь, 29: Бар
-ALLOWED_MENU_IDS = {90, 92, 141, 32, 29}
+# 167: Завтраки, 166: Кухня, 141: Сыр
+# 159: Бар, 162: Напитки
+ALLOWED_MENU_IDS = {167, 166, 141, 159, 162}
 
 class MenuCache:
     """Класс для кэширования меню"""
@@ -137,8 +137,9 @@ class MenuCache:
     def _save_delivery_cache(self):
         """Сохранение кэша меню доставки в файл"""
         try:
-            # Фильтруем только меню доставки
-            delivery_menu_ids = {90, 92, 141}
+            # Фильтруем только меню доставки (Завтраки, Кухня, Сыр, Напитки)
+            # 167: Завтраки, 166: Кухня, 141: Сыр, 162: Напитки
+            delivery_menu_ids = {167, 166, 141, 162}
             filtered_menus = {}
             
             for k, v in self.all_menus_cache.items():
@@ -170,10 +171,10 @@ class MenuCache:
             return False
 
     def _save_all_menus_cache(self):
-        """Сохранение кэша доп. меню (бар/алкоголь) в файл all_menus_cache.json"""
+        """Сохранение кэша всех разрешенных меню в файл all_menus_cache.json"""
         try:
-            # Фильтруем: оставляем только 32 и 29
-            allowed_ids = {32, 29}
+            # Фильтруем: сохраняем ВСЕ разрешенные меню
+            allowed_ids = ALLOWED_MENU_IDS
             filtered_menus = {}
             
             for k, v in self.all_menus_cache.items():
@@ -193,7 +194,7 @@ class MenuCache:
             with open(self.all_menus_cache_file, 'w', encoding='utf-8') as f:
                 json.dump(cache_data, f, ensure_ascii=False, indent=2)
 
-            logger.info(f"✅ Доп. меню (32, 29) сохранены в кэш ({len(filtered_menus)} меню)")
+            logger.info(f"✅ Все меню ({len(filtered_menus)} шт.) сохранены в общий кэш")
             return True
 
         except Exception as e:
@@ -267,9 +268,9 @@ class MenuCache:
 
                 if menus:
                     # Оставляем только нужные меню в памяти (доставка + бар)
-                    # Доставка: 90, 92, 141
-                    # Бар: 32, 29
-                    allowed_ids = {90, 92, 141, 32, 29}
+                    # Доставка: 167 (Завтраки), 166 (Кухня), 141 (Сыр), 162 (Напитки)
+                    # Бар: 159 (Бар)
+                    allowed_ids = {167, 166, 141, 162, 159}
                     filtered_menus = {}
                     for k, v in menus.items():
                         try:
@@ -313,7 +314,8 @@ class MenuCache:
         current_time = datetime.now(self.moscow_tz).time()
 
         # Меню доступные для доставки/заказа
-        delivery_menu_ids = {90, 92, 141}  # Только эти меню для доставки
+        # 167: Завтраки, 166: Кухня, 141: Сыр, 162: Напитки
+        delivery_menu_ids = {167, 166, 141, 162}
 
         available_menus = []
 
@@ -343,7 +345,7 @@ class MenuCache:
     def get_bar_menus(self) -> List[Dict]:
         """Получает меню бара (алкогольные напитки)"""
         # Меню бара
-        bar_menu_ids = {29, 91, 86, 32}  # ДЕСЕРТЫ БАР, МЕНЮ КУХНЯ, НАПИТКИ 25, МЕНЮ АЛКОГОЛЬ
+        bar_menu_ids = {159, 162}  # БАРНАЯ КАРТА 2026, НАПИТКИ 2026
 
         bar_menus = []
 
@@ -363,7 +365,7 @@ class MenuCache:
                 'name': menu_name,
                 'categories_count': len(menu_data.get('categories', {})),
                 'total_items': sum(len(cat['items']) for cat in menu_data.get('categories', {}).values()),
-                'is_alcoholic': m_id_int == 32  # МЕНЮ АЛКОГОЛЬ
+                'is_alcoholic': m_id_int == 159  # БАРНАЯ КАРТА 2026
             })
 
         return bar_menus
