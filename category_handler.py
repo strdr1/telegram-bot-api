@@ -431,11 +431,15 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
 
         found = False
         
-        # Определяем порядок поиска: сначала меню доставки, потом бар
-        # Меню доставки: 90, 92, 141
-        # Барные меню: 32, 29
+        # Определяем порядок поиска: сначала основные меню, потом бар
+        # 166: Кухня, 167: Завтраки, 141: Сыр, 159: Бар, 162: Напитки
         
-        target_priority_ids = [90, 92, 141, 32, 29]
+        target_priority_ids = [166, 167, 141, 159, 162]
+        # Также добавляем любые другие разрешенные ID, если они не в списке приоритетов
+        for mid in ALLOWED_MENU_IDS:
+            if mid not in target_priority_ids:
+                target_priority_ids.append(mid)
+
         menus_to_process = []
         processed_ids = set()
         

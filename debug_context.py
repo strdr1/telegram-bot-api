@@ -106,12 +106,18 @@ def generate_context():
             items = category.get('items', [])
             items = [item for item in items if float(item.get('price', 0)) > 0]
             
-            for item in items[:5]:
+            # Increased limit to 50 to capture more menu items
+            saved_items_count = 0
+            for item in items[:50]:
                 dish_info = {
                     "name": item['name'],
                     "price": item['price']
                 }
                 category_data["items"].append(dish_info)
+                saved_items_count += 1
+            
+            if category_name == 'ПИЦЦА':
+                 print(f"DEBUG: Saved {saved_items_count} pizzas to context")
             
             menu_section["categories"].append(category_data)
         
@@ -121,8 +127,19 @@ def generate_context():
     for cat in sorted(all_categories):
         print(f"- {cat}")
 
+    cwd = os.getcwd()
+    file_path = os.path.abspath('menu_context.json')
+    print(f"DEBUG: CWD = {cwd}")
+    print(f"DEBUG: Saving to = {file_path}")
+
     with open('menu_context.json', 'w', encoding='utf-8') as f:
         json.dump(menu_knowledge_base, f, ensure_ascii=False, indent=2)
+    
+    if os.path.exists('menu_context.json'):
+        print("DEBUG: File verified as existing after write.")
+    else:
+        print("DEBUG: File NOT found after write!")
+        
     print("\nSaved to menu_context.json")
 
 if __name__ == "__main__":

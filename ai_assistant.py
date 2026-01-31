@@ -1223,8 +1223,8 @@ async def get_ai_response(message: str, user_id: int) -> dict:
                     }
                     category_data["items"].append(dish_info)
                 
-                if len(items) > 5:
-                    category_data["more_items_count"] = len(items) - 5
+                if len(items) > 50:
+                    category_data["more_items_count"] = len(items) - 50
                     
                 menu_section["categories"].append(category_data)
             

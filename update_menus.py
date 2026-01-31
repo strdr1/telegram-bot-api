@@ -66,6 +66,15 @@ async def main():
                 found_keywords.append(f"Разливное found in {m_data.get('name')}: {cat['name']}")
             if 'бутылочн' in cat_name:
                 found_keywords.append(f"Бутылочное found in {m_data.get('name')}: {cat['name']}")
+            if 'игрист' in cat_name:
+                found_keywords.append(f"Игристое found in {m_data.get('name')}: {cat['name']}")
+
+        # Check for specific items
+        for cat_id, cat in m_data.get('categories', {}).items():
+            for item in cat.get('products', []):
+                 item_name = item.get('name', '').lower()
+                 if 'корона' in item_name:
+                     found_keywords.append(f"DISH FOUND: Корона in {m_data.get('name')}: {item['name']}")
 
     if found_keywords:
         logger.info("✅ Found expected keywords in categories:")
