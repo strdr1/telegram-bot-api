@@ -2901,8 +2901,11 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
             search_query = result.get('search_query')
             
             # Проверяем на REST_PHOTO внутри search_query (если AI вдруг засунул его туда) или в тексте
-            if 'REST_PHOTO' in result['text'] or 'REST_PHOTO' in search_query:
-                result['text'] = result['text'].replace('REST_PHOTO', '').strip()
+            # FIX: Добавлена проверка result.get('text'), чтобы избежать TypeError: argument of type 'NoneType' is not iterable
+            text = result.get('text')
+            if (text and 'REST_PHOTO' in text) or 'REST_PHOTO' in search_query:
+                if text:
+                    result['text'] = text.replace('REST_PHOTO', '').strip()
                 try:
                     rest_photo_path = 'rest_photos/REST_PHOTO.webp'
                     if os.path.exists(rest_photo_path):
@@ -2950,8 +2953,10 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
             return
 
         # Проверяем на REST_PHOTO в обычном ответе (без поиска)
-        if 'REST_PHOTO' in result['text']:
-            result['text'] = result['text'].replace('REST_PHOTO', '').strip()
+        # FIX: Добавлена проверка result.get('text')
+        text = result.get('text')
+        if text and 'REST_PHOTO' in text:
+            result['text'] = text.replace('REST_PHOTO', '').strip()
             try:
                 rest_photo_path = 'rest_photos/REST_PHOTO.webp'
                 if os.path.exists(rest_photo_path):
