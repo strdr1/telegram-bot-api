@@ -656,6 +656,10 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                     
                     # Добавляем блюда в список
                     for item in unique_items.values():
+                        # Пропускаем блюда без названия
+                        if not item.get('name') or item.get('name') == 'Без названия':
+                            continue
+                            
                         text += f"• {item['name']} — {item['price']}₽"
                         
                         details = []
@@ -744,6 +748,10 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                 
                 # Добавляем блюда в список
                 for item in unique_items.values():
+                    # Пропускаем блюда без названия
+                    if not item.get('name') or item.get('name') == 'Без названия':
+                        continue
+
                     text += f"• {item['name']} — {item['price']}₽"
                     if item.get('weight'):
                         text += f" (⚖️ {item['weight']}г)"
@@ -988,6 +996,30 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                         logger.warning(f"Категория '{category.get('name')}' (ID {cat_id}) найдена, но пуста. Пропускаем.")
                         found = False
                         continue
+                        
+                    # 🛑 FIX: Populate unique_items for full category view (was causing UnboundLocalError)
+                    unique_items = {}
+                    for item in items:
+                        item_id = item.get('id')
+                        if item_id:
+                            unique_items[item_id] = item
+                        else:
+                            unique_items[item.get('name')] = item
+                    
+                    # 🛑 FIX: Фильтр "Без названия"
+                    # Удаляем блюда без имени из списка
+                    items_to_remove = []
+                    for uid, item in unique_items.items():
+                        if not item.get('name') or item.get('name') == 'Без названия':
+                            items_to_remove.append(uid)
+                    
+                    for uid in items_to_remove:
+                        del unique_items[uid]
+                        
+                    if not unique_items:
+                        logger.warning(f"Категория '{category.get('name')}' содержала только пустые блюда. Пропускаем.")
+                        found = False
+                        continue
 
                     # Отправляем вступительное сообщение
                     category_title = category.get('display_name') or category.get('name', category_name)
@@ -1031,6 +1063,10 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
 
                     # Отправляем каждое блюдо с фото
                     for item in unique_items.values():
+                        # Пропускаем блюда без названия
+                        if not item.get('name') or item.get('name') == 'Без названия':
+                            continue
+                            
                         try:
                             photo_url = item.get('image_url')
                             if photo_url:
