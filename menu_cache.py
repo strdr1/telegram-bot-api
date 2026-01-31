@@ -25,11 +25,10 @@ class MenuCache:
     """Класс для кэширования меню"""
 
     def __init__(self):
-        self.cache_file = config.MENU_CACHE_FILE  # Для меню доставки
-        self.all_menus_cache_file = os.path.join(os.path.dirname(self.cache_file), 'all_menus_cache.json')  # Для всех меню
+        self.cache_file = config.MENU_CACHE_FILE  # Единый файл кэша
         self.images_dir = config.MENU_IMAGES_DIR
         self.all_menus_cache = {}  # Хранит все меню
-        self.delivery_menus_cache = {}  # Хранит только меню доставки
+        self.delivery_menus_cache = {}  # Устарело, но оставим для совместимости (будет ссылаться на all_menus_cache)
         self.last_update = None
         self.cache_ttl = 3600  # 1 час
         self.moscow_tz = pytz.timezone('Europe/Moscow')
@@ -41,15 +40,13 @@ class MenuCache:
         # Загружаем точку продаж из БД если есть
         self._load_point_id_from_db()
 
-        # Загружаем кэши при инициализации (теперь они будут пустыми, но это ок)
+        # Загружаем единый кэш
         self._load_delivery_cache()
-        self._load_all_menus_cache()
         
-        # ВАЖНО: Объединяем кэши в памяти, чтобы all_menus_cache содержал 
-        # и меню доставки (90, 92, 141), и барные меню (32, 29)
-        if self.delivery_menus_cache:
-            self.all_menus_cache.update(self.delivery_menus_cache)
-            logger.info(f"✅ Кэши объединены. Всего меню в памяти: {len(self.all_menus_cache)}")
+        # Для совместимости: delivery_menus_cache = all_menus_cache
+        self.delivery_menus_cache = self.all_menus_cache
+        
+        logger.info(f"✅ Кэш инициализирован. Всего меню в памяти: {len(self.all_menus_cache)}")
     
     def _load_point_id_from_db(self):
         """Загрузка ID точки продаж из базы данных"""
@@ -62,7 +59,7 @@ class MenuCache:
                 logger.warning("⚠️ Неверный формат ID точки в БД")
     
     def _load_delivery_cache(self):
-        """Загрузка кэша меню доставки из файла"""
+        """Загрузка ЕДИНОГО кэша меню из файла menu_cache.json"""
         try:
             if os.path.exists(self.cache_file):
                 with open(self.cache_file, 'r', encoding='utf-8') as f:
@@ -75,7 +72,7 @@ class MenuCache:
 
                     # Проверяем не устарел ли кэш
                     if (datetime.now() - cache_time).total_seconds() < self.cache_ttl:
-                        self.delivery_menus_cache = cache_data.get('all_menus') or {}
+                        self.all_menus_cache = cache_data.get('all_menus') or {}
                         self.last_update = cache_time
 
                         # Также загружаем point_id из кэша если есть
@@ -83,55 +80,22 @@ class MenuCache:
                         if cached_point_id and not presto_api.point_id:
                             presto_api.point_id = cached_point_id
 
-                        logger.info(f"✅ Меню доставки загружены из кэша ({len(self.delivery_menus_cache)} меню)")
+                        logger.info(f"✅ Единый кэш загружен ({len(self.all_menus_cache)} меню)")
                         return True
                     else:
-                        logger.info("🔄 Кэш меню доставки устарел, требуется обновление")
+                        logger.info("🔄 Кэш устарел, требуется обновление")
                 else:
-                    logger.warning("⚠️ Кэш меню доставки без timestamp, требуется обновление")
+                    logger.warning("⚠️ Кэш без timestamp, требуется обновление")
 
             return False
 
         except Exception as e:
-            logger.error(f"❌ Ошибка загрузки кэша меню доставки: {e}")
+            logger.error(f"❌ Ошибка загрузки кэша: {e}")
             return False
 
     def _load_all_menus_cache(self):
-        """Загрузка кэша всех меню из файла"""
-        try:
-            if os.path.exists(self.all_menus_cache_file):
-                with open(self.all_menus_cache_file, 'r', encoding='utf-8') as f:
-                    cache_data = json.load(f)
-
-                # Проверяем время кэша
-                cache_time_str = cache_data.get('timestamp')
-                if cache_time_str:
-                    cache_time = datetime.fromisoformat(cache_time_str)
-
-                    # Проверяем не устарел ли кэш
-                    if (datetime.now() - cache_time).total_seconds() < self.cache_ttl:
-                        loaded_cache = cache_data.get('all_menus') or {}
-                        
-                        # 🛑 ФИЛЬТРАЦИЯ ПРИ ЗАГРУЗКЕ
-                        # Оставляем только разрешенные ID, чтобы исключить мусор
-                        self.all_menus_cache = {}
-                        for k, v in loaded_cache.items():
-                            try:
-                                if int(k) in ALLOWED_MENU_IDS:
-                                    self.all_menus_cache[k] = v
-                            except:
-                                continue
-                                
-                        logger.info(f"✅ Все меню загружены из кэша и отфильтрованы ({len(self.all_menus_cache)} меню)")
-                        return True
-                    else:
-                        logger.info("🔄 Кэш всех меню устарел, требуется обновление")
-
-            return False
-
-        except Exception as e:
-            logger.error(f"❌ Ошибка загрузки кэша всех меню: {e}")
-            return False
+        """Устаревший метод. Больше не используется."""
+        return True
 
     def _save_delivery_cache(self):
         """Сохранение кэша меню в файл (ЕДИНЫЙ ФАЙЛ)"""
@@ -139,8 +103,8 @@ class MenuCache:
             # Сохраняем ВСЕ меню из памяти в menu_cache.json
             # Это включает и доставку, и бар, и все что загружено согласно ALLOWED_MENU_IDS
             
-            # Обновляем кэш в памяти (delivery_menus_cache теперь равен all_menus_cache)
-            self.delivery_menus_cache = self.all_menus_cache.copy()
+            # Для совместимости: delivery_menus_cache = all_menus_cache
+            self.delivery_menus_cache = self.all_menus_cache
 
             cache_data = {
                 'timestamp': self.last_update.isoformat() if self.last_update else datetime.now().isoformat(),
@@ -159,7 +123,7 @@ class MenuCache:
             return False
 
     def _save_all_menus_cache(self):
-        """Устаревший метод, больше не используется. Меню сохраняются в _save_delivery_cache"""
+        """Устаревший метод, больше не используется."""
         return True
 
     def _compare_and_save_snapshot(self, new_menus: Dict):
@@ -241,9 +205,8 @@ class MenuCache:
                     self.all_menus_cache = filtered_menus
                     self.last_update = datetime.now()
                     
-                    # Сохраняем кэши (каждый метод сам возьмет что ему нужно из self.all_menus_cache)
+                    # Сохраняем в единый кэш
                     self._save_delivery_cache()
-                    self._save_all_menus_cache()
                     
                     # 📊 Сохраняем снимок в БД и анализируем изменения
                     self._compare_and_save_snapshot(filtered_menus)
