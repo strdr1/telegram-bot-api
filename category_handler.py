@@ -6,7 +6,7 @@ import logging
 import re
 import random
 from difflib import SequenceMatcher
-from menu_cache import menu_cache
+from menu_cache import menu_cache, ALLOWED_MENU_IDS
 from handlers.utils import safe_send_message
 from aiogram import types
 from aiogram.types import BufferedInputFile
@@ -379,7 +379,8 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                              (lower_name.endswith('завтраки') and len(lower_name.split()) < 3)
 
         if is_generic_breakfast:
-            menu = menu_cache.all_menus_cache.get("90") or menu_cache.all_menus_cache.get(90)
+            # 167 - ID меню завтраков
+            menu = menu_cache.all_menus_cache.get("167") or menu_cache.all_menus_cache.get(167)
             if menu:
                 items = []
                 for category in menu.get('categories', {}).values():
