@@ -546,7 +546,11 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                                    is_match = True
                                    
                          if not is_specific_beer:
-                              if 'пив' in cat_name or 'пив' in cat_display_name or 'пенн' in cat_name:
+                              # Если просто "пиво" - показываем и разливное, и бутылочное (пивное), и категорию "пиво"
+                              # ВАЖНО: "В бутылках" (вода) не должно попадать, поэтому используем 'бутылочн'
+                              beer_indicators = ['пив', 'пенн', 'разливн', 'бутылочн']
+                              if any(ind in cat_name for ind in beer_indicators) or \
+                                 any(ind in cat_display_name for ind in beer_indicators):
                                    is_match = True
                     elif is_drink_search:
                         # Для остальных конкретных напитков - ищем совпадение по запросу
@@ -568,9 +572,19 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                 if is_match:
                     # Получаем все блюда категории
                     items = category.get('items', [])
-                    if not items:
-                        await safe_send_message(bot, user_id, f"В категории '{category.get('name', category_name)}' пока нет блюд.", parse_mode="HTML")
-                        return
+                    
+                    # Убираем дубликаты по ID блюда
+                    unique_items = {}
+                    for item in items:
+                        item_id = item.get('id')
+                        if item_id not in unique_items:
+                            unique_items[item_id] = item
+
+                    if not unique_items:
+                        # Если категория найдена, но блюд нет - продолжаем поиск (возможно, есть виртуальная)
+                        logger.warning(f"Категория '{category.get('name')}' найдена, но не содержит уникальных блюд. Пропускаем.")
+                        found = False
+                        continue # Пробуем следующую категорию или переходим к виртуальному поиску
 
                     # Формируем краткий список
                     category_title = category.get('display_name') or category.get('name', category_name)
@@ -597,13 +611,6 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                     if intro_message:
                         text += f"{intro_message}\n\n"
                     text += f"{emoji} <b>{category_title}</b>\n\n"
-                    
-                    # Убираем дубликаты по ID блюда
-                    unique_items = {}
-                    for item in items:
-                        item_id = item.get('id')
-                        if item_id not in unique_items:
-                            unique_items[item_id] = item
                     
                     # Добавляем блюда в список
                     for item in unique_items.values():
@@ -659,7 +666,14 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                         if search_term in item.get('name', '').lower() or search_term in item.get('description', '').lower():
                             virtual_items.append(item)
 
-            if virtual_items:
+            # Убираем дубликаты по ID блюда
+            unique_items = {}
+            for item in virtual_items:
+                item_id = item.get('id')
+                if item_id not in unique_items:
+                    unique_items[item_id] = item
+
+            if unique_items:
                 # Нашли блюда! Формируем виртуальную категорию
                 category_title = category_name.capitalize()
                 
@@ -685,13 +699,6 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                 if intro_message:
                     text += f"{intro_message}\n\n"
                 text += f"{emoji} <b>{category_title}</b> (найдено по названию)\n\n"
-                
-                # Убираем дубликаты по ID блюда
-                unique_items = {}
-                for item in virtual_items:
-                    item_id = item.get('id')
-                    if item_id not in unique_items:
-                        unique_items[item_id] = item
                 
                 # Добавляем блюда в список
                 for item in unique_items.values():
@@ -928,8 +935,11 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                     # Получаем все блюда категории
                     items = category.get('items', [])
                     if not items:
-                        await safe_send_message(bot, user_id, f"В категории '{category.get('name', category_name)}' пока нет блюд.", parse_mode="HTML")
-                        return
+                        # Если категория найдена, но блюд нет - пропускаем её
+                        # Это позволяет найти другую категорию с таким же именем или перейти к виртуальному поиску
+                        logger.warning(f"Категория '{category.get('name')}' (ID {cat_id}) найдена, но пуста. Пропускаем.")
+                        found = False
+                        continue
 
                     # Отправляем вступительное сообщение
                     category_title = category.get('display_name') or category.get('name', category_name)
@@ -952,19 +962,6 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                             emoji = em
                             break
                             
-                    header_text = f"{emoji} <b>{category_title}</b>\n\nВот что у нас есть:"
-                    if intro_message:
-                        header_text = f"{intro_message}\n\n{emoji} <b>{category_title}</b>"
-                    
-                    await safe_send_message(bot, user_id, header_text, parse_mode="HTML")
-                    
-                    # Убираем дубликаты по ID блюда
-                    unique_items = {}
-                    for item in items:
-                        item_id = item.get('id')
-                        if item_id not in unique_items:
-                            unique_items[item_id] = item
-                    
                     # 🟢 ЗАЩИТА ОТ СПАМА: Если блюд слишком много (> 5), показываем краткий список
                     # ИСКЛЮЧЕНИЕ: Завтраки всегда показываем полностью (по просьбе пользователя)
                     is_breakfast = any(x in category_name.lower() for x in ['завтрак', 'breakfast'])
@@ -972,6 +969,13 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                     if len(unique_items) > 5 and not is_breakfast:
                         logger.info(f"Слишком много блюд в категории '{category_title}' ({len(unique_items)}). Переключаюсь на краткий список.")
                         return await handle_show_category_brief(category_name, user_id, bot, intro_message)
+
+                    # Отправляем вступительное сообщение
+                    header_text = f"{emoji} <b>{category_title}</b>\n\nВот что у нас есть:"
+                    if intro_message:
+                        header_text = f"{intro_message}\n\n{emoji} <b>{category_title}</b>"
+                    
+                    await safe_send_message(bot, user_id, header_text, parse_mode="HTML")
 
                     # Отправляем каждое блюдо с фото
                     for item in unique_items.values():
