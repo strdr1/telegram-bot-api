@@ -321,8 +321,7 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
             kb = types.InlineKeyboardMarkup(inline_keyboard=[
                 [types.InlineKeyboardButton(text="🔴 Красное", callback_data="ai_category:красное"),
                  types.InlineKeyboardButton(text="⚪ Белое", callback_data="ai_category:белое")],
-                [types.InlineKeyboardButton(text="🌸 Розовое", callback_data="ai_category:розовое"),
-                 types.InlineKeyboardButton(text="🍾 Пузырки", callback_data="ai_category:пузырки")],
+                [types.InlineKeyboardButton(text="🍾 Пузырки (Игристое)", callback_data="ai_category:пузырки")],
                 [types.InlineKeyboardButton(text="📜 Показать все вина списком", callback_data="ai_category:all_wine")]
             ])
             
@@ -341,8 +340,8 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
             )
             
             kb = types.InlineKeyboardMarkup(inline_keyboard=[
-                [types.InlineKeyboardButton(text="🍺 Разливное на кранах", callback_data="ai_category:разливное"),
-                 types.InlineKeyboardButton(text="🍾 Бутылочное 500мл", callback_data="ai_category:бутылочное")],
+                [types.InlineKeyboardButton(text="🍺 Разливное на кранах", callback_data="ai_category:разливное на кранах"),
+                 types.InlineKeyboardButton(text="🍾 Бутылочное 500мл", callback_data="ai_category:бутылочное 500мл")],
                 [types.InlineKeyboardButton(text="📜 Показать все пиво", callback_data="ai_category:all_beer")]
             ])
             
@@ -548,6 +547,10 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                          
                          if any(root in search_name for root in ['разливн', 'кран']):
                               is_specific_beer = True
+                              # Если ищем разливное - показываем категорию "ПИВО" (это и есть разливное)
+                              # Но исключаем "Бутылочное"
+                              if 'пиво' in cat_name and 'бутылочн' not in cat_name:
+                                   is_match = True
                               if any(x in cat_name for x in ['разливн', 'кран']):
                                    is_match = True
                          elif any(root in search_name for root in ['бутылочн', '500']):
