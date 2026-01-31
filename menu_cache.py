@@ -134,71 +134,33 @@ class MenuCache:
             return False
 
     def _save_delivery_cache(self):
-        """Сохранение кэша меню доставки в файл"""
+        """Сохранение кэша меню в файл (ЕДИНЫЙ ФАЙЛ)"""
         try:
-            # Фильтруем только меню доставки (Завтраки, Кухня, Сыр, Напитки)
-            # 169: Завтраки пн-пт, 167: Завтраки сб-вс, 166: Кухня, 141: Сыр, 162: Напитки
-            delivery_menu_ids = {169, 167, 166, 141, 162}
-            filtered_menus = {}
+            # Сохраняем ВСЕ меню из памяти в menu_cache.json
+            # Это включает и доставку, и бар, и все что загружено согласно ALLOWED_MENU_IDS
             
-            for k, v in self.all_menus_cache.items():
-                try:
-                    # Приводим ключ к int для проверки
-                    k_int = int(k)
-                    if k_int in delivery_menu_ids:
-                        filtered_menus[str(k)] = v
-                except (ValueError, TypeError):
-                    continue
-            
-            # Обновляем кэш в памяти
-            self.delivery_menus_cache = filtered_menus
+            # Обновляем кэш в памяти (delivery_menus_cache теперь равен all_menus_cache)
+            self.delivery_menus_cache = self.all_menus_cache.copy()
 
             cache_data = {
                 'timestamp': self.last_update.isoformat() if self.last_update else datetime.now().isoformat(),
                 'point_id': presto_api.point_id,
-                'all_menus': filtered_menus
+                'all_menus': self.all_menus_cache
             }
 
             with open(self.cache_file, 'w', encoding='utf-8') as f:
                 json.dump(cache_data, f, ensure_ascii=False, indent=2)
 
-            logger.info(f"✅ Меню доставки сохранены в кэш ({len(filtered_menus)} меню)")
+            logger.info(f"✅ Все меню сохранены в единый кэш menu_cache.json ({len(self.all_menus_cache)} меню)")
             return True
 
         except Exception as e:
-            logger.error(f"❌ Ошибка сохранения кэша меню доставки: {e}")
+            logger.error(f"❌ Ошибка сохранения кэша меню: {e}")
             return False
 
     def _save_all_menus_cache(self):
-        """Сохранение кэша всех разрешенных меню в файл all_menus_cache.json"""
-        try:
-            # Фильтруем: сохраняем ВСЕ разрешенные меню
-            allowed_ids = ALLOWED_MENU_IDS
-            filtered_menus = {}
-            
-            for k, v in self.all_menus_cache.items():
-                try:
-                    k_int = int(k)
-                    if k_int in allowed_ids:
-                        filtered_menus[str(k)] = v
-                except (ValueError, TypeError):
-                    continue
-
-            cache_data = {
-                'timestamp': self.last_update.isoformat() if self.last_update else datetime.now().isoformat(),
-                'point_id': presto_api.point_id,
-                'all_menus': filtered_menus
-            }
-
-            with open(self.all_menus_cache_file, 'w', encoding='utf-8') as f:
-                json.dump(cache_data, f, ensure_ascii=False, indent=2)
-
-            logger.info(f"✅ Все меню ({len(filtered_menus)} шт.) сохранены в общий кэш")
-            return True
-
-        except Exception as e:
-            logger.error(f"❌ Ошибка сохранения кэша всех меню: {e}")
-            return False
+        """Устаревший метод, больше не используется. Меню сохраняются в _save_delivery_cache"""
+        return True
 
     def _compare_and_save_snapshot(self, new_menus: Dict):
         """Сравнение с предыдущим снимком и сохранение нового"""
@@ -324,6 +286,9 @@ class MenuCache:
                 continue
 
             # Проверяем, что меню в списке доставочных
+            # 169: Завтраки пн-пт, 167: Завтраки сб-вс, 166: Кухня, 141: Сыр, 162: Напитки
+            # 159: Бар (теперь тоже включаем, если нужно, но по логике available_menus это для доставки)
+            delivery_menu_ids = {169, 167, 166, 141, 162}
             if m_id_int not in delivery_menu_ids:
                 continue
 

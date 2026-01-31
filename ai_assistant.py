@@ -115,11 +115,11 @@ def refresh_token() -> str:
     return polza_token
 
 def load_menu_cache() -> Dict:
-    """Загрузка кэша всех меню для AI с приоритетом доставки"""
+    """Загрузка кэша всех меню для AI (только из единого menu_cache.json)"""
     try:
         all_menus = {}
         
-        # 1. Сначала загружаем меню доставки (menu_cache.json) - ЭТО ПРИОРИТЕТ
+        # 1. Загружаем единый кэш (menu_cache.json)
         delivery_cache_file = 'files/menu_cache.json'
         if os.path.exists(delivery_cache_file):
             try:
@@ -128,33 +128,11 @@ def load_menu_cache() -> Dict:
                     delivery_menus = delivery_data.get('all_menus', {})
                     if delivery_menus:
                         all_menus.update(delivery_menus)
-                        logger.info(f"AI: Загружено {len(delivery_menus)} меню из кэша доставки")
+                        logger.info(f"AI: Загружено {len(delivery_menus)} меню из единого кэша")
             except Exception as e:
                 logger.error(f"AI: Ошибка загрузки menu_cache.json: {e}")
 
-        # 2. Затем загружаем общий кэш (all_menus_cache.json) и добавляем то, чего нет
-        all_cache_file = 'files/all_menus_cache.json'
-        if os.path.exists(all_cache_file):
-            try:
-                with open(all_cache_file, 'r', encoding='utf-8') as f:
-                    all_data = json.load(f)
-                    other_menus = all_data.get('all_menus', {})
-                    
-                    # Добавляем только те меню, которых еще нет, И КОТОРЫЕ РАЗРЕШЕНЫ
-                    for m_id, m_data in other_menus.items():
-                        try:
-                            # 🛑 STRICT FILTER: Skip menus not in whitelist
-                            if int(m_id) not in ALLOWED_MENU_IDS:
-                                continue
-                        except:
-                            continue
-                            
-                        if m_id not in all_menus:
-                            all_menus[m_id] = m_data
-                            
-                    logger.info(f"AI: Догружено из общего кэша. Всего меню: {len(all_menus)}")
-            except Exception as e:
-                logger.error(f"AI: Ошибка загрузки all_menus_cache.json: {e}")
+        # 2. (УДАЛЕНО) all_menus_cache.json больше не используется
 
         return all_menus
     except Exception as e:
@@ -1229,14 +1207,14 @@ async def get_ai_response(message: str, user_id: int) -> dict:
                 menu_section["categories"].append(category_data)
             
             menu_knowledge_base.append(menu_section)
-
-        # Сохраняем в файл menu_context.json (как просил пользователь "отдельно место в json")
-        try:
-            with open('menu_context.json', 'w', encoding='utf-8') as f:
-                json.dump(menu_knowledge_base, f, ensure_ascii=False, indent=2)
-            logger.info("✅ Menu context saved to menu_context.json")
-        except Exception as e:
-            logger.error(f"Failed to save menu_context.json: {e}")
+        
+        # (УДАЛЕНО) Сохранение в файл menu_context.json - теперь все в памяти, чтобы не плодить файлы
+        # try:
+        #     with open('menu_context.json', 'w', encoding='utf-8') as f:
+        #         json.dump(menu_knowledge_base, f, ensure_ascii=False, indent=2)
+        #     logger.info("✅ Menu context saved to menu_context.json")
+        # except Exception as e:
+        #     logger.error(f"Failed to save menu_context.json: {e}")
 
         # Формируем строку JSON для контекста
         menu_context_json = json.dumps(menu_knowledge_base, ensure_ascii=False)

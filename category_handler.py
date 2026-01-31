@@ -475,6 +475,8 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                     is_hot_search = any(root in search_name for root in ['горяч', 'основн', 'втор'])
                     # Проверяем, является ли запрос поиском салатов
                     is_salad_search = 'салат' in search_name
+                    # Проверяем, является ли запрос поиском пасты
+                    is_pasta_search = 'паст' in search_name or 'макарон' in search_name
                     # Проверяем, является ли запрос поиском напитков
                     is_generic_drink = any(root in search_name for root in ['напит', 'бар', 'попить'])
                     is_wine_search = any(root in search_name for root in ['вин', 'шампан', 'игрист'])
@@ -489,6 +491,10 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                     elif is_salad_search:
                         # Для салатов ищем корень "салат"
                         if 'салат' in cat_name or 'салат' in cat_display_name:
+                             is_match = True
+                    elif is_pasta_search:
+                        # Для пасты ищем корень "паста" или "макарон"
+                        if 'паста' in cat_name or 'паст' in cat_name or 'макарон' in cat_name:
                              is_match = True
                     elif is_generic_drink:
                          # Если это ОБЩИЙ запрос (напитки, бар) - показываем все напитки
@@ -853,6 +859,8 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                 is_hot_search = any(root in search_name for root in ['горяч', 'основн', 'втор'])
                 # Проверяем, является ли запрос поиском салатов
                 is_salad_search = 'салат' in search_name
+                # Проверяем, является ли запрос поиском пасты
+                is_pasta_search = 'паст' in search_name or 'макарон' in search_name
                 # Проверяем, является ли запрос поиском напитков
                 is_generic_drink = any(root in search_name for root in ['напит', 'бар', 'попить'])
                 is_wine_search = any(root in search_name for root in ['вин', 'шампан', 'игрист'])
@@ -867,6 +875,10 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                 elif is_salad_search:
                     # Для салатов ищем корень "салат"
                     if 'салат' in cat_name or 'салат' in cat_display_name:
+                         is_match = True
+                elif is_pasta_search:
+                    # Для пасты ищем корень "паста" или "макарон"
+                    if 'паста' in cat_name or 'паст' in cat_name or 'макарон' in cat_name:
                          is_match = True
                 elif is_generic_drink:
                      # Если это ОБЩИЙ запрос (напитки, бар) - показываем все напитки
