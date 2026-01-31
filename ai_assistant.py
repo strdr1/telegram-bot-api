@@ -2155,7 +2155,13 @@ async def get_ai_response(message: str, user_id: int) -> dict:
             clean_text = re.sub(r'[Пп]арсе категорию:.+', '', clean_text, flags=re.DOTALL | re.IGNORECASE).strip()
             
             # Если текст слишком короткий или общий, не показываем его
-            if len(clean_text) < 5 or clean_text.lower().startswith('вот') or clean_text.lower().startswith('пожалуйста'):
+            clean_lower = clean_text.lower()
+            if (len(clean_text) < 5 or 
+                clean_lower.startswith('вот') or 
+                clean_lower.startswith('пожалуйста') or
+                'вот что у нас есть' in clean_lower or
+                'вот наше меню' in clean_lower or
+                'смотрите, что нашлось' in clean_lower):
                  clean_text = None
             
             logger.info(f"AI запросил категорию: '{category_name}'. Делегируем в unified handler.")

@@ -652,31 +652,48 @@ async def send_dish_photo(user_id: int, dish: Dict, menu_id: int, category_id: i
              except:
                  pass
 
+        sent_message = None
+
         if image_path and os.path.exists(image_path):
-            with open(image_path, 'rb') as photo_file:
-                message = await bot.send_photo(
+            try:
+                with open(image_path, 'rb') as photo_file:
+                    sent_message = await bot.send_photo(
+                        chat_id=user_id,
+                        photo=BufferedInputFile(photo_file.read(), filename="dish.jpg"),
+                        caption=caption,
+                        parse_mode="HTML",
+                        reply_markup=keyboard
+                    )
+            except Exception as e:
+                logger.error(f"Failed to send local photo for dish {dish.get('id')}: {e}")
+        
+        # Если локальное фото не удалось отправить, пробуем URL
+        if not sent_message and dish.get('image_url'):
+             try:
+                 sent_message = await bot.send_photo(chat_id=user_id, photo=dish['image_url'], caption=caption, parse_mode="HTML", reply_markup=keyboard)
+             except Exception as e:
+                 logger.error(f"Failed to send photo URL for dish {dish.get('id')}: {e}")
+
+        # Если фото не удалось отправить, отправляем текст (fallback)
+        if not sent_message:
+            text_caption = "🖼️ (Фото временно недоступно)\n\n" + caption
+            try:
+                sent_message = await bot.send_message(
                     chat_id=user_id,
-                    photo=BufferedInputFile(photo_file.read(), filename="dish.jpg"),
-                    caption=caption,
+                    text=text_caption,
                     parse_mode="HTML",
                     reply_markup=keyboard
                 )
-        elif dish.get('image_url'):
-             message = await bot.send_photo(chat_id=user_id, photo=dish['image_url'], caption=caption, parse_mode="HTML", reply_markup=keyboard)
-        else:
-            message = await bot.send_message(
-                chat_id=user_id,
-                text=caption,
-                parse_mode="HTML",
-                reply_markup=keyboard
-            )
-        
+            except Exception as e:
+                logger.error(f"Failed to send text fallback for dish {dish.get('id')}: {e}")
+                return
+
         if user_id not in user_photo_messages:
             user_photo_messages[user_id] = []
-        user_photo_messages[user_id].append(message.message_id)
+        user_photo_messages[user_id].append(sent_message.message_id)
         
     except Exception as e:
-        logger.error(f"Ошибка отправки фото блюда {dish['id']}: {e}")
+        logger.error(f"Ошибка отправки фото блюда {dish.get('id')}: {e}", exc_info=True)
 
 async def show_category_photos(user_id: int, menu_id: int, category_id: int, bot, state: FSMContext):
     dishes = menu_cache.get_category_items(menu_id, category_id)
