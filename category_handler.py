@@ -594,6 +594,10 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                               if any(ind in cat_name for ind in beer_indicators) or \
                                  any(ind in cat_display_name for ind in beer_indicators):
                                    is_match = True
+                    elif is_cocktail_search:
+                         # Если ищем КОКТЕЙЛИ
+                         if 'коктейл' in cat_name or 'коктейл' in cat_display_name:
+                              is_match = True
                     elif is_drink_search:
                         # Для остальных конкретных напитков - ищем совпадение по запросу
                         if search_name in cat_name or search_name in cat_display_name:
@@ -909,6 +913,7 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                 is_generic_drink = any(root in search_name for root in ['напит', 'бар', 'попить'])
                 is_wine_search = any(root in search_name for root in ['вин', 'шампан', 'игрист'])
                 is_beer_search = any(root in search_name for root in ['пив', 'пенн'])
+                is_cocktail_search = any(root in search_name for root in ['коктейл'])
                 is_drink_search = any(root in search_name for root in ['напит', 'лимонад', 'сок', 'вод', 'коктейл', 'пив', 'вин', 'чай', 'кофе', 'алко', 'настойк'])
 
                 if is_hot_search:
@@ -971,6 +976,10 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                      # Включаем поиск по словам "разливное" и "бутылочное", так как они часто вынесены отдельно
                      beer_roots = ['пив', 'пенн', 'разливн', 'бутылочн', 'кран']
                      if any(root in cat_name for root in beer_roots) or any(root in cat_display_name for root in beer_roots):
+                          is_match = True
+                elif is_cocktail_search:
+                     # Если ищем КОКТЕЙЛИ
+                     if 'коктейл' in cat_name or 'коктейл' in cat_display_name:
                           is_match = True
                 elif is_drink_search:
                     # Для остальных конкретных напитков - ищем совпадение по запросу
