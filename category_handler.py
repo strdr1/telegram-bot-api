@@ -163,13 +163,23 @@ def find_dishes_by_name(raw_search: str, limit: int = 20, include_alcohol: bool 
         'рыба': ['рыб', 'лосос', 'судак', 'форел', 'треск', 'семг', 'тунц', 'тунец', 'угор', 'угрь', 'дорад', 'сибас', 'камбал', 'щук'],
         'рыб': ['рыб', 'лосос', 'судак', 'форел', 'треск', 'семг', 'тунц', 'тунец', 'угор', 'угрь', 'дорад', 'сибас', 'камбал', 'щук'],
     }
-    expanded_keywords = list(search_keywords)
+    
+    search_groups = []
+    expanded_keywords = [] # Плоский список сохраняем для совместимости (логи, seafood_search)
+    
     for k in search_keywords:
+        group = {k} # Используем set для уникальности
         for base, syns in synonyms_map.items():
             if base in k:
-                for s in syns:
-                    if s not in expanded_keywords:
-                        expanded_keywords.append(s)
+                group.update(syns)
+        
+        group_list = list(group)
+        search_groups.append(group_list)
+        # Собираем плоский список для других проверок
+        for g_item in group_list:
+            if g_item not in expanded_keywords:
+                expanded_keywords.append(g_item)
+                
     search_keywords = expanded_keywords
     seafood_search = False
     if any('морепродукт' in k for k in search_keywords) or 'морепродукт' in raw_search:
@@ -255,8 +265,16 @@ def find_dishes_by_name(raw_search: str, limit: int = 20, include_alcohol: bool 
                             break
                 else:
                     match = True
-                    for keyword in search_keywords:
-                        if keyword not in full_text:
+                    # Логика: должны совпасть ВСЕ группы (AND),
+                    # но внутри группы достаточно ОДНОГО совпадения (OR)
+                    for group in search_groups:
+                        group_match = False
+                        for keyword in group:
+                            if keyword in full_text:
+                                group_match = True
+                                break
+                        
+                        if not group_match:
                             match = False
                             break
                 
