@@ -738,6 +738,70 @@ async def cmd_call(message: types.Message, state: FSMContext):
     await safe_send_message(message.bot, message.from_user.id, text,
                            reply_markup=keyboard, parse_mode="HTML")
 
+@router.message(Command("refresh_menu"))
+@handler_timeout()
+async def cmd_refresh_menu(message: types.Message, state: FSMContext):
+    """
+    Принудительное обновление меню:
+    1. Запускает внешний скрипт update_menus.py (для генерации файла кэша)
+    2. Перезагружает кэш в памяти бота
+    """
+    user_id = message.from_user.id
+
+    # Проверяем права админа
+    if not database.is_admin(user_id):
+        await safe_send_message(message.bot, user_id, "❌ Доступно только администраторам.", parse_mode="HTML")
+        return
+
+    await safe_send_message(message.bot, user_id, "🔄 <b>Запускаю скрипт update_menus.py...</b>", parse_mode="HTML")
+
+    try:
+        # 1. Запускаем внешний скрипт update_menus.py
+        process = await asyncio.create_subprocess_exec(
+            "python", "update_menus.py",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await process.communicate()
+
+        if process.returncode == 0:
+            # Успешное выполнение скрипта
+            output = stdout.decode().strip()
+            # Можно немного сократить вывод для лога
+            logger.info(f"update_menus.py output: {output}")
+            
+            await safe_send_message(message.bot, user_id, 
+                                   f"✅ <b>Скрипт выполнен успешно!</b>\n\nФайл кэша обновлен.", 
+                                   parse_mode="HTML")
+            
+            # 2. Перезагружаем кэш в памяти бота, чтобы он подхватил новый файл
+            from menu_cache import menu_cache
+            # force_update=False, так как мы только что обновили файл и хотим загрузить именно ЕГО, 
+            # а не качать снова из API внутри процесса бота (хотя load_all_menus проверит TTL)
+            # Но чтобы гарантированно перечитать файл, можно вызвать внутренний метод загрузки
+            menu_cache._load_delivery_cache() 
+            
+            menus = menu_cache.all_menus_cache
+            total_items = sum(len(cat['items']) for m in menus.values() for cat in m.get('categories', {}).values())
+            
+            await safe_send_message(message.bot, user_id,
+                                   f"✅ <b>Память бота обновлена!</b>\n\n"
+                                   f"📊 В памяти: {len(menus)} меню\n"
+                                   f"🍽️ Позиций: {total_items}",
+                                   parse_mode="HTML")
+        else:
+            # Ошибка скрипта
+            error_output = stderr.decode().strip()
+            logger.error(f"update_menus.py failed: {error_output}")
+            await safe_send_message(message.bot, user_id,
+                                   f"❌ <b>Ошибка выполнения скрипта</b>\n\nCode: {process.returncode}\nError: {error_output[:500]}",
+                                   parse_mode="HTML")
+
+    except Exception as e:
+        logger.error(f"Ошибка при выполнении refresh_menu: {e}")
+        await safe_send_message(message.bot, user_id, f"❌ Ошибка: {str(e)}", parse_mode="HTML")
+
+
 @router.message(Command("restart_menu"))
 @handler_timeout()
 async def cmd_restart_menu(message: types.Message, state: FSMContext):
