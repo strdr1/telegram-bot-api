@@ -259,8 +259,8 @@ def find_dishes_by_name(raw_search: str, limit: int = 20, include_alcohol: bool 
                 continue
 
             for item in category.get('items', []):
-                item_name = item.get('name', '').lower()
-                item_desc = item.get('description', '').lower()
+                item_name = (item.get('name') or '').lower()
+                item_desc = (item.get('description') or '').lower()
                 full_text = f"{item_name} {item_desc}"
 
                 if seafood_search or ',' in raw_search:
