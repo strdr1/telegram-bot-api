@@ -315,18 +315,16 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
             text = (
                 f"{intro_message if intro_message else ''}\n"
                 "🍷 <b>Винная карта</b>\n\n"
-                "У нас большой выбор вин! Пожалуйста, уточните, какое вино вас интересует:"
+                "У нас большой выбор вин! Пожалуйста, уточните, какое вино вас интересует:\n\n"
+                "🔴 <b>Красное</b>\n"
+                "⚪ <b>Белое</b>\n"
+                "🍾 <b>Пузырки (Игристое)</b>\n\n"
+                "<i>Напишите название категории, чтобы посмотреть список!</i>"
             )
             
-            kb = types.InlineKeyboardMarkup(inline_keyboard=[
-                [types.InlineKeyboardButton(text="🔴 Красное", callback_data="ai_category:красное"),
-                 types.InlineKeyboardButton(text="⚪ Белое", callback_data="ai_category:белое")],
-                [types.InlineKeyboardButton(text="🍾 Пузырки (Игристое)", callback_data="ai_category:пузырки")],
-                [types.InlineKeyboardButton(text="📜 Показать все вина списком", callback_data="ai_category:all_wine")]
-            ])
-            
-            await safe_send_message(bot, user_id, text, parse_mode="HTML", reply_markup=kb)
-            logger.info("Показал кнопки выбора вина")
+            # УБРАНЫ КНОПКИ ПО ТРЕБОВАНИЮ ПОЛЬЗОВАТЕЛЯ ("ПРОСТО СПИСОК ПОДКАТЕГОРИЙ")
+            await safe_send_message(bot, user_id, text, parse_mode="HTML")
+            logger.info("Показал список категорий вина (текстом)")
             return
 
         # 🍺 ПИВНАЯ КАРТА: Если запрос "пиво" (общий), предлагаем выбор подкатегории
@@ -336,17 +334,15 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
             text = (
                 f"{intro_message if intro_message else ''}\n"
                 "🍺 <b>Пивная карта</b>\n\n"
-                "Какое пиво вы предпочитаете?"
+                "Какое пиво вы предпочитаете?\n\n"
+                "🍺 <b>Разливное на кранах</b>\n"
+                "🍾 <b>Бутылочное 500мл</b>\n\n"
+                "<i>Напишите название категории, чтобы посмотреть список!</i>"
             )
             
-            kb = types.InlineKeyboardMarkup(inline_keyboard=[
-                [types.InlineKeyboardButton(text="🍺 Разливное на кранах", callback_data="ai_category:разливное на кранах"),
-                 types.InlineKeyboardButton(text="🍾 Бутылочное 500мл", callback_data="ai_category:бутылочное 500мл")],
-                [types.InlineKeyboardButton(text="📜 Показать все пиво", callback_data="ai_category:all_beer")]
-            ])
-            
-            await safe_send_message(bot, user_id, text, parse_mode="HTML", reply_markup=kb)
-            logger.info("Показал кнопки выбора пива")
+            # УБРАНЫ КНОПКИ ПО ТРЕБОВАНИЮ ПОЛЬЗОВАТЕЛЯ
+            await safe_send_message(bot, user_id, text, parse_mode="HTML")
+            logger.info("Показал список категорий пива (текстом)")
             return
 
         # Очищаем от эмодзи и лишних символов
