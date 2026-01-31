@@ -968,7 +968,9 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                                is_match = False
                 elif is_beer_search:
                      # Если ищем ПИВО
-                     if 'пив' in cat_name or 'пив' in cat_display_name or 'пенн' in cat_name:
+                     # Включаем поиск по словам "разливное" и "бутылочное", так как они часто вынесены отдельно
+                     beer_roots = ['пив', 'пенн', 'разливн', 'бутылочн', 'кран']
+                     if any(root in cat_name for root in beer_roots) or any(root in cat_display_name for root in beer_roots):
                           is_match = True
                 elif is_drink_search:
                     # Для остальных конкретных напитков - ищем совпадение по запросу
@@ -1149,6 +1151,10 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                 # Убираем дубликаты
                 unique_items = {}
                 for item in virtual_items:
+                    # Skip nameless items immediately
+                    if not item.get('name') or item.get('name') == 'Без названия':
+                        continue
+                        
                     # Используем ID как первичный ключ, если нет - fallback на название
                     item_id = item.get('id')
                     item_name = item.get('name')
