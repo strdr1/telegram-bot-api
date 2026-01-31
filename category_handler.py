@@ -479,7 +479,7 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                     is_pasta_search = 'паст' in search_name or 'макарон' in search_name
                     # Проверяем, является ли запрос поиском напитков
                     is_generic_drink = any(root in search_name for root in ['напит', 'бар', 'попить'])
-                    is_wine_search = any(root in search_name for root in ['вин', 'шампан', 'игрист'])
+                    is_wine_search = any(root in search_name for root in ['вин', 'шампан', 'игрист', 'пузыр', 'бел', 'красн', 'розов'])
                     is_beer_search = any(root in search_name for root in ['пив', 'пенн'])
                     is_drink_search = any(root in search_name for root in ['напит', 'лимонад', 'сок', 'вод', 'коктейл', 'пив', 'вин', 'чай', 'кофе', 'алко'])
 
@@ -512,15 +512,18 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                          
                          if any(root in search_name for root in ['белое', 'бел']):
                               is_specific_wine = True
-                              if 'белое' in cat_name or 'белое' in cat_display_name:
+                              if any(x in cat_name for x in ['бел', 'white']) or \
+                                 any(x in cat_display_name for x in ['бел', 'white']):
                                    is_match = True
                          elif any(root in search_name for root in ['красное', 'красн']):
                               is_specific_wine = True
-                              if 'красное' in cat_name or 'красное' in cat_display_name:
+                              if any(x in cat_name for x in ['красн', 'red']) or \
+                                 any(x in cat_display_name for x in ['красн', 'red']):
                                    is_match = True
                          elif any(root in search_name for root in ['розовое', 'розов']):
                               is_specific_wine = True
-                              if 'розовое' in cat_name or 'розовое' in cat_display_name:
+                              if any(x in cat_name for x in ['розов', 'rose']) or \
+                                 any(x in cat_display_name for x in ['розов', 'rose']):
                                    is_match = True
                          elif any(root in search_name for root in ['игрист', 'шампан', 'брют', 'пузыр']):
                               is_specific_wine = True
@@ -533,6 +536,7 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                               if any(root in cat_name for root in wine_roots) or \
                                  any(root in cat_display_name for root in wine_roots):
                                    is_match = True
+
 
                          # Исключаем явные не-винные категории, если они случайно попали
                          if any(x in cat_name for x in ['лимонад', 'коктейл', 'сок', 'вод', 'чай', 'кофе', 'пиво']):
