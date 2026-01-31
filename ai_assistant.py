@@ -1204,8 +1204,8 @@ async def get_ai_response(message: str, user_id: int) -> dict:
                 # Фильтруем товары с ценой 0 (модификаторы, скрытые товары)
                 items = [item for item in items if float(item.get('price', 0)) > 0]
                 
-                # Берем первые 5 блюд из каждой категории для лучшего контекста
-                for item in items[:5]:
+                # Берем первые 50 блюд из каждой категории для лучшего контекста
+                for item in items[:50]:
                     desc = item.get('description', '')
                     # Очищаем описание от HTML тегов если есть
                     if desc:
