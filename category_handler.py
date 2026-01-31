@@ -289,17 +289,17 @@ def find_dishes_by_name(raw_search: str, limit: int = 20, include_alcohol: bool 
                             break
                 
                 if match:
-                # 🛑 FIX: Защита от ложного срабатывания "Паста" -> "Антипасти"
-                # Если искали "паст" (паста), но нашли "антипасти" и не искали "антипаст" специально
-                # Ищем "паст" в плоском списке expanded_keywords
-                if 'паст' in expanded_keywords and 'антипаст' not in expanded_keywords:
-                    if 'антипаст' in item_name.lower():
-                        logger.info(f"🛑 Filtered out Antipasti for Pasta query: {item_name}")
-                        continue
-                    else:
-                        # Debug: why wasn't it filtered if it looks like antipasti?
-                        if 'анти' in item_name.lower():
-                            logger.info(f"⚠️ Suspicious item passed filter: {item_name}")
+                    # 🛑 FIX: Защита от ложного срабатывания "Паста" -> "Антипасти"
+                    # Если искали "паст" (паста), но нашли "антипасти" и не искали "антипаст" специально
+                    # Ищем "паст" в плоском списке expanded_keywords
+                    if 'паст' in expanded_keywords and 'антипаст' not in expanded_keywords:
+                        if 'антипаст' in item_name.lower():
+                            logger.info(f"🛑 Filtered out Antipasti for Pasta query: {item_name}")
+                            continue
+                        else:
+                            # Debug: why wasn't it filtered if it looks like antipasti?
+                            if 'анти' in item_name.lower():
+                                logger.info(f"⚠️ Suspicious item passed filter: {item_name}")
 
                     # 🛑 ДОПОЛНИТЕЛЬНАЯ ФИЛЬТРАЦИЯ ДЛЯ ДИЕТИЧЕСКИХ ЗАПРОСОВ
                     # Если ищем овощи/веганское, исключаем явные мясные блюда
