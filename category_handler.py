@@ -997,24 +997,20 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                         found = False
                         continue
                         
-                    # 🛑 FIX: Populate unique_items for full category view (was causing UnboundLocalError)
+                    # 🛑 FIX: Populate unique_items with robust filtering
+                    # We filter items BEFORE adding to dict to ensure that a valid item (with name)
+                    # is not overwritten by an invalid item (without name) if they share the same ID.
                     unique_items = {}
                     for item in items:
+                        # Skip nameless items immediately
+                        if not item.get('name') or item.get('name') == 'Без названия':
+                            continue
+                            
                         item_id = item.get('id')
                         if item_id:
                             unique_items[item_id] = item
                         else:
                             unique_items[item.get('name')] = item
-                    
-                    # 🛑 FIX: Фильтр "Без названия"
-                    # Удаляем блюда без имени из списка
-                    items_to_remove = []
-                    for uid, item in unique_items.items():
-                        if not item.get('name') or item.get('name') == 'Без названия':
-                            items_to_remove.append(uid)
-                    
-                    for uid in items_to_remove:
-                        del unique_items[uid]
                         
                     if not unique_items:
                         logger.warning(f"Категория '{category.get('name')}' содержала только пустые блюда. Пропускаем.")
