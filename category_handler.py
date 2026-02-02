@@ -545,6 +545,7 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                     is_generic_drink = any(root in search_name for root in ['напит', 'бар', 'попить'])
                     is_wine_search = any(root in search_name for root in ['вин', 'шампан', 'игрист', 'пузыр', 'бел', 'красн', 'розов'])
                     is_beer_search = any(root in search_name for root in ['пив', 'пенн'])
+                    is_cocktail_search = any(root in search_name for root in ['коктейл'])
                     is_drink_search = any(root in search_name for root in ['напит', 'лимонад', 'сок', 'вод', 'коктейл', 'пив', 'вин', 'чай', 'кофе', 'алко', 'настойк'])
 
                     if is_hot_search:
