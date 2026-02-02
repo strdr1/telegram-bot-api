@@ -5,12 +5,15 @@ category_handler.py - Обработчик показа категорий бл�
 import logging
 import re
 import random
+import json
 from difflib import SequenceMatcher
 from menu_cache import menu_cache, ALLOWED_MENU_IDS
 from handlers.utils import safe_send_message
 from aiogram import types
 from aiogram.types import BufferedInputFile
 from ai_assistant import get_ai_response
+from database import database
+from presto_api import presto_api
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +28,39 @@ BLOCKED_CATEGORIES = [
     'упаковка',
     'прочее'
 ]
+
+def get_new_items_list():
+    """
+    Получает список новых товаров путем сравнения двух последних снимков меню.
+    """
+    try:
+        # 1. Получаем 2 последних снимка через прямой SQL
+        with database.get_cursor() as cursor:
+            cursor.execute('''
+                SELECT menu_data 
+                FROM menu_snapshots 
+                ORDER BY id DESC 
+                LIMIT 2
+            ''')
+            rows = cursor.fetchall()
+
+        if len(rows) < 2:
+            return [] # Недостаточно данных для сравнения
+
+        # 2. Распаковываем JSON
+        # rows[0] - это последнее (актуальное) меню
+        # rows[1] - это предыдущее меню
+        new_menu_data = json.loads(rows[0][0])
+        old_menu_data = json.loads(rows[1][0])
+
+        # 3. Используем встроенный метод сравнения
+        diff = presto_api.compare_menus(old_menu_data, new_menu_data)
+        
+        # 4. Возвращаем список добавленных блюд
+        return diff.get('added', [])
+    except Exception as e:
+        logger.error(f"Ошибка при получении списка новинок: {e}")
+        return []
 
 def is_category_blocked(category_name: str) -> bool:
     """Проверяет, является ли категория запрещенной"""
@@ -925,10 +961,43 @@ async def handle_show_category(category_name: str, user_id: int, bot, intro_mess
                        any(root in cat_display_name for root in ['горяч', 'основн', 'втор']):
                         is_match = True
                 elif is_new_search:
-                     # Если ищут новинки - перенаправляем на ПИЦЦУ (как самую популярную категорию)
-                     # Это временное решение, чтобы не выдавать ошибку
-                     if 'пицца' in cat_name or 'пицц' in cat_display_name:
-                          is_match = True
+                     # Если ищут новинки - показываем реально новые товары (diff snapshot)
+                     new_items = get_new_items_list()
+                     if new_items:
+                         # Создаем "виртуальную" категорию из новых товаров
+                         # Используем логику отображения виртуальных товаров
+                         category_title = "🆕 Новинки меню"
+                         intro_message = "Вот что у нас появилось новенького!"
+                         
+                         # Формируем список для отображения
+                         # Нам нужно адаптировать формат под handle_show_category_brief или отобразить прямо здесь
+                         # Проще всего вызвать handle_show_category_brief передав ему "виртуальное" имя, 
+                         # но эта функция ищет по имени.
+                         # Поэтому реализуем отображение прямо здесь.
+                         
+                         text = f"🆕 <b>{category_title}</b>\n\n{intro_message}\n\n"
+                         
+                         # Ограничиваем количество
+                         limit = 15
+                         if len(new_items) > limit:
+                             text += f"(показаны последние {limit})\n\n"
+                             new_items = new_items[:limit]
+                             
+                         for item in new_items:
+                             price = item.get('price', 0)
+                             text += f"• {item['name']} — {price}₽\n"
+                         
+                         text += f"\n💡 <i>Спросите про конкретное блюдо, чтобы увидеть фото!</i>"
+                         await safe_send_message(bot, user_id, text, parse_mode="HTML")
+                         return # Выходим, так как мы сами обработали запрос
+                     else:
+                         # Если новинок нет (или не удалось получить), показываем сообщение и перенаправляем
+                         text = "К сожалению, прямо сейчас я не вижу списка последних обновлений. 😔\nНо у нас всегда вкусная пицца! 🍕"
+                         await safe_send_message(bot, user_id, text, parse_mode="HTML")
+                         # Имитируем поиск пиццы как fallback
+                         is_new_search = False
+                         if 'пицца' in cat_name or 'пицц' in cat_display_name:
+                             is_match = True
                 elif is_salad_search:
                     # Для салатов ищем корень "салат"
                     if 'салат' in cat_name or 'салат' in cat_display_name:
