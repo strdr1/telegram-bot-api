@@ -12,7 +12,7 @@ from handlers.utils import safe_send_message
 from aiogram import types
 from aiogram.types import BufferedInputFile
 from ai_assistant import get_ai_response
-from database import database
+import database
 from presto_api import presto_api
 
 logger = logging.getLogger(__name__)
