@@ -2447,7 +2447,9 @@ async def get_ai_response(message: str, user_id: int) -> dict:
         # 🟢 FORCE: Если пользователь явно просит меню, но AI забыл маркер - добавляем принудительно
         # Это решает проблему "Меню" -> "Привет..." (без кнопок)
         force_menu_keywords = ['меню', 'покажи меню', 'меню ресторана', 'список блюд']
-        if message.strip().lower() in force_menu_keywords:
+        is_explicit_menu_request = message.strip().lower() in force_menu_keywords
+        
+        if is_explicit_menu_request:
              if not show_restaurant_menu:
                  logger.info(f"Forcing SHOW_RESTAURANT_MENU for explicit user request: '{message}'")
                  show_restaurant_menu = True
@@ -2560,8 +2562,8 @@ async def get_ai_response(message: str, user_id: int) -> dict:
         # ПОДАВЛЯЕМ текстовый ответ ИИ полностью.
         # Это требование пользователя: "пусть ИИ только парсер вызывает! и не отвечает текстом"
         # Это предотвращает дублирование (текст от ИИ + результат поиска) и галлюцинации списков.
-        if show_category or search_query_result or dish_photo_query:
-            logger.info("Tool call detected (SEARCH/CATEGORY/PHOTO), suppressing AI text response.")
+        if show_category or search_query_result or dish_photo_query or (show_restaurant_menu and is_explicit_menu_request):
+            logger.info("Tool call detected (SEARCH/CATEGORY/PHOTO/MENU), suppressing AI text response.")
             final_text = None
         elif final_text:
              # Финальная очистка от "Показываю меню", если парсер НЕ сработал (show_category=False),
