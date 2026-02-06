@@ -3078,24 +3078,34 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
         # Проверяем на показ меню ресторана
         if result.get('show_restaurant_menu'):
             logger.info(f"Обрабатываем show_restaurant_menu для пользователя {user_id}")
+            
             # Перед показом меню пробуем найти блюда по исходному запросу пользователя
-            try:
-                from category_handler import find_dishes_by_name, handle_show_category
-                found_items = find_dishes_by_name(message.text, limit=5)
-            except Exception as e:
-                logger.error(f"Ошибка поиска блюд перед показом меню: {e}")
-                found_items = []
+            # 🟢 FIX: Не ищем блюда, если запрос явно "меню" (чтобы не находить блюда с словом "меню" в описании)
+            explicit_menu_requests = ['меню', 'покажи меню', 'меню ресторана', 'список блюд', 'поесть', 'хочу кушать']
+            should_search = message.text.lower().strip() not in explicit_menu_requests
+            
+            found_items = []
+            if should_search:
+                try:
+                    from category_handler import find_dishes_by_name, handle_show_category
+                    found_items = find_dishes_by_name(message.text, limit=5)
+                except Exception as e:
+                    logger.error(f"Ошибка поиска блюд перед показом меню: {e}")
+                    found_items = []
+            
             if found_items:
                 # Если блюда найдены — показываем их и НЕ предлагаем меню
                 await handle_show_category(message.text, user.id, message.bot)
                 return
+
             # Иначе — показываем меню ресторана
-            await safe_send_message(message.bot, user_id, result['text'])
-            try:
-                chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
-                database.save_chat_message(chat_id, 'bot', result['text'])
-            except Exception as e:
-                logger.error(f"Ошибка сохранения ответа бота: {e}")
+            if result.get('text'):
+                await safe_send_message(message.bot, user_id, result['text'])
+                try:
+                    chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
+                    database.save_chat_message(chat_id, 'bot', result['text'])
+                except Exception as e:
+                    logger.error(f"Ошибка сохранения ответа бота: {e}")
             await show_restaurant_menu(user.id, message.bot)
             return
 
@@ -3103,26 +3113,28 @@ async def handle_text_messages(message: types.Message, state: FSMContext):
         if result.get('show_bot_menu'):
             logger.info(f"Обрабатываем show_bot_menu для пользователя {user_id}")
             # Сначала отправляем ответ AI
-            await safe_send_message(message.bot, user_id, result['text'])
-            # Сохраняем ответ бота
-            try:
-                chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
-                database.save_chat_message(chat_id, 'bot', result['text'])
-            except Exception as e:
-                logger.error(f"Ошибка сохранения ответа бота: {e}")
+            if result.get('text'):
+                await safe_send_message(message.bot, user_id, result['text'])
+                # Сохраняем ответ бота
+                try:
+                    chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
+                    database.save_chat_message(chat_id, 'bot', result['text'])
+                except Exception as e:
+                    logger.error(f"Ошибка сохранения ответа бота: {e}")
             # Затем показываем главное меню
             await show_main_menu(user.id, message.bot)
             return
 
         # Проверяем на парсинг бронирования
         if result.get('parse_booking'):
-            await safe_send_message(message.bot, user_id, result['text'])
-            # Сохраняем ответ бота
-            try:
-                chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
-                database.save_chat_message(chat_id, 'bot', result['text'])
-            except Exception as e:
-                logger.error(f"Ошибка сохранения ответа бота: {e}")
+            if result.get('text'):
+                await safe_send_message(message.bot, user_id, result['text'])
+                # Сохраняем ответ бота
+                try:
+                    chat_id = database.get_or_create_chat(user.id, user.full_name or f'User {user.id}')
+                    database.save_chat_message(chat_id, 'bot', result['text'])
+                except Exception as e:
+                    logger.error(f"Ошибка сохранения ответа бота: {e}")
             
             # Парсим детали бронирования из исходного сообщения пользователя
             booking_details = parse_booking_message(message.text)
