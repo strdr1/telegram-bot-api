@@ -47,6 +47,43 @@ class MenuCache:
         self.delivery_menus_cache = self.all_menus_cache
         
         logger.info(f"✅ Кэш инициализирован. Всего меню в памяти: {len(self.all_menus_cache)}")
+
+    def cleanup_cache(self):
+        """
+        Полная очистка кэша: удаление файла menu_cache.json и всех изображений.
+        Используется при запуске и ежедневном обновлении.
+        """
+        logger.info("🧹 Запуск полной очистки кэша...")
+        
+        # 1. Удаляем файл кэша JSON
+        if os.path.exists(self.cache_file):
+            try:
+                os.remove(self.cache_file)
+                logger.info(f"🗑️ Файл кэша удален: {self.cache_file}")
+            except Exception as e:
+                logger.error(f"❌ Ошибка удаления файла кэша: {e}")
+        
+        # 2. Очищаем папку с изображениями
+        if os.path.exists(self.images_dir):
+            try:
+                count = 0
+                for filename in os.listdir(self.images_dir):
+                    file_path = os.path.join(self.images_dir, filename)
+                    try:
+                        if os.path.isfile(file_path) or os.path.islink(file_path):
+                            os.unlink(file_path)
+                            count += 1
+                    except Exception as e:
+                        logger.error(f"❌ Ошибка удаления файла {file_path}: {e}")
+                logger.info(f"🗑️ Удалено {count} изображений из {self.images_dir}")
+            except Exception as e:
+                logger.error(f"❌ Ошибка очистки папки изображений: {e}")
+        
+        # Сбрасываем кэш в памяти
+        self.all_menus_cache = {}
+        self.delivery_menus_cache = {}
+        self.last_update = None
+        logger.info("✅ Кэш полностью очищен")
     
     def _load_point_id_from_db(self):
         """Загрузка ID точки продаж из базы данных"""

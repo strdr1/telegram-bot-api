@@ -572,7 +572,9 @@ async def handle_show_category_brief(category_name: str, user_id: int, bot, intr
                     # Проверяем, является ли запрос поиском пасты
                     is_pasta_search = 'паст' in search_name or 'макарон' in search_name
                     # Проверяем, является ли запрос поиском напитков
-                    is_generic_drink = any(root in search_name for root in ['напит', 'бар', 'попить'])
+                    # FIX: 'бар' triggering on 'барбекю', 'баранина' etc.
+                    is_bar_trigger = 'бар' in search_name and not any(x in search_name for x in ['барбекю', 'барбекью', 'баран', 'барбарис'])
+                    is_generic_drink = any(root in search_name for root in ['напит', 'попить']) or is_bar_trigger
                     is_wine_search = any(root in search_name for root in ['вин', 'шампан', 'игрист', 'пузыр', 'бел', 'красн', 'розов'])
                     is_beer_search = any(root in search_name for root in ['пив', 'пенн'])
                     is_cocktail_search = any(root in search_name for root in ['коктейл'])

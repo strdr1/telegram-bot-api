@@ -27,6 +27,10 @@ async def auto_update_menu():
         last_snapshot = database.get_last_menu_snapshot()
         old_menu_data = json.loads(last_snapshot['menu_data']) if last_snapshot else {}
 
+        # Очищаем кэш перед обновлением (удаляем старые фото и json)
+        print("🧹 Очистка кэша перед автообновлением...")
+        menu_cache.cleanup_cache()
+
         # 2. Обновляем меню с принудительной перезагрузкой
         menus = await menu_cache.load_all_menus(force_update=True)
 
